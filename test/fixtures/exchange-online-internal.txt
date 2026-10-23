@@ -1,0 +1,20 @@
+Received: from PH0PR12MB7744.namprd12.prod.outlook.com (2603:10b6:510:26d::5)
+ by DM4PR12MB6040.namprd12.prod.outlook.com with HTTPS; Thu, 22 Oct 2026
+ 14:02:11 +0000
+Received: from PH0PR12MB7744.namprd12.prod.outlook.com
+ ([fe80::4c1a:9b2e:77d0:1f3a]) by PH0PR12MB7744.namprd12.prod.outlook.com
+ ([fe80::4c1a:9b2e:77d0:1f3a%3]) with mapi id 15.20.9100.014; Thu, 22 Oct 2026
+ 14:02:10 +0000
+From: Sam Okafor <sam@client.example>
+To: Neil <neil@client.example>
+Subject: Re: DMARC rollout
+Thread-Topic: DMARC rollout
+Date: Thu, 22 Oct 2026 14:02:09 +0000
+Message-ID:
+ <PH0PR12MB77441A2B3C4D5E6F@PH0PR12MB7744.namprd12.prod.outlook.com>
+Return-Path: sam@client.example
+X-MS-Exchange-Organization-AuthAs: Internal
+X-MS-Exchange-Organization-AuthSource: PH0PR12MB7744.namprd12.prod.outlook.com
+Authentication-Results: dkim=none (message not signed)
+ header.d=none;dmarc=none action=none header.from=client.example;
+MIME-Version: 1.0

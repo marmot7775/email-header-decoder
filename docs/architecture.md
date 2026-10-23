@@ -1,0 +1,77 @@
+Header Verdict, architecture
+
+Shape
+One static page. No server, no network calls, no storage. Pasted
+headers are parsed in the visitor's browser and never leave it.
+The same files run under Node for tests. This is the plan for the
+product, not a prototype shortcut: a header analyzer has no reason
+to send mail headers anywhere.
+
+Modules, each one file, each a pure function layer over the one
+below it, all under the HA namespace:
+
+src/parse.js     Text in, field list out. Finds the header block
+                 inside a bare paste, a full .eml, or a copy of a
+                 whole Show original page. Unfolds, repairs lost
+                 indentation, decodes RFC 2047, parses addresses,
+                 dates (RFC 5322 plus the obsolete zones), comments,
+                 and tag=value lists. Nothing downstream re-reads
+                 raw text.
+src/psl.js       Organizational domain from an abbreviated public
+                 suffix list (RFC 7489 style). The DMARCbis tree
+                 walk needs DNS, so this is the first release
+                 approximation and the page says so.
+src/received.js  Received fields into a chronological hop chain
+                 with per hop delay, slowest hop, clock skew, TLS
+                 evidence, and internal relay detection (two hosts
+                 of one operator, mapi, private IPs).
+src/auth.js      Authentication-Results per RFC 8601 (Google form
+                 with authserv-id, Exchange Online form without),
+                 Received-SPF, DKIM-Signature, the ARC set per RFC
+                 8617 with chain checks, and identifier alignment.
+                 Produces reported results and a computed DMARC
+                 result side by side.
+src/providers.js Decodes filter verdicts (Microsoft SCL, BCL, CAT,
+                 SFV, IPV; Proofpoint; Mimecast; Cisco; Barracuda;
+                 SpamAssassin; Rspamd) into plain statements with a
+                 level, fingerprints the sending platform from
+                 headers, DKIM d=, Return-Path and first relay, and
+                 reads list and sending headers (RFC 8058 one-click).
+                 Unknown codes are shown raw, never guessed.
+src/verdict.js   The sentence. Reads everything above and writes
+                 status, headline, cause, policy consequence,
+                 details, fixes, and flags. Forwarded mail is
+                 recognised from ARC and the pre-forward results are
+                 quoted, so the failure is blamed on the forward
+                 when that is what happened.
+src/analyze.js   analyze(text) returns one plain result object.
+                 The page renders it; the tests assert on it.
+
+ui/page.html     Markup and tokens. Verdict first, then message,
+                 alignment, authentication, path, filter headers,
+                 raw headers collapsed.
+ui/app.js        Rendering only. No parsing logic lives here.
+build.js         Concatenates src and ui into dist/index.html
+                 (artifact form) and dist/standalone.html (full
+                 document, host anywhere, including static/ on
+                 dns-audit.com with one route).
+test/            node:test suite over analyze() with synthetic
+                 fixtures and hostile input. Run: node --test test/
+
+Rules that keep it honest
+No DNS, no signature verification, no guessing. Every sentence is
+built from identifiers in the headers. Where the page cannot know
+(adkim/aspf, the organizational domain, Gmail's spam verdict) it
+says so in the output rather than defaulting silently.
+
+Result object (what the page renders)
+input, message, verdict, alignment (rows per identifier with
+aligned, strict, mode), auth (all A-R, primary, spf, dkim, dmarc,
+computed, arc, arcResult, compauth), chain (hops, totalSec,
+slowestIdx, clockSkew, originIp), decoded (providers, platform,
+misc), fields.
+
+Parked for later releases
+DKIM key lookup through a DNS API. Bounce and SMTP code decoding.
+Full public suffix list or a DMARCbis tree walk via DNS. Link from a
+failing From domain to its dns-audit.com audit.

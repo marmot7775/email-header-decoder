@@ -1,0 +1,9 @@
+Received: from mail.attacker.example (mail.attacker.example [198.51.100.66])
+        by mx.receiver.example (Postfix) with ESMTP id 9F1A2B3C
+        for <neil@receiver.example>; Fri, 23 Oct 2026 16:40:02 +0000 (UTC)
+From: "Bank Support" <support@bank.example>
+From: support@attacker.example
+To: neil@receiver.example
+Subject: Account notice
+Date: Fri, 23 Oct 2026 16:40:00 +0000
+Message-ID: <x1@attacker.example>

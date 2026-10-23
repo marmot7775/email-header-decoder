@@ -1,0 +1,47 @@
+Microsoft Mail Internet Headers Version 2.0
+Received: from SA1PR12MB8123.namprd12.prod.outlook.com (2603:10b6:806:31b::9)
+ by DM4PR12MB6040.namprd12.prod.outlook.com with HTTPS; Fri, 23 Oct 2026
+ 16:20:07 +0000
+Received: from BN9PR03CA0417.namprd03.prod.outlook.com (2603:10b6:408:111::32)
+ by SA1PR12MB8123.namprd12.prod.outlook.com (2603:10b6:806:31b::9) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9100.14; Fri, 23 Oct
+ 2026 16:20:06 +0000
+Received: from BN2PEPF000044A7.namprd04.prod.outlook.com
+ (2603:10b6:408:111:cafe::d1) by BN9PR03CA0417.outlook.office365.com
+ (2603:10b6:408:111::32) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9100.14 via Frontend Transport; Fri,
+ 23 Oct 2026 16:20:06 +0000
+Authentication-Results: spf=pass (sender IP is 203.0.113.20)
+ smtp.mailfrom=billing.vendor.example; dkim=pass (signature was verified)
+ header.d=vendor.example;dmarc=pass action=none
+ header.from=vendor.example;compauth=pass reason=100
+Received-SPF: Pass (protection.outlook.com: domain of billing.vendor.example
+ designates 203.0.113.20 as permitted sender)
+ receiver=protection.outlook.com; client-ip=203.0.113.20;
+ helo=mx1.vendor.example; pr=C
+Received: from mx1.vendor.example (203.0.113.20) by
+ BN2PEPF000044A7.mail.protection.outlook.com (10.167.243.152) with Microsoft
+ SMTP Server (version=TLS1_3, cipher=TLS_AES_256_GCM_SHA384) id 15.20.9100.14
+ via Frontend Transport; Fri, 23 Oct 2026 16:20:05 +0000
+Received: from app03.vendor.example (app03.vendor.example [10.20.0.5])
+ by mx1.vendor.example (Postfix) with ESMTP id 4XbR7m0Hc2
+ for <neil@client.example>; Fri, 23 Oct 2026 16:19:58 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=vendor.example;
+ s=s2026; h=from:to:subject:date:message-id:mime-version;
+ bh=SyntheticBodyHash0003=; b=SyntheticSignature0003
+From: Vendor Billing <billing@vendor.example>
+To: Neil <neil@client.example>
+Subject: =?utf-8?B?SW52b2ljZSAjNDQxMiDigJMgT2N0b2Jlcg==?=
+Date: Fri, 23 Oct 2026 16:19:57 +0000
+Message-ID: <20261023161957.4412@vendor.example>
+Return-Path: bounces@billing.vendor.example
+X-MS-Exchange-Organization-AuthSource:
+ BN2PEPF000044A7.namprd04.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-Forefront-Antispam-Report:
+CIP:203.0.113.20;CTRY:US;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:mx1.vendor.example;PTR:mx1.vendor.example;CAT:NONE;SFS:(13230040)(1800799024);DIR:INB;
+X-Microsoft-Antispam: BCL:0;ARA:13230040|1800799024;
+X-MS-Exchange-Organization-SCL: 1
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"

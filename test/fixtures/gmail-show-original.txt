@@ -1,0 +1,56 @@
+Original Message
+Message ID	<CAF7x9Q2Lr8kWm4Pz@mail.sender.example>
+Created at:	Fri, Oct 23, 2026 at 9:14 AM (Delivered after 263 seconds)
+From:	Alex Rivera <alex@sender.example>
+To:	neil@example.org
+Subject:	Q3 numbers and the renewal date
+SPF:	PASS with IP 192.0.2.45 Learn more
+DKIM:	'PASS' with domain sender.example Learn more
+DMARC:	'PASS' Learn more
+Download original	Copy to clipboard
+Delivered-To: neil@example.org
+Received: by 2002:a05:7300:5c11:b0:1b2:3f4e:aa10 with SMTP id k17csp1184222dyb;
+        Fri, 23 Oct 2026 09:14:06 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IFq0Synthetic0Token0Only
+X-Received: by 2002:a17:90a:6b44:b0:2e2:c1d8:81f3 with SMTP id x4-20020a17090a6b44b0;
+        Fri, 23 Oct 2026 09:14:06 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1792775645; cv=none;
+        d=google.com; s=arc-20240605;
+        b=SyntheticSealValue0001
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=subject:message-id:date:to:from:mime-version:dkim-signature;
+        bh=SyntheticBodyHash0001=; b=SyntheticAmsValue0001
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@sender.example header.s=mail2026 header.b=Xy12Ab34;
+       spf=pass (google.com: domain of alex@sender.example designates 192.0.2.45 as permitted sender) smtp.mailfrom=alex@sender.example;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=sender.example
+Return-Path: <alex@sender.example>
+Received: from mail.sender.example (mail.sender.example. [192.0.2.45])
+        by mx.google.com with ESMTPS id 5b1f17b1804b1-4317d6a2c61si1234567f8f.412.2026.10.23.09.14.05
+        for <neil@example.org>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 23 Oct 2026 09:14:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain of alex@sender.example designates 192.0.2.45 as permitted sender) client-ip=192.0.2.45;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@sender.example header.s=mail2026 header.b=Xy12Ab34;
+       spf=pass (google.com: domain of alex@sender.example designates 192.0.2.45 as permitted sender) smtp.mailfrom=alex@sender.example;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=sender.example
+Received: from filter.sender.example (filter.sender.example [10.40.0.8])
+	by mail.sender.example (Postfix) with ESMTP id 4XbQ2k1Zz5;
+	Fri, 23 Oct 2026 12:13:58 -0400 (EDT)
+Received: from [198.51.100.23] (unknown [198.51.100.23])
+	(Authenticated sender: alex@sender.example)
+	by filter.sender.example (Postfix) with ESMTPSA id 4XbQ0d3Lk1
+	for <neil@example.org>; Fri, 23 Oct 2026 16:09:42 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sender.example; s=mail2026;
+	t=1792771782; h=from:to:subject:date:message-id;
+	bh=SyntheticBodyHash0002=; b=Xy12Ab34SyntheticSignature
+MIME-Version: 1.0
+From: Alex Rivera <alex@sender.example>
+Date: Fri, 23 Oct 2026 09:09:41 -0700
+Message-ID: <CAF7x9Q2Lr8kWm4Pz@mail.sender.example>
+Subject: =?UTF-8?Q?Q3_numbers_and_the_renewal_date?=
+To: Neil <neil@example.org>
+Content-Type: text/plain; charset="UTF-8"
+
+Hi Neil, the numbers are attached.

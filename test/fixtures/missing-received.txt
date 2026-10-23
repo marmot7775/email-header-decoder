@@ -1,0 +1,9 @@
+MIME-Version: 1.0
+Date: Fri, 23 Oct 2026 10:02:44 -0700
+Message-ID: <draft-77a1@laptop.sender.example>
+Subject: Draft: contract notes
+From: Alex Rivera <alex@sender.example>
+To: Jordan Lee <jordan@partner.example>
+Content-Type: text/plain; charset="UTF-8"
+
+Notes go here.

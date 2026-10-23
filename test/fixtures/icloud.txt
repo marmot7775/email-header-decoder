@@ -1,0 +1,30 @@
+Return-Path: <bounce-7f3a@mail.shop.example>
+Original-recipient: rfc822;neil@icloud.example
+Received: from p00-icloudmta-asmtp-us-west-1a-10-percent-4 (pv50p00im-tydg10021701.me.com [17.58.6.44])
+	 by p172-mailgateway-smtp-7d4c9f6b5-x2lqk (mailgateway 2610B12)
+	 with SMTP id 3f1c2a9e-7b0d-4e55-9a61-0c2b8d7e1f40
+	 for <neil@icloud.example>;
+	 Fri, 23 Oct 2026 16:30:14 GMT
+X-ICL-SCORE: 3.33133303330
+X-ICL-INFO: SyntheticInfoToken
+Authentication-Results: bimi.icloud.com; bimi=none
+X-ARC-Info: policy=fail; arc=none
+Authentication-Results: arc.icloud.com; arc=none
+Authentication-Results: dmarc.icloud.com; dmarc=pass header.from=shop.example
+Authentication-Results: dkim-verifier.icloud.com;
+	dkim=pass (2048-bit key) header.d=shop.example header.i=@shop.example header.b=Ab12Cd34
+Authentication-Results: spf.icloud.com; spf=pass (spf.icloud.com: domain of bounce-7f3a@mail.shop.example designates 192.0.2.80 as permitted sender) smtp.mailfrom=bounce-7f3a@mail.shop.example
+Received-SPF: pass (spf.icloud.com: domain of bounce-7f3a@mail.shop.example designates 192.0.2.80 as permitted sender) receiver=spf.icloud.com; client-ip=192.0.2.80; helo=mta-12.mail.shop.example; envelope-from=bounce-7f3a@mail.shop.example
+Received: from mta-12.mail.shop.example (mta-12.mail.shop.example [192.0.2.80])
+	by p00-icloudmta-asmtp-us-west-1a-10-percent-4 (Postfix) with ESMTPS id 8C2A31800211
+	for <neil@icloud.example>; Fri, 23 Oct 2026 16:30:12 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=shop.example; s=k1; h=from:to:subject:date:message-id:list-unsubscribe:list-unsubscribe-post; bh=SyntheticBodyHash0004=; b=Ab12Cd34Synthetic
+From: =?utf-8?Q?Caf=C3=A9_Shop?= <hello@shop.example>
+To: neil@icloud.example
+Subject: =?utf-8?B?WW91ciBvcmRlciBoYXMg?=
+ =?utf-8?B?c2hpcHBlZA==?=
+Date: Fri, 23 Oct 2026 16:30:09 +0000
+Message-ID: <0102019a1b2c3d4e-shop-000001@mail.shop.example>
+List-Unsubscribe: <https://shop.example/u/abc>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+MIME-Version: 1.0

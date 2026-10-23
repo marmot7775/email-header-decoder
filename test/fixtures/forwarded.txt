@@ -1,0 +1,43 @@
+Received: from SJ0PR01MB1234.prod.exchangelabs.com (2603:10b6:a03:1234::5) by
+ BYAPR01MB5678.prod.exchangelabs.com with HTTPS; Thu, 15 Oct 2026 17:02:11
+ +0000
+Received: from DM6PR01CA0001.prod.exchangelabs.com (2603:10b6:5:1234::11) by
+ SJ0PR01MB1234.prod.exchangelabs.com (2603:10b6:a03:1234::5) with Microsoft
+ SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9000.12; Thu, 15 Oct
+ 2026 17:02:09 +0000
+Received: from mail-forwarder.relay.example (198.51.100.25) by
+ DM6PR01CA0001.prod.exchangelabs.com (2603:10b6:5:1234::11) with Microsoft SMTP
+ Server (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.20.9000.12 via Frontend Transport; Thu, 15 Oct 2026 17:02:08 +0000
+Authentication-Results: spf=fail (sender IP is 198.51.100.25)
+ smtp.mailfrom=newsletter.example.net; dkim=fail (body hash did not verify)
+ header.d=newsletter.example.net;dmarc=fail action=oreject
+ header.from=newsletter.example.net;compauth=fail reason=000
+Received-SPF: Fail (protection.outlook.com: domain of newsletter.example.net does
+ not designate 198.51.100.25 as permitted sender)
+ receiver=protection.outlook.com; client-ip=198.51.100.25;
+ helo=mail-forwarder.relay.example;
+X-MS-Exchange-Organization-AuthSource: DM6PR01CA0001.prod.exchangelabs.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-Forefront-Antispam-Report:
+ CIP:198.51.100.25;CTRY:US;LANG:en;SCL:5;SRV:;IPV:NLI;SFV:SPM;H:mail-forwarder.relay.example;PTR:mail-forwarder.relay.example;CAT:SPOOF;SFS:(13230040)(1800799024);DIR:INB;
+X-Microsoft-Antispam: BCL:0;ARA:13230040|1800799024;
+X-MS-Exchange-Organization-SCL: 5
+ARC-Seal: i=1; a=rsa-sha256; s=arc; d=relay.example; cv=none; t=1760547727;
+ b=AbC
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=relay.example; s=arc; h=from:to:subject:date:message-id; bh=xyz=; b=AbC
+ARC-Authentication-Results: i=1; relay.example; spf=pass smtp.mailfrom=bounce.newsletter.example.net; dkim=pass header.d=newsletter.example.net header.s=k1; dmarc=pass header.from=newsletter.example.net
+Received: from out.newsletter.example.net (out.newsletter.example.net [203.0.113.77])
+ by mail-forwarder.relay.example (Postfix) with ESMTPS id 4XyZ
+ for <old-address@relay.example>; Thu, 15 Oct 2026 17:01:55 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=newsletter.example.net; s=k1;
+ h=from:to:subject:date:message-id:list-unsubscribe; bh=abc=; b=AbC
+From: "Example News" <news@newsletter.example.net>
+To: old-address@relay.example
+Subject: This week
+Date: Thu, 15 Oct 2026 17:01:50 +0000
+Message-ID: <weekly-1@newsletter.example.net>
+List-Unsubscribe: <https://newsletter.example.net/u/1>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+MIME-Version: 1.0
