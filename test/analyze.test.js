@@ -122,6 +122,14 @@ test('slowest hop and total transit are stated as sentences that cite their fiel
   assertSentence(total, 'total');
 });
 
+test('a skewed chain reports no negative transit time', () => {
+  const r = HA.analyze(fixture('folded-garbage.txt'));
+  const n = r.chain.notes.find(x => /Transit time cannot be measured/.test(x.technical));
+  assertSentence(n, 'skewed total');
+  assert.equal(n.state, 'caveat');
+  assert.ok(!r.chain.notes.some(x => /End to end: -/.test(x.technical)));
+});
+
 test('a plain external hop is a fail sentence', () => {
   const r = HA.analyze(fixture('two-from.txt'));
   assert.equal(r.chain.hops[0].tls.state, 'fail');

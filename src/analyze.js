@@ -1,52 +1,83 @@
-// analyze.js: the one entry point. analyze(text) returns a plain object
-// the page renders and the tests assert on. The result is JSON-safe
-// except for Date objects on hops, which the renderer formats.
+// analyze.js: the one entry point. analyze(text) returns a plain,
+// JSON-safe object the page renders and the tests assert on.
+//
+// Shapes every step keeps:
+//   Sentence = { state, technical, plain, src }
+//     state is pass | caveat | fail | unknown. caveat is a pass that does
+//     not count or carries a condition. technical and plain are the same
+//     finding for two readers. src lists the field indexes it came from.
+//   Any value the page shows carries src the same way.
+//   verdict (step 3) = { state, headline: Sentence, cause: Sentence,
+//     consequence: Sentence | null, details: [Sentence], fixes: [Sentence],
+//     flags: [Sentence], forwarded: { yes, evidence: [Sentence] } }
+//
+// Step 1 fills input, message, chain and fields. The later sections are
+// null, and pending names the step that fills each one.
 (function (root) {
   'use strict';
   const HA = (root.HA = root.HA || {});
   const P = HA.parse;
+  const say = P.sentence;
 
+  const STEP = 1;
+  const PENDING = { verdict: 3, alignment: 2, auth: 2, decoded: 3 };
+
+  function all(fields, name) { return fields.filter(f => f.lower === name); }
   function first(fields, name) { return fields.find(f => f.lower === name) || null; }
+
+  function buildMessage(fields) {
+    const notes = [];
+    const froms = all(fields, 'from');
+    let from = null;
+    if (froms.length) {
+      const addrs = P.parseAddresses(froms[0].value);
+      if (addrs[0]) from = Object.assign({}, addrs[0], { src: [froms[0].index], count: addrs.length });
+      if (addrs.length > 1) notes.push(say('caveat', 'The From field lists ' + addrs.length + ' addresses. DMARC evaluates one author domain; receivers differ on how they treat the rest.', 'The message names more than one sender, which some mail systems treat with suspicion.', [froms[0].index]));
+      if (!addrs[0] || !addrs[0].domain) notes.push(say('fail', 'The From field holds no usable address, so there is no author domain to check.', 'The sender\'s address is missing or broken.', [froms[0].index]));
+    } else if (fields.length) {
+      notes.push(say('fail', 'There is no From field. RFC 5322 3.6 requires one, and without it there is no author domain to check.', 'The message does not say who sent it.', []));
+    }
+    if (froms.length > 1) {
+      notes.push(say('fail', 'The message carries ' + froms.length + ' From fields. RFC 5322 3.6 allows exactly one; the card shows the first. Receivers handle this differently, and many reject the message.', 'This message names two different senders. That is not allowed, and it is a common trick in forged mail.', froms.map(f => f.index)));
+    }
+    const toF = first(fields, 'to');
+    const subjF = first(fields, 'subject');
+    const dateF = first(fields, 'date');
+    const midF = first(fields, 'message-id');
+    const rpF = first(fields, 'return-path');
+    let returnPath = null;
+    if (rpF) {
+      const a = P.parseAddresses(rpF.value)[0] || { address: '', domain: '', empty: true };
+      returnPath = { address: a.address, domain: a.domain, empty: !!a.empty, src: [rpF.index] };
+    }
+    let date = null;
+    if (dateF) { const d = P.parseDate(dateF.value); date = { text: dateF.value, time: d.time, tzKnown: d.tzKnown, src: [dateF.index] }; }
+    return {
+      from, fromCount: froms.length,
+      to: toF ? { addresses: P.parseAddresses(toF.value), text: toF.decoded, src: [toF.index] } : null,
+      subject: subjF ? { value: subjF.decoded, src: [subjF.index] } : null,
+      date,
+      messageId: midF ? { value: midF.value.replace(/^<|>$/g, '').trim(), src: [midF.index] } : null,
+      returnPath,
+      notes,
+    };
+  }
 
   function analyze(text) {
     const parsed = P.parseHeaders(text);
     const fields = parsed.fields;
-    const fromField = first(fields, 'from');
-    const fromAddrs = fromField ? P.parseAddresses(fromField.value) : [];
-    const fromAddr = fromAddrs[0] || null;
-    const fromDomain = fromAddr ? fromAddr.domain : '';
-
-    const chain = HA.received.buildChain(fields);
-    const auth = HA.auth.buildAuth(fields, fromDomain);
-    const decoded = HA.providers.decodeAll(fields, auth, chain, fromAddr);
-    const verdict = HA.verdict.build({ auth, chain, fields, fromAddr, fromAddrs, decoded });
-
-    const toField = first(fields, 'to');
-    const subj = first(fields, 'subject');
-    const dateField = first(fields, 'date');
-    const mid = first(fields, 'message-id');
-    const message = {
-      from: fromAddr, fromDisplay: fromField ? fromField.decoded : '',
-      to: toField ? P.parseAddresses(toField.value) : [],
-      subject: subj ? subj.decoded : '',
-      date: dateField ? P.parseDate(dateField.value) : null,
-      messageId: mid ? mid.value.replace(/^<|>$/g, '') : '',
-      deliveredTo: (first(fields, 'delivered-to') || { value: '' }).value,
-    };
-
-    // Alignment rows: one per identifier the receiver evaluated.
-    const rows = [];
-    const org = HA.psl.orgDomain(fromDomain);
-    rows.push({ id: 'From', domain: fromDomain, result: '', aligned: null, note: org && org !== fromDomain ? 'organizational domain ' + org : 'organizational domain' });
-    if (auth.spf.reported || auth.spf.domain) rows.push({ id: 'SPF', domain: auth.spf.domain, identity: auth.spf.identity, result: auth.spf.result, aligned: auth.spf.align.aligned, strict: auth.spf.align.strict, mode: auth.spf.align.mode, note: auth.spf.identity === 'helo' ? 'HELO identity only' : auth.spf.identity === 'return-path' ? 'from Return-Path, no SPF result recorded' : '' });
-    for (const k of auth.dkim) rows.push({ id: 'DKIM', domain: k.domain, selector: k.selector, result: k.result || 'not evaluated', aligned: k.align.aligned, strict: k.align.strict, mode: k.align.mode, note: k.unreported ? 'signature present, no result recorded' : (k.matched ? '' : 'result recorded, signature header not found') });
-
     return {
-      version: '0.1',
-      input: { headerLineCount: parsed.headerLineCount, fieldCount: fields.length, bodyPresent: parsed.bodyPresent, blockFound: parsed.blockFound, notes: parsed.notes },
-      message, verdict,
-      alignment: { fromDomain, orgDomain: org, rows, policy: auth.dmarc.policy, computed: auth.computed, reported: auth.dmarc.result },
-      auth, chain, decoded, fields,
+      version: '0.2',
+      step: STEP,
+      input: { blockFound: parsed.blockFound, format: parsed.format, block: parsed.block, fieldCount: fields.length, bodyPresent: parsed.bodyPresent, notes: parsed.notes },
+      message: buildMessage(fields),
+      chain: HA.received.buildChain(fields),
+      verdict: null,
+      alignment: null,
+      auth: null,
+      decoded: null,
+      pending: Object.assign({}, PENDING),
+      fields,
     };
   }
 

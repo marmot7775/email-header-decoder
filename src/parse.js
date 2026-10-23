@@ -7,9 +7,18 @@
 
   // Header names that mark where a real header block starts. Used to
   // skip the summary table Gmail's "Show original" puts above the
-  // headers, mbox "From " lines, and other leading noise.
+  // headers, Outlook's version banner, mbox "From " lines, and other
+  // leading noise.
   const STRONG_ANCHORS = /^(Delivered-To|Return-Path|Received|ARC-Seal|ARC-Message-Signature|ARC-Authentication-Results|Authentication-Results|DKIM-Signature|X-Received|X-Google-Smtp-Source|Received-SPF):/i;
   const FIELD_START = /^([!-9;-~]+):(.*)$/; // RFC 5322 field-name is printable US-ASCII except colon
+  // Names real mail uses. RFC 5322 allows more, but a "name" such as
+  // 16, 2603 or h=from is a folded line that lost its indentation.
+  const PLAUSIBLE_NAME = /^[A-Za-z][A-Za-z0-9_-]*$/;
+  // Fields that can start a header block on their own when no strong anchor is present.
+  const KNOWN = new Set(['from', 'to', 'cc', 'bcc', 'subject', 'date', 'message-id', 'mime-version', 'content-type', 'content-transfer-encoding',
+    'reply-to', 'sender', 'in-reply-to', 'references', 'return-path', 'received', 'delivered-to', 'authentication-results', 'dkim-signature',
+    'received-spf', 'list-unsubscribe', 'list-unsubscribe-post', 'list-id', 'thread-topic', 'thread-index', 'x-mailer', 'user-agent',
+    'arc-seal', 'arc-message-signature', 'arc-authentication-results', 'x-received', 'importance', 'precedence', 'feedback-id']);
 
   function normalizeText(text) {
     return String(text || '')
@@ -18,63 +27,94 @@
       .replace(/ /g, ' ');
   }
 
+  function isFieldStart(line) {
+    const m = FIELD_START.exec(line);
+    return m && PLAUSIBLE_NAME.test(m[1]) ? m : null;
+  }
+
   // Find the header block inside whatever was pasted: a bare header
-  // list, a full .eml, or a copy of a whole "Show original" page.
+  // list, a full .eml, a copy of a whole "Show original" page, or
+  // Outlook's Internet headers box.
   function locateHeaderBlock(lines) {
     let start = -1;
     for (let i = 0; i < lines.length; i++) {
       if (STRONG_ANCHORS.test(lines[i])) { start = i; break; }
     }
+    let weak = false;
     if (start === -1) {
       for (let i = 0; i < lines.length; i++) {
-        if (FIELD_START.test(lines[i]) && lines[i].length < 2000) { start = i; break; }
+        if (isFieldStart(lines[i]) && lines[i].length < 2000) { start = i; weak = true; break; }
       }
     }
-    if (start === -1) return { start: 0, end: 0 };
+    if (start === -1) return null;
     // Walk back to the first line of the contiguous block the anchor sits in.
-    while (start > 0 && lines[start - 1].trim() !== '' && (FIELD_START.test(lines[start - 1]) || /^[ \t]/.test(lines[start - 1]))) start--;
+    while (start > 0 && lines[start - 1].trim() !== '' && (isFieldStart(lines[start - 1]) || /^[ \t]/.test(lines[start - 1]))) start--;
     let end = lines.length;
     for (let i = start; i < lines.length; i++) {
       if (lines[i].trim() === '') { end = i; break; }
     }
+    // Without a strong anchor, the block has to hold at least one field real mail carries.
+    if (weak && !lines.slice(start, end).some(l => { const m = isFieldStart(l); return m && KNOWN.has(m[1].toLowerCase()); })) return null;
     return { start, end };
+  }
+
+  function detectFormat(lines, block, bodyPresent) {
+    const before = lines.slice(0, block.start).join('\n');
+    if (/^Microsoft Mail Internet Headers Version/im.test(before)) return 'outlook-headers';
+    if (/^(Original Message|Download original|Created at:)/im.test(before) || /Copy to clipboard/i.test(before)) return 'gmail-original';
+    if (bodyPresent) return 'eml';
+    return 'bare';
+  }
+
+  // A sentence the page shows. Every one carries a state (pass, caveat,
+  // fail, unknown), a technical wording, a plain wording for a reader
+  // who is not technical, and the indexes of the fields it came from.
+  function sentence(state, technical, plain, src) {
+    return { state, technical, plain, src: (src || []).filter(i => i !== null && i !== undefined) };
   }
 
   // Build fields. Continuation lines start with WSP (RFC 5322 folding).
   // Pastes from some clients lose the leading whitespace, so a line that
-  // cannot be a field start is also treated as a continuation.
+  // cannot be a field start is also treated as a continuation, and so is
+  // an unknown one-word name straight after a field with an empty value
+  // (Outlook drops the indent on X-Forefront-Antispam-Report's CIP: line).
+  // Every field keeps its index and the span of raw lines it came from.
   function parseHeaders(text) {
     const lines = normalizeText(text).split('\n');
-    const { start, end } = locateHeaderBlock(lines);
-    const fields = [];
+    const block = locateHeaderBlock(lines);
     const notes = [];
+    if (!block) {
+      notes.push(sentence('unknown', 'No header block found: no line in the paste has the form Name: value with a field real mail carries.', 'This looks like the text of an email, not its headers. Copy the message source instead; the box below the paste area says where to find it.', []));
+      return { fields: [], notes, block: null, format: 'none', bodyPresent: false, blockFound: false };
+    }
+    const fields = [];
     let current = null;
-    for (let i = start; i < end; i++) {
+    for (let i = block.start; i < block.end; i++) {
       const line = lines[i];
-      const m = FIELD_START.exec(line);
-      const isContinuation = /^[ \t]/.test(line) || !m;
-      if (isContinuation && current) {
+      const m = isFieldStart(line);
+      let continuation = /^[ \t]/.test(line) || !m;
+      if (!continuation && current && current.valueSoFar === '' && !KNOWN.has(m[1].toLowerCase()) && !m[1].includes('-')) continuation = true;
+      if (continuation && current) {
         current.rawLines.push(line);
+        current.lastLine = i;
+        current.valueSoFar += line.trim();
         if (!/^[ \t]/.test(line)) current.looseFold = true;
         continue;
       }
-      if (!m) continue; // garbage before the first field
-      current = { name: m[1], rawLines: [line], firstLine: i, looseFold: false };
+      if (continuation) continue; // garbage before the first field
+      current = { name: m[1], rawLines: [line], firstLine: i, lastLine: i, looseFold: false, valueSoFar: m[2].trim() };
       fields.push(current);
     }
-    for (const f of fields) {
+    const out = fields.map((f, index) => {
       const first = f.rawLines[0].slice(f.name.length + 1);
       const rest = f.rawLines.slice(1);
       // Unfold: join folded lines with a single space, collapse runs of WSP.
-      f.value = [first].concat(rest).map(s => s.replace(/^[ \t]+/, '')).join(' ').replace(/[ \t]+/g, ' ').trim();
-      f.raw = f.rawLines.join('\n');
-      f.lower = f.name.toLowerCase();
-      f.decoded = decodeWords(f.value);
-      delete f.rawLines;
-      if (f.looseFold) notes.push('Folded lines under ' + f.name + ' had lost their leading whitespace and were rejoined.');
-    }
-    const bodyPresent = end < lines.length && lines.slice(end + 1).some(l => l.trim() !== '');
-    return { fields, notes, headerLineCount: end - start, bodyPresent, blockFound: fields.length > 0 };
+      const value = [first].concat(rest).map(s => s.replace(/^[ \t]+/, '')).join(' ').replace(/[ \t]+/g, ' ').trim();
+      if (f.looseFold) notes.push(sentence('caveat', 'Lines under ' + f.name + ' had lost their leading whitespace and were rejoined as one field.', 'Some lines lost their indentation when they were copied, so they were joined back to the header they belong to.', [index]));
+      return { index, name: f.name, lower: f.name.toLowerCase(), value, decoded: decodeWords(value), raw: f.rawLines.join('\n'), lines: [f.firstLine, f.lastLine], looseFold: f.looseFold };
+    });
+    const bodyPresent = block.end < lines.length && lines.slice(block.end + 1).some(l => l.trim() !== '');
+    return { fields: out, notes, block: [block.start, block.end - 1], format: detectFormat(lines, block, bodyPresent), bodyPresent, blockFound: out.length > 0 };
   }
 
   // RFC 2047 encoded words: =?charset?B|Q?text?=
@@ -198,36 +238,46 @@
   }
 
   // RFC 5322 date-time, with the obsolete forms that still show up in
-  // Received lines. Returns {date: Date|null, tzKnown, text}.
-  const ZONES = { UT: 0, UTC: 0, GMT: 0, Z: 0, EST: -300, EDT: -240, CST: -360, CDT: -300, MST: -420, MDT: -360, PST: -480, PDT: -420,
-    CET: 60, CEST: 120, BST: 60, IST: 330, JST: 540, AEST: 600, AEDT: 660 };
+  // Received lines. Returns {time, tzKnown, text}; time is UTC
+  // milliseconds or null. Only the zones RFC 5322 4.3 defines are
+  // trusted. Military letters and other names are read as -0000, which
+  // means UTC with the zone unknown, as 4.3 says to.
+  const ZONES = { UT: 0, UTC: 0, GMT: 0, EST: -300, EDT: -240, CST: -360, CDT: -300, MST: -420, MDT: -360, PST: -480, PDT: -420 };
   const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
   function parseDate(text) {
-    const result = { date: null, tzKnown: true, text: (text || '').trim() };
+    const result = { time: null, tzKnown: false, text: (text || '').trim() };
     if (!text) return result;
     const s = stripComments(text).replace(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s*/i, '');
-    const m = /^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([+-]\d{4}|[A-Za-z]{1,5})?/.exec(s);
-    if (!m) {
-      const d = new Date(s);
-      if (!isNaN(d.getTime())) result.date = d; else result.tzKnown = false;
+    const m = /^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([+-]\d{4}|[A-Za-z]{1,5})?(?:\s|$)/.exec(s);
+    if (m) {
+      // obs-year: two digits are 19xx from 50 up and 20xx below; three digits add 1900.
+      let year = parseInt(m[3], 10);
+      if (m[3].length === 2) year += year < 50 ? 2000 : 1900;
+      else if (m[3].length === 3) year += 1900;
+      const mon = MONTHS[m[2].toLowerCase()];
+      if (mon === undefined) return result;
+      let offsetMin = 0;
+      const z = m[7];
+      if (z && /^[+-]\d{4}$/.test(z)) {
+        const sign = z[0] === '-' ? -1 : 1;
+        offsetMin = sign * (parseInt(z.slice(1, 3), 10) * 60 + parseInt(z.slice(3, 5), 10));
+        result.tzKnown = z !== '-0000'; // -0000 means no zone information
+      } else if (z && ZONES[z.toUpperCase()] !== undefined) {
+        offsetMin = ZONES[z.toUpperCase()];
+        result.tzKnown = true;
+      }
+      result.time = Date.UTC(year, mon, parseInt(m[1], 10), parseInt(m[4], 10), parseInt(m[5], 10), m[6] ? parseInt(m[6], 10) : 0) - offsetMin * 60000;
       return result;
     }
-    let year = parseInt(m[3], 10);
-    if (m[3].length === 2) year += year < 50 ? 2000 : 1900;
-    const mon = MONTHS[m[2].toLowerCase()];
-    if (mon === undefined) return result;
-    let offsetMin = 0;
-    const z = m[7];
-    if (!z) { result.tzKnown = false; }
-    else if (/^[+-]\d{4}$/.test(z)) {
-      const sign = z[0] === '-' ? -1 : 1;
-      offsetMin = sign * (parseInt(z.slice(1, 3), 10) * 60 + parseInt(z.slice(3, 5), 10));
-      if (z === '-0000') result.tzKnown = false; // RFC 5322 3.3: -0000 means no zone information
-    } else if (ZONES[z.toUpperCase()] !== undefined) {
-      offsetMin = ZONES[z.toUpperCase()];
-    } else { result.tzKnown = false; }
-    const utc = Date.UTC(year, mon, parseInt(m[1], 10), parseInt(m[4], 10), parseInt(m[5], 10), m[6] ? parseInt(m[6], 10) : 0);
-    result.date = new Date(utc - offsetMin * 60000);
+    // asctime, as some older MTAs write it: Fri Oct 23 16:30:14 2026. No zone.
+    const a = /^([A-Za-z]{3})\s+(\d{1,2})\s+(\d{1,2}):(\d{2}):(\d{2})\s+(\d{4})/.exec(s);
+    if (a && MONTHS[a[1].toLowerCase()] !== undefined) {
+      result.time = Date.UTC(+a[6], MONTHS[a[1].toLowerCase()], +a[2], +a[3], +a[4], +a[5]);
+      return result;
+    }
+    // ISO 8601 with an explicit offset. Without one the zone would be a guess.
+    const iso = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.exec(s);
+    if (iso) { const t = Date.parse(s.replace(' ', 'T')); if (!isNaN(t)) { result.time = t; result.tzKnown = true; } }
     return result;
   }
 
@@ -247,5 +297,5 @@
     return { tags, order };
   }
 
-  HA.parse = { parseHeaders, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
+  HA.parse = { parseHeaders, sentence, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

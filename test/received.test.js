@@ -75,11 +75,12 @@ test('Exchange Online: mapi submission is internal and its TLS state is unknown'
   assert.deepEqual(c.groups[0].hops, [0, 1]);
 });
 
-test('iCloud: GMT stamps parse, a single-label receiving host counts as internal', () => {
+test('iCloud: GMT stamps parse, two single-label hosts count as internal, the inbound hop does not', () => {
   const c = chainOf('icloud.txt');
   assert.equal(c.count, 2);
   assert.equal(c.hops[0].tls.state, 'pass');
   assert.equal(c.hops[1].delaySec, 2);
+  assert.equal(c.hops[0].internal, false);
   assert.equal(c.hops[1].internal, true);
   assert.match(c.hops[1].internalReason, /single-label/);
   assert.equal(c.hops[1].operator, 'Apple');
