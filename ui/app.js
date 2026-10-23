@@ -11,8 +11,6 @@
   const FORMATS = { 'gmail-original': 'a Gmail Show original copy', 'outlook-headers': 'Outlook Internet headers', eml: 'a full message (.eml)', bare: 'a header block' };
   const STEP_FILLS = {
     verdict: [3, 'Step 3 writes the verdict here: what failed and why in one sentence, with the fix, in technical and plain wording.'],
-    alignment: [2, 'Step 2 fills this: the From domain against the Return-Path and every DKIM d=, each marked aligned or not.'],
-    auth: [2, 'Step 2 fills this: Authentication-Results per method with the host that wrote them, and the ARC chain with cv=.'],
     filters: [3, 'Step 3 fills this: Microsoft, Google, Proofpoint and Mimecast filter verdicts decoded in one place.'],
   };
   const TITLES = { verdict: 'Verdict', alignment: 'Alignment', auth: 'Authentication', filters: 'Filter headers' };
@@ -64,8 +62,8 @@
 
   function renderVerdict() {
     let h = later('verdict');
-    const fails = [].concat(R.message.notes, R.chain.notes).filter(s => s.state === 'fail');
-    if (fails.length) h += '<p class="note-line">Until then, these step 1 findings are marked as failures:</p>' + says(fails);
+    const fails = [].concat(R.message.notes, R.alignment.notes, R.auth.notes, R.chain.notes).filter(s => s.state === 'fail');
+    if (fails.length) h += '<p class="note-line">Until then, these findings are marked as failures:</p>' + says(fails);
     $('verdict').innerHTML = h;
   }
 
@@ -90,6 +88,112 @@
     $('message').innerHTML = '<h2 id="h-message">Message</h2><dl class="meta">' + rows + '</dl>' + says(m.notes);
   }
 
+  // Alignment picture: the From domain in the middle, DKIM d= on one
+  // side, the SPF domain on the other, each connector styled by state.
+  function alignNode(x) {
+    let inner = '<span class="k">' + (x.kind === 'dkim' ? 'DKIM signing domain' : 'SPF domain') + '</span>';
+    if (x.absent) inner += '<span class="d absent">' + (x.kind === 'dkim' ? 'No DKIM signature' : 'No SPF domain') + '</span>';
+    else {
+      inner += '<span class="d mono">' + esc(x.domain) + '</span>';
+      const sub = [];
+      if (x.kind === 'dkim' && x.selector) sub.push('s=' + esc(x.selector));
+      if (x.kind === 'spf' && x.identity) sub.push('from ' + esc(x.identity));
+      if (sub.length) inner += '<span class="sub mono">' + sub.join(' · ') + '</span>';
+      inner += '<span class="res">' + chip(HA.auth.resultState(x.result), x.result ? x.kind + '=' + x.result : 'Not reported') + '</span>';
+    }
+    return '<div class="anode">' + prov(x.src, inner) + '</div>';
+  }
+  function connector(x) {
+    const state = x.absent ? 'unknown' : x.state;
+    const word = x.absent ? 'Absent' : x.word;
+    return '<div class="conn ' + state + '"><span class="wire" aria-hidden="true"></span>' + chip(state, word) + '</div>';
+  }
+  function renderAlignment() {
+    const a = R.alignment;
+    const f = a.from;
+    const dkim = a.rows.filter(x => x.kind === 'dkim');
+    const spf = a.rows.find(x => x.kind === 'spf');
+    const st = (x) => x.absent ? 'unknown' : x.state;
+    const left = (dkim.length ? dkim : [{ kind: 'dkim', absent: true, src: [] }]).map(x => '<div class="arow ' + st(x) + '">' + alignNode(x) + connector(x) + '</div>').join('');
+    const right = '<div class="arow ' + st(spf) + '">' + connector(spf) + alignNode(spf) + '</div>';
+    const showOrg = f.domain && a.rows.some(x => x.state === 'pass' && x.relaxedOnly);
+    let center = '<span class="k">From domain</span>';
+    if (f.domain) {
+      center += '<span class="d mono">' + esc(f.domain) + '</span>';
+      if (showOrg) center += '<span class="org">organizational domain <span class="mono">' + esc(f.org) + '</span>' + (f.approximate ? ' ' + chip('caveat', 'Approximate') : '') + '</span>';
+      else if (f.approximate) center += '<span class="org">' + chip('caveat', 'Approximate') + ' organizational domain</span>';
+    } else center += '<span class="d absent">No From domain</span>';
+    let h = '<h2 id="h-alignment">Alignment <span class="count">recomputed from the identifiers, not copied from the receiver</span></h2>';
+    h += '<div class="apic' + (dkim.length > 1 ? ' multi' : '') + '"><div class="aside left">' + left + '</div><div class="acenter"><div class="anode from">' + prov(f.src, center) + '</div></div><div class="aside right">' + right + '</div></div>';
+    h += '<p class="legend"><span class="lg pass">aligned</span><span class="lg caveat">passed, not aligned</span><span class="lg fail">failed</span><span class="lg unknown">absent or not reported</span></p>';
+    h += says(a.notes);
+    $('alignment').innerHTML = h;
+  }
+
+  const TRUST = { receiver: ['pass', 'Receiver'], 'sender-side': ['unknown', 'Before custody'], unverified: ['unknown', 'Unverified'] };
+  const MATCHED = { host: 'named as a Received by host', operator: 'same operator as a receiving hop', position: 'no authserv-id; tied by position' };
+  function idText(e) {
+    return Object.keys(e.ids).map(k => k + '=' + e.ids[k]).join(' ');
+  }
+  function arBlock(rec) {
+    const t = TRUST[rec.trust];
+    let h = '<div class="arf' + (rec.primary ? ' primary' : '') + (rec.trust === 'unverified' ? ' unverified' : '') + '"><div class="arh">' +
+      '<span class="who mono">' + esc(rec.writer || '(no host named)') + '</span>' +
+      (rec.primary ? '<span class="badge">Primary</span>' : '') + chip(t[0], t[1]) +
+      '<span class="how">' + esc(rec.matchedBy ? MATCHED[rec.matchedBy] + (rec.hopIdx >= 0 ? ', hop ' + (rec.hopIdx + 1) : '') : 'no Received by host matches') + '</span>' + srcBtn(rec.src) + '</div>';
+    if (!rec.entries.length) h += '<p class="absent">' + (rec.none ? 'Reports none: no methods were checked.' : 'No method results could be read.') + '</p>';
+    else h += '<div class="ents">' + rec.entries.map(e => '<div class="ent"><span class="m">' + esc(e.method) + '</span>' + chip(e.state, e.result) +
+      '<span class="id mono">' + esc(idText(e) || '–') + '</span>' + (e.reason ? '<span class="why">reason ' + esc(e.reason) + '</span>' : '') + '</div>').join('') + '</div>';
+    return h + '</div>';
+  }
+  function cvState(set) { return (set.i === 1 && set.cv === 'none') || (set.i > 1 && set.cv === 'pass') ? 'pass' : set.cv ? 'fail' : 'unknown'; }
+  function renderAuth() {
+    const a = R.auth;
+    let h = '<h2 id="h-auth">Authentication</h2>';
+    // Authentication-Results, the primary first, the rest in header order.
+    h += '<h3>Authentication-Results <span class="count">' + a.all.length + ' field' + (a.all.length === 1 ? '' : 's') + '</span></h3>';
+    if (a.all.length) {
+      const order = a.all.filter(r => r.primary).concat(a.all.filter(r => !r.primary));
+      h += order.map(arBlock).join('');
+    } else h += '<p class="absent">' + chip('unknown', 'Absent') + ' No Authentication-Results field in these headers.</p>';
+    if (a.receivedSpf.length) {
+      h += '<div class="arf"><div class="arh"><span class="who">Received-SPF</span>' + srcBtn(a.receivedSpf.flatMap(x => x.src)) + '</div><div class="ents">' +
+        a.receivedSpf.map(x => '<div class="ent"><span class="m">spf</span>' + chip(HA.auth.resultState(x.result), x.result || 'unreadable') + '<span class="id mono">' +
+          esc(['client-ip', 'envelope-from', 'helo', 'receiver'].filter(k => x.props[k]).map(k => k + '=' + x.props[k]).join(' ') || '–') + '</span></div>').join('') + '</div></div>';
+    }
+    // ARC chain, one row per instance.
+    const arc = a.arc;
+    h += '<h3>ARC chain <span class="count">' + (arc.present ? arc.instances.length + ' set' + (arc.instances.length === 1 ? '' : 's') : 'none') + '</span></h3>';
+    if (arc.present) {
+      h += '<ol class="arc">' + arc.instances.map(set => '<li><span class="i mono">i=' + set.i + '</span><div class="body"><div class="arh">' +
+        '<span class="who mono">' + esc(set.sealer.domain || '(no d=)') + '</span>' + (set.sealer.host ? '<span class="how">at ' + esc(set.sealer.host) + (set.hopIdx >= 0 ? ', hop ' + (set.hopIdx + 1) : ', not in the Received chain') + '</span>' : '') +
+        chip(cvState(set), 'cv=' + (set.cv || 'missing')) + srcBtn(set.src) + '</div>' +
+        '<div class="pre"><span class="lbl">Before this hop:</span>' + (set.preForward.length ? set.preForward.map(x => chip(x.state, x.method + '=' + x.result)).join('') : '<span class="absent">no ARC-Authentication-Results</span>') + '</div></div></li>').join('') + '</ol>';
+      h += '<p class="arc-sum">' + chip(arc.state === 'pass' ? 'pass' : 'fail', arc.state === 'pass' ? 'Chain intact' : 'Chain broken') +
+        (a.arcResult ? ' <span>receiver reported</span> ' + chip(HA.auth.resultState(a.arcResult.result), 'arc=' + a.arcResult.result) + srcBtn(a.arcResult.src) : ' <span class="absent">the receiver reported no arc= result</span>') + '</p>';
+    } else if (a.arcResult) {
+      h += '<p class="arc-sum"><span>No ARC set; receiver reported</span> ' + chip(HA.auth.resultState(a.arcResult.result), 'arc=' + a.arcResult.result) + srcBtn(a.arcResult.src) + '</p>';
+    } else h += '<p class="absent">No ARC headers. The message carries no record of being forwarded.</p>';
+    // Reported DMARC beside computed DMARC.
+    const d = a.dmarc, c = a.computed;
+    h += '<h3>DMARC</h3><div class="dm">';
+    let rep = '<span class="k">Reported by the receiver</span>';
+    if (d.reported) {
+      const pol = [d.policy.p && 'p=' + d.policy.p, d.policy.sp && 'sp=' + d.policy.sp, d.policy.dis && 'dis=' + d.policy.dis, d.policy.action && 'action=' + d.policy.action].filter(Boolean).join(' ');
+      rep += chip(d.state, 'dmarc=' + d.result) + (d.headerFrom ? '<span class="sub mono">header.from=' + esc(d.headerFrom) + '</span>' : '') + (pol ? '<span class="sub mono">' + esc(pol) + '</span>' : '') + srcBtn(d.src);
+    } else rep += chip('unknown', 'Not reported') + '<span class="sub">No dmarc= result in the receiver\'s Authentication-Results.</span>';
+    let cmp = '<span class="k">Computed here</span>';
+    if (c.result === 'unknown') cmp += chip('unknown', 'Cannot compute') + '<span class="sub">' + (c.why === 'no-from' ? 'There is no From domain to align with.' : 'The receiver reported no SPF or DKIM results to combine.') + '</span>';
+    else if (c.result === 'depends') cmp += '<span class="modes">' + chip('pass', 'relaxed: pass') + chip('fail', 'strict: fail') + '</span><span class="sub">The DMARC record decides: ' + esc(c.tags.join(' and ')) + ' (relaxed when absent).</span>' + srcBtn(c.src);
+    else cmp += chip(c.result, 'dmarc=' + c.result) + '<span class="sub">' + (c.result === 'pass' ? 'Aligned pass from ' + esc((c.by.strict.length ? c.by.strict : c.by.relaxed).join(', ')) + '.' : 'No method that passed aligns with the From domain.') + '</span>' + srcBtn(c.src);
+    h += '<div class="dmt">' + rep + '</div><div class="dmt">' + cmp + '</div></div>';
+    if (d.disagreement) h += says([d.disagreement]);
+    if (a.compauth) h += '<p class="raw-line"><span class="lbl">Microsoft compauth, raw:</span> <span class="mono">' + prov(a.compauth.src, esc(a.compauth.raw)) + '</span> <span class="absent">Step 3 decodes the reason code.</span></p>';
+    const shown = (n) => (d.disagreement && n.technical === d.disagreement.technical) || /^Microsoft composite authentication/.test(n.technical);
+    h += says(a.notes.filter(n => !shown(n)));
+    $('auth').innerHTML = h;
+  }
+
   function tlsChip(h) { return chip(h.tls.state, h.tls.state === 'pass' || h.tls.state === 'caveat' ? h.tls.label : h.tls.state === 'fail' ? 'Plain' : h.tls.label); }
 
   function hopRow(h, maxDelay, numberLabel) {
@@ -108,9 +212,21 @@
       delay = '<div class="delay"><div class="bar" aria-hidden="true">' + (h.skew ? '' : '<i style="width:' + pct + '%"></i>') + '</div><span class="val">' + esc(fmtDur(h.delaySec)) + '</span></div>';
       if (h.skew) delay += '<div class="facts">' + chip('caveat', 'Clock skew') + '<span>stamped earlier than the hop before it</span></div>';
     } else if (h.index === 0) delay = '<div class="facts"><span class="absent">First stamp, so no delay to measure.</span></div>';
-    return '<li class="hop' + (h.slowest ? ' slowest' : '') + '"><span class="n">' + numberLabel + '</span><div class="body">' +
+    const forgeable = R.chain.trust.boundaryIdx > h.index;
+    return '<li class="hop' + (h.slowest ? ' slowest' : '') + (forgeable ? ' sender-side' : '') + '"><span class="n">' + numberLabel + '</span><div class="body">' +
       '<div class="route">' + prov(h.src, route) + (h.slowest ? ' <span class="slow-word">slowest</span>' : '') + '</div>' +
       '<div class="facts">' + facts.join('') + '</div>' + delay + '</div></li>';
+  }
+
+  // The trust line: where the receiver took custody. Hops above it were
+  // written by the sender's side.
+  function trustRow(c) {
+    const t = c.trust;
+    const origin = t.originPrivate
+      ? '<span>inside ' + esc(t.operator) + '\'s own network' + (t.originIp ? ', from private address <span class="mono">' + esc(t.originIp) + '</span>' : '') + '</span>'
+      : '<span>' + esc(t.operator) + ' took it from <span class="mono ip-o">' + esc(t.originIp || 'an unrecorded address') + '</span>' + (t.originHelo ? ' <span class="sub">which called itself <span class="mono">' + esc(t.originHelo) + '</span></span>' : '') + '</span>';
+    const above = t.boundaryIdx ? '<span class="sub">Above this line: ' + t.boundaryIdx + ' hop' + (t.boundaryIdx === 1 ? '' : 's') + ' written by the sender\'s side, which can be forged.</span>' : '';
+    return '<li class="trust" aria-label="Trust line"><span class="tl" aria-hidden="true"></span><div class="tt"><strong>Receiver took custody here</strong>' + origin + srcBtn(t.src) + above + '</div></li>';
   }
 
   function renderPath() {
@@ -119,9 +235,11 @@
     if (!c.count) { $('path').innerHTML = h + says(c.notes); return; }
     const maxDelay = Math.max.apply(null, [0].concat(c.hops.map(x => x.delaySec || 0), c.groups.map(g => g.delaySec || 0)));
     h += '<div class="summary"><span class="big">' + (c.totalSec !== null && c.totalSec >= 0 ? esc(fmtDur(c.totalSec)) : '–') + '</span><span class="lbl">end to end</span>' +
-      (c.clockSkew ? chip('caveat', 'Clock skew') : '') + (c.originIp ? '<span class="lbl">first public address <span class="mono">' + esc(c.originIp) + '</span></span>' : '') + '</div>';
+      (c.clockSkew ? chip('caveat', 'Clock skew') : '') + (c.trust.boundaryIdx >= 0 && !c.trust.originPrivate && c.originIp ? '<span class="lbl">origin <span class="mono">' + esc(c.originIp) + '</span></span>' : '') + '</div>';
     h += '<ol class="hops">';
+    const t = c.trust;
     for (const g of c.groups) {
+      if (t.boundaryIdx >= 0 && g.hops.includes(t.boundaryIdx)) h += trustRow(c);
       if (g.kind === 'hop') { h += hopRow(c.hops[g.hops[0]], maxDelay, String(g.hops[0] + 1)); continue; }
       const hs = g.hops.map(i => c.hops[i]);
       const states = hs.map(x => x.tls.state);
@@ -136,6 +254,7 @@
     }
     h += '</ol>';
     h += says(c.notes);
+    if (t.boundaryIdx > 0) h = h.replace('<ol class="hops">', '<ol class="hops has-trust">');
     h += '<p class="note-line">A delay is the time between the previous stamp and this one. Hops inside one operator (mapi, private addresses, two hosts of one company) are grouped; open a group to see each hop.</p>';
     $('path').innerHTML = h;
   }
@@ -201,8 +320,8 @@
     const openGroups = Array.from(document.querySelectorAll('#path details[open]')).map(d => d.dataset.group);
     $('read-as').textContent = 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + R.fields.length + ' fields, ' + R.chain.count + ' Received.';
     renderVerdict(); renderMessage();
-    $('alignment').innerHTML = later('alignment');
-    $('auth').innerHTML = later('auth');
+    renderAlignment();
+    renderAuth();
     renderPath();
     $('filters').innerHTML = later('filters');
     renderRaw();

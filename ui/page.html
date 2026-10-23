@@ -1,4 +1,4 @@
-<title>Header Verdict, step 1</title>
+<title>Header Verdict, step 2</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
@@ -118,7 +118,7 @@ button { font: inherit; cursor: pointer; }
 .says { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
 .say { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; font-size: var(--font-sm); line-height: 1.55; }
 .say .st { margin-top: 1px; }
-.say .txt { min-width: 0; max-width: 68ch; }
+.say .txt { min-width: 0; max-width: 68ch; overflow-wrap: anywhere; }
 .say .src { grid-column: 2; justify-self: start; }
 
 /* Provenance: anything with a source can light its raw lines */
@@ -186,6 +186,100 @@ details.raw > summary .count { font-weight: 400; color: var(--text-2); font-size
 footer { color: var(--muted); font-size: var(--font-sm); max-width: 68ch; display: grid; gap: 6px; }
 footer p { margin: 0; }
 
+/* Sub-headings inside a card */
+.card h3 { font-size: var(--font-sm); font-weight: 600; margin: 18px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.card h3:first-of-type { margin-top: 4px; }
+.card h3 .count { font-weight: 400; color: var(--text-2); }
+.badge { font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--primary); border: 1px solid var(--primary-border); background: var(--primary-subtle); border-radius: 999px; padding: 3px 8px; line-height: 1; }
+
+/* Alignment picture. Wires carry the state in color, line style and word. */
+.apic { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9rem, 15rem) minmax(0, 1fr); align-items: center; gap: 0; }
+.aside { display: grid; gap: 10px; min-width: 0; }
+.aside.left { padding-right: 0; }
+.apic.multi .aside.left { border-right: 2px solid var(--border-strong); }
+.arow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(6.5rem, auto); align-items: center; min-width: 0; }
+.aside.right .arow { grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr); }
+.anode { min-width: 0; }
+.anode > .prov, .anode > span:not(.prov) { display: grid; gap: 3px; width: 100%; border: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong); border-radius: var(--radius); padding: 10px 12px; background: var(--raised); }
+.anode .prov:hover, .anode .prov.on { border-color: var(--primary); }
+.anode .k { font-size: var(--font-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.anode .d { font-weight: 600; overflow-wrap: anywhere; }
+.anode .sub { color: var(--text-2); font-size: var(--font-xs); }
+.anode .res { margin-top: 2px; }
+.anode .org { font-size: var(--font-xs); color: var(--text-2); display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; border-top: 1px dashed var(--border); padding-top: 5px; margin-top: 3px; }
+.anode.from > .prov, .anode.from > span { border-width: 2px; border-color: var(--primary-border); background: var(--primary-subtle); text-align: center; justify-items: center; }
+.conn { position: relative; display: grid; place-items: center; min-height: 44px; padding: 0 2px; }
+.conn .wire { position: absolute; left: 0; right: 0; top: 50%; border-top: 3px solid var(--unknown); transform: translateY(-50%); }
+.conn .st { position: relative; background: var(--surface); }
+.conn.pass .wire { border-top: 3px solid var(--pass); }
+.conn.caveat .wire { border-top: 3px dashed var(--caveat); }
+.conn.fail .wire { border-top: 3px solid var(--fail); }
+.conn.unknown .wire { border-top: 3px dotted var(--unknown); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 0; font-size: var(--font-xs); color: var(--muted); }
+.legend .lg::before { content: ''; display: inline-block; width: 22px; vertical-align: middle; margin-right: 6px; border-top: 3px solid; }
+.legend .lg.pass::before { border-top-color: var(--pass); }
+.legend .lg.caveat::before { border-top-style: dashed; border-top-color: var(--caveat); }
+.legend .lg.fail::before { border-top-color: var(--fail); }
+.legend .lg.unknown::before { border-top-style: dotted; border-top-color: var(--unknown); }
+
+/* Authentication box */
+.arf { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; min-width: 0; }
+.arf.primary { border-color: var(--primary-border); }
+.arf.unverified { border-style: dashed; }
+.arh { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; min-width: 0; }
+.arh .who { font-weight: 600; overflow-wrap: anywhere; }
+.arh .how { color: var(--muted); font-size: var(--font-xs); }
+.ents { display: grid; gap: 6px; margin-top: 8px; }
+.ent { display: grid; grid-template-columns: 5.5rem auto 1fr; gap: 4px 10px; align-items: center; font-size: var(--font-sm); min-width: 0; }
+.ent .st { justify-self: start; }
+.ent .m { font-family: var(--font-mono); font-size: var(--font-xs); color: var(--text-2); }
+.ent .id { overflow-wrap: anywhere; min-width: 0; color: var(--text-2); font-size: var(--font-xs); }
+.ent .why { grid-column: 3; color: var(--muted); font-size: var(--font-xs); }
+ol.arc { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--border); }
+ol.arc li { display: grid; grid-template-columns: 2.75rem 1fr; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); min-width: 0; }
+ol.arc .i { color: var(--muted); font-size: var(--font-sm); padding-top: 3px; }
+ol.arc .body { display: grid; gap: 6px; min-width: 0; }
+.pre { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: var(--font-sm); }
+.pre .lbl, .raw-line .lbl { color: var(--muted); font-size: var(--font-xs); }
+.arc-sum { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 10px 0 0; font-size: var(--font-sm); color: var(--text-2); }
+.dm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dmt { display: grid; gap: 6px; align-content: start; justify-items: start; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; min-width: 0; }
+.dmt .k { font-size: var(--font-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.dmt .sub { color: var(--text-2); font-size: var(--font-sm); overflow-wrap: anywhere; }
+.dmt .modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.raw-line { margin: 12px 0 0; font-size: var(--font-sm); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+
+/* Trust line across the path */
+.hop.sender-side .route { color: var(--text-2); }
+li.trust { position: relative; display: grid; grid-template-columns: 2.25rem 1fr; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+li.trust .tl { grid-column: 1 / -1; grid-row: 1; height: 0; border-top: 3px solid var(--primary); align-self: start; margin-top: -13px; }
+li.trust .tt { grid-column: 2; grid-row: 1; display: grid; gap: 4px; font-size: var(--font-sm); justify-items: start; }
+li.trust strong { color: var(--primary); font-size: var(--font-xs); letter-spacing: 0.06em; text-transform: uppercase; }
+li.trust .ip-o { font-weight: 600; color: var(--text); }
+li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
+
+@media (max-width: 640px) {
+  /* Phone: the From domain on top, a spine down from it, and one branch
+     per identifier, so no wire ever runs from one identifier to another. */
+  .apic { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+  .apic.multi .aside.left { border-right: 0; }
+  .acenter { order: -1; }
+  .aside { padding-left: 24px; gap: 12px; }
+  .arow, .aside.right .arow { position: relative; grid-template-columns: 1fr; gap: 4px; }
+  .arow::after { content: ''; position: absolute; left: -15px; top: -12px; bottom: 0; border-left: 2px solid var(--border-strong); }
+  .aside.right .arow::after { bottom: 50%; }
+  .arow::before { content: ''; position: absolute; left: -15px; width: 15px; top: 50%; border-top: 3px solid var(--unknown); }
+  .arow.pass::before { border-top: 3px solid var(--pass); }
+  .arow.caveat::before { border-top: 3px dashed var(--caveat); }
+  .arow.fail::before { border-top: 3px solid var(--fail); }
+  .arow.unknown::before { border-top: 3px dotted var(--unknown); }
+  .conn { order: -1; min-height: 0; place-items: start; padding: 0; }
+  .conn .wire { display: none; }
+  .dm { grid-template-columns: 1fr; }
+  .ent { grid-template-columns: 4.5rem 1fr; }
+  .ent .id, .ent .why { grid-column: 1 / -1; }
+}
+
 @media (max-width: 520px) {
   .meta { grid-template-columns: 1fr; gap: 2px; }
   .meta dd { margin-bottom: 8px; }
@@ -198,9 +292,9 @@ footer p { margin: 0; }
 
 <div class="wrap">
   <header class="top">
-    <span class="eyebrow">Step 1 of 4: parser and path</span>
+    <span class="eyebrow">Step 2 of 4: authentication, ARC and alignment</span>
     <h1>Header Verdict</h1>
-    <p>Paste the raw headers of a message that arrived. This step reads the message and the path it took; the authentication checks and the verdict come in later steps.</p>
+    <p>Paste the raw headers of a message that arrived. This step reads the message, the path it took, and its authentication, and works the DMARC alignment out for itself instead of copying the receiver's answer. The verdict comes in step 3.</p>
   </header>
 
   <section class="card input" id="input-panel" aria-label="Paste headers">
@@ -217,6 +311,9 @@ footer p { margin: 0; }
         <button class="link-btn" type="button" data-sample="gmail">Gmail</button>
         <button class="link-btn" type="button" data-sample="exchange">Exchange Online</button>
         <button class="link-btn" type="button" data-sample="forwarded">Forwarded</button>
+        <button class="link-btn" type="button" data-sample="arc">ARC chain</button>
+        <button class="link-btn" type="button" data-sample="twodkim">Two DKIM</button>
+        <button class="link-btn" type="button" data-sample="relaxed">Subdomain</button>
       </span>
     </div>
     <p class="hint">Gmail: More, Show original, Copy to clipboard. Outlook: File, Properties, Internet headers. Outlook on the web: More actions, View, View message source. Apple Mail: View, Message, Raw Source.</p>
@@ -243,6 +340,7 @@ footer p { margin: 0; }
   <footer>
     <p>Reads the headers as the receiving servers wrote them. It makes no network requests, queries no DNS and verifies no signatures, and it never sends what you paste anywhere.</p>
     <p>Received dates follow RFC 5322, including the obsolete zones; a zone it cannot trust is read as UTC and marked. TLS is taken from each hop's with clause (RFC 3848) and the comments around it.</p>
+    <p>Alignment uses the SPF and DKIM results the receiver reported (RFC 8601) and checks each identifier against the From domain itself (RFC 7489). The organizational domain comes from a short built-in suffix list, not DNS, and the page marks it when that is a guess. ARC (RFC 8617) is checked for structure only; seals are not verified.</p>
   </footer>
 </div>
 <!-- SCRIPTS -->
