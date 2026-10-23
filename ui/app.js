@@ -1,176 +1,239 @@
 // app.js: rendering only. Takes the analyze() result and writes the page.
+// No parsing logic lives here; every value comes from the result object,
+// and every value with a src can light its raw lines.
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtDur = HA.verdict.fmtDur;
-  const lvlPill = (lvl, text) => '<span class="pill ' + esc(lvl) + '">' + esc(text) + '</span>';
-  const resultLevel = (r) => r === 'pass' ? 'ok' : (r === 'fail' || r === 'permerror' || r === 'softfail') ? 'bad' : (r === 'none' || r === 'neutral' || r === 'temperror' || r === 'policy') ? 'warn' : 'info';
+  const fmtDur = HA.received.fmtDur;
 
-  function fmtDate(d) {
-    if (!d) return '';
-    try { return d.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC'); } catch (e) { return ''; }
+  const STATES = { pass: ['✓', 'Pass'], caveat: ['!', 'Caveat'], fail: ['✕', 'Fail'], unknown: ['?', 'Unknown'] };
+  const FORMATS = { 'gmail-original': 'a Gmail Show original copy', 'outlook-headers': 'Outlook Internet headers', eml: 'a full message (.eml)', bare: 'a header block' };
+  const STEP_FILLS = {
+    verdict: [3, 'Step 3 writes the verdict here: what failed and why in one sentence, with the fix, in technical and plain wording.'],
+    alignment: [2, 'Step 2 fills this: the From domain against the Return-Path and every DKIM d=, each marked aligned or not.'],
+    auth: [2, 'Step 2 fills this: Authentication-Results per method with the host that wrote them, and the ARC chain with cv=.'],
+    filters: [3, 'Step 3 fills this: Microsoft, Google, Proofpoint and Mimecast filter verdicts decoded in one place.'],
+  };
+  const TITLES = { verdict: 'Verdict', alignment: 'Alignment', auth: 'Authentication', filters: 'Filter headers' };
+
+  let R = null;
+  let voice = 'technical';
+  try { if (localStorage.getItem('hv-voice') === 'plain') voice = 'plain'; } catch (e) { /* storage blocked */ }
+
+  // State chip: symbol and word carry the state, color repeats it.
+  function chip(state, label) {
+    const s = STATES[state] || STATES.unknown;
+    const word = label || s[1];
+    const sr = label && label !== s[1] ? '<span class="sr-only">' + s[1] + ': </span>' : '';
+    return '<span class="st ' + state + '"><span class="sym" aria-hidden="true">' + s[0] + '</span>' + sr + esc(word) + '</span>';
   }
 
-  function renderVerdict(r) {
-    const v = r.verdict;
-    const pillFor = { pass: ['ok', 'Pass'], fail: ['bad', 'Fail'], none: ['warn', 'No policy'], unknown: ['info', 'Not determined'] }[v.status] || ['info', v.status];
-    let h = '<div class="head">' + lvlPill(pillFor[0], pillFor[1]) + '<h3>' + esc(v.headline) + '</h3>' + (v.forwarded ? lvlPill('info', 'Forwarded') : '') + '</div>';
-    h += '<p class="cause">' + esc(v.cause) + '</p>';
-    if (v.policyText) h += '<p class="policy">' + esc(v.policyText) + '</p>';
-    if (v.detail.length) h += '<ul class="detail">' + v.detail.map(d => '<li>' + esc(d) + '</li>').join('') + '</ul>';
-    if (v.fixes.length) h += '<div class="fixes"><h4>' + (v.status === 'pass' ? 'Worth knowing' : 'What to change') + '</h4><ol>' + v.fixes.map(f => '<li>' + esc(f) + '</li>').join('') + '</ol></div>';
-    if (v.flags.length) h += '<div class="flags">' + v.flags.map(f => '<div class="flag">' + lvlPill(f.level, f.level === 'bad' ? 'Problem' : f.level === 'warn' ? 'Watch' : 'Note') + '<span>' + esc(f.text) + '</span></div>').join('') + '</div>';
-    if (v.forwardEvidence.length) h += '<p class="note">Forwarding evidence: ' + esc(v.forwardEvidence.join('; ')) + '.</p>';
-    const el = $('verdict');
-    el.className = 'panel verdict ' + v.status;
-    el.innerHTML = h;
+  function linesOf(src) {
+    const ls = [];
+    for (const i of src || []) { const f = R.fields[i]; if (f) ls.push(f.lines[0] + 1, f.lines[1] + 1); }
+    if (!ls.length) return '';
+    const lo = Math.min.apply(null, ls), hi = Math.max.apply(null, ls);
+    return lo === hi ? 'L' + lo : 'L' + lo + '–' + hi;
+  }
+  function srcAttr(src) { return ' data-src="' + esc((src || []).join(',')) + '"'; }
+  function srcBtn(src) {
+    if (!src || !src.length) return '';
+    const names = Array.from(new Set(src.map(i => R.fields[i] && R.fields[i].name))).join(', ');
+    return '<button type="button" class="src"' + srcAttr(src) + ' aria-label="Show source lines: ' + esc(names) + ', ' + linesOf(src) + '">' + linesOf(src) + '</button>';
+  }
+  function prov(src, html) {
+    if (!src || !src.length) return html;
+    return '<button type="button" class="prov"' + srcAttr(src) + ' title="Show the raw lines this came from">' + html + '</button>';
   }
 
-  function renderMessage(r) {
-    const m = r.message;
-    const from = m.from ? (m.from.display ? m.from.display + ' <' + m.from.address + '>' : m.from.address) : '(none)';
-    const rows = [
-      ['From', from],
-      ['To', m.to.map(a => a.address).join(', ') || ''],
-      ['Subject', m.subject],
-      ['Date', m.date && m.date.date ? fmtDate(m.date.date) + (m.date.tzKnown ? '' : ' (zone unknown)') : (m.date ? m.date.text : '')],
-      ['Message-ID', m.messageId],
-      ['Delivered to', m.deliveredTo],
-      ['Received by', r.auth.primary ? (r.auth.primary.authserv || (r.auth.compauth ? 'Microsoft 365 (no authserv-id written)' : 'unnamed')) : ''],
-      ['Sent through', r.decoded.platform.name ? r.decoded.platform.name + (r.decoded.platform.confident ? '' : ' (weak evidence)') + ' (' + r.decoded.platform.evidence.map(e => e.what).join(', ') + ')' : (r.decoded.platform.xmailer ? r.decoded.platform.xmailer : 'not identified')],
-      ['Origin', r.chain.originIp ? r.chain.originIp + (r.chain.originHost ? ' (' + r.chain.originHost + ')' : '') : ''],
-    ].filter(x => x[1]);
-    $('message').innerHTML = '<h2>Message</h2><dl class="meta">' + rows.map(x => '<dt>' + esc(x[0]) + '</dt><dd' + (/Message-ID|Origin/.test(x[0]) ? ' class="mono"' : '') + '>' + esc(x[1]) + '</dd>').join('') + '</dl>';
+  function says(list) {
+    if (!list || !list.length) return '';
+    return '<ul class="says">' + list.map(s => '<li class="say">' + chip(s.state) + '<span class="txt">' + esc(s[voice]) + '</span>' + srcBtn(s.src) + '</li>').join('') + '</ul>';
   }
 
-  function renderAlignment(r) {
-    const a = r.alignment;
-    if (!a.fromDomain) { $('alignment').innerHTML = '<h2>Alignment</h2><p class="note">No From domain to align against.</p>'; return; }
-    let h = '<h2>Alignment with ' + esc(a.fromDomain) + '</h2><div class="tbl"><table><thead><tr><th>Identifier</th><th>Domain</th><th>Result</th><th>Aligned</th><th>Note</th></tr></thead><tbody>';
-    for (const row of a.rows) {
-      const aligned = row.aligned === null ? '' : row.aligned ? lvlPill('ok', row.strict ? 'Yes, strict' : 'Yes, relaxed') : lvlPill('bad', 'No');
-      h += '<tr><td>' + esc(row.id) + (row.selector ? ' <span class="mono">s=' + esc(row.selector) + '</span>' : '') + (row.identity === 'helo' ? ' (HELO)' : '') + '</td><td class="mono">' + esc(row.domain || '(none)') + '</td><td>' + (row.result ? lvlPill(resultLevel(row.result), row.result) : '') + '</td><td>' + aligned + '</td><td>' + esc(row.note || '') + '</td></tr>';
+  function fmtUtc(ms) {
+    if (ms === null || ms === undefined) return '';
+    return new Date(ms).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
+  }
+
+  function later(key) {
+    const [step, text] = STEP_FILLS[key];
+    return '<h2 id="h-' + key + '">' + TITLES[key] + '</h2><p class="later">' + chip('unknown', 'Step ' + step) + '<span>' + esc(text) + '</span></p>';
+  }
+
+  function renderVerdict() {
+    let h = later('verdict');
+    const fails = [].concat(R.message.notes, R.chain.notes).filter(s => s.state === 'fail');
+    if (fails.length) h += '<p class="note-line">Until then, these step 1 findings are marked as failures:</p>' + says(fails);
+    $('verdict').innerHTML = h;
+  }
+
+  function renderMessage() {
+    const m = R.message;
+    const row = (label, html) => '<dt>' + esc(label) + '</dt><dd>' + html + '</dd>';
+    const absent = (what) => chip('unknown', 'Absent') + ' <span class="absent">' + esc(what) + '</span>';
+    let rows = '';
+    if (m.from) {
+      const who = m.from.display ? esc(m.from.display) + ' <span class="sub mono">&lt;' + esc(m.from.address) + '&gt;</span>' : '<span class="mono">' + esc(m.from.address) + '</span>';
+      rows += row('From', prov(m.from.src, who) + (m.fromCount > 1 ? ' ' + chip('fail', m.fromCount + ' From fields') : ''));
+    } else rows += row('From', absent('No From field in these headers.'));
+    rows += row('To', m.to ? prov(m.to.src, esc(m.to.addresses.map(a => a.display ? a.display + ' <' + a.address + '>' : a.address).join(', ') || m.to.text)) : absent('No To field in these headers.'));
+    rows += row('Subject', m.subject ? prov(m.subject.src, esc(m.subject.value || '(empty)')) : absent('No Subject field in these headers.'));
+    if (m.date) {
+      const utc = m.date.time !== null ? '<span class="sub mono">' + esc(fmtUtc(m.date.time)) + '</span>' : '';
+      rows += row('Date', prov(m.date.src, esc(m.date.text)) + utc + (m.date.time === null ? ' ' + chip('unknown', 'Unreadable') : !m.date.tzKnown ? ' ' + chip('caveat', 'Zone unknown') : ''));
+    } else rows += row('Date', absent('No Date field in these headers.'));
+    rows += row('Message-ID', m.messageId ? prov(m.messageId.src, '<span class="mono">' + esc(m.messageId.value) + '</span>') : absent('No Message-ID field in these headers.'));
+    if (m.returnPath) rows += row('Return-Path domain', prov(m.returnPath.src, m.returnPath.empty ? '<span class="mono">&lt;&gt;</span> <span class="sub">empty, the null sender that bounces use</span>' : '<span class="mono">' + esc(m.returnPath.domain || m.returnPath.address) + '</span>'));
+    else rows += row('Return-Path domain', absent('No Return-Path field. The receiving server adds it at delivery, so a sent copy has none.'));
+    $('message').innerHTML = '<h2 id="h-message">Message</h2><dl class="meta">' + rows + '</dl>' + says(m.notes);
+  }
+
+  function tlsChip(h) { return chip(h.tls.state, h.tls.state === 'pass' || h.tls.state === 'caveat' ? h.tls.label : h.tls.state === 'fail' ? 'Plain' : h.tls.label); }
+
+  function hopRow(h, maxDelay, numberLabel) {
+    const from = h.from ? esc(h.fromHost || '(unnamed)') + (h.fromIp && h.fromHost.indexOf(h.fromIp) === -1 ? ' <span class="ip">' + esc(h.fromIp) + '</span>' : '') : '<span class="ip">(handoff inside the server)</span>';
+    const route = from + '<span class="arrow" aria-label="to">→</span>' + esc(h.byHost || '(unnamed)');
+    const facts = [];
+    facts.push(tlsChip(h));
+    if (h.protocol) facts.push('<span>with ' + esc(h.protocol) + (h.authenticated ? ', authenticated' : '') + '</span>');
+    if (h.internal) facts.push('<span title="' + esc(h.internalReason) + '">internal</span>');
+    if (h.time !== null) facts.push('<span class="time">' + esc(fmtUtc(h.time)) + (h.tzKnown ? '' : ' (zone unknown)') + '</span>');
+    else facts.push(chip('unknown', 'No readable date'));
+    facts.push(srcBtn(h.src));
+    let delay = '';
+    if (h.delaySec !== null) {
+      const pct = h.delaySec > 0 && maxDelay > 0 ? Math.max(1, Math.round(h.delaySec / maxDelay * 100)) : 0;
+      delay = '<div class="delay"><div class="bar" aria-hidden="true">' + (h.skew ? '' : '<i style="width:' + pct + '%"></i>') + '</div><span class="val">' + esc(fmtDur(h.delaySec)) + '</span></div>';
+      if (h.skew) delay += '<div class="facts">' + chip('caveat', 'Clock skew') + '<span>stamped earlier than the hop before it</span></div>';
+    } else if (h.index === 0) delay = '<div class="facts"><span class="absent">First stamp, so no delay to measure.</span></div>';
+    return '<li class="hop' + (h.slowest ? ' slowest' : '') + '"><span class="n">' + numberLabel + '</span><div class="body">' +
+      '<div class="route">' + prov(h.src, route) + (h.slowest ? ' <span class="slow-word">slowest</span>' : '') + '</div>' +
+      '<div class="facts">' + facts.join('') + '</div>' + delay + '</div></li>';
+  }
+
+  function renderPath() {
+    const c = R.chain;
+    let h = '<h2 id="h-path">Path <span class="count">' + c.count + ' hop' + (c.count === 1 ? '' : 's') + ', oldest first</span></h2>';
+    if (!c.count) { $('path').innerHTML = h + says(c.notes); return; }
+    const maxDelay = Math.max.apply(null, [0].concat(c.hops.map(x => x.delaySec || 0), c.groups.map(g => g.delaySec || 0)));
+    h += '<div class="summary"><span class="big">' + (c.totalSec !== null && c.totalSec >= 0 ? esc(fmtDur(c.totalSec)) : '–') + '</span><span class="lbl">end to end</span>' +
+      (c.clockSkew ? chip('caveat', 'Clock skew') : '') + (c.originIp ? '<span class="lbl">first public address <span class="mono">' + esc(c.originIp) + '</span></span>' : '') + '</div>';
+    h += '<ol class="hops">';
+    for (const g of c.groups) {
+      if (g.kind === 'hop') { h += hopRow(c.hops[g.hops[0]], maxDelay, String(g.hops[0] + 1)); continue; }
+      const hs = g.hops.map(i => c.hops[i]);
+      const states = hs.map(x => x.tls.state);
+      const worst = ['fail', 'caveat', 'unknown', 'pass'].find(s => states.includes(s));
+      const pct = g.delaySec > 0 && maxDelay > 0 ? Math.max(1, Math.round(g.delaySec / maxDelay * 100)) : 0;
+      const slow = hs.some(x => x.slowest);
+      h += '<li class="hop group' + (slow ? ' slowest' : '') + '"><span class="n">' + (g.hops[0] + 1) + '–' + (g.hops[g.hops.length - 1] + 1) + '</span><div class="body"><details data-group="' + g.hops[0] + '"><summary>' +
+        '<span class="grp-title">' + hs.length + ' internal hops inside ' + esc(g.operator) + (slow ? ' <span class="slow-word">slowest</span>' : '') + ' <span class="chev"><span class="closed">Show hops</span><span class="open">Hide hops</span></span></span>' +
+        '<span class="facts">' + chip(worst, worst === 'pass' ? 'TLS on every hop' : worst === 'unknown' ? 'TLS not recorded on every hop' : worst === 'caveat' ? 'TLS with caveats' : 'Plain on a hop') + srcBtn(g.src) + '</span>' +
+        (g.delaySec !== null ? '<span class="delay"><span class="bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span><span class="val">' + esc(fmtDur(g.delaySec)) + '</span></span>' : '') +
+        '</summary><ol class="inner">' + hs.map(x => hopRow(x, maxDelay, String(x.index + 1))).join('') + '</ol></details></div></li>';
     }
-    h += '</tbody></table></div>';
-    const p = a.policy;
-    const bits = [];
-    if (p.p) bits.push('p=' + p.p); if (p.sp) bits.push('sp=' + p.sp); if (p.action) bits.push('action=' + p.action); if (p.dis) bits.push('disposition ' + p.dis);
-    bits.push('adkim=' + p.adkim + ' aspf=' + p.aspf + (p.source === 'reported' ? '' : ' (assumed relaxed; not in the headers)'));
-    h += '<p class="note">Receiver reported DMARC ' + esc(a.reported || 'nothing') + '. Policy as seen: ' + esc(bits.join(', ')) + '. Computed from identifiers: ' + (a.computed.pass ? 'pass' : 'fail') + (a.computed.byDkim ? ' via DKIM' : '') + (a.computed.bySpf ? (a.computed.byDkim ? ' and SPF' : ' via SPF') : '') + '.</p>';
-    $('alignment').innerHTML = h;
+    h += '</ol>';
+    h += says(c.notes);
+    h += '<p class="note-line">A delay is the time between the previous stamp and this one. Hops inside one operator (mapi, private addresses, two hosts of one company) are grouped; open a group to see each hop.</p>';
+    $('path').innerHTML = h;
   }
 
-  function renderAuth(r) {
-    const A = r.auth;
-    let h = '<h2>Authentication results</h2>';
-    if (!A.all.length) h += '<p class="note">No Authentication-Results header present.</p>';
-    A.all.forEach((ar, i) => {
-      h += '<div class="card" style="margin-bottom:10px"><h4>' + (i === 0 ? 'Final receiver' : 'Earlier hop') + ': <span class="mono">' + esc(ar.authserv || '(no authserv-id)') + '</span></h4><div class="chips">';
-      if (ar.none) h += '<span class="chip">none</span>';
-      for (const x of ar.results) {
-        const who = x.props['header.d'] || x.props['header.i'] || x.props['header.from'] || x.props['smtp.mailfrom'] || x.props['smtp.helo'] || '';
-        h += '<span class="chip ' + resultLevel(x.result) + '" title="' + esc(x.comments.join(' ') + (x.reason ? ' reason=' + x.reason : '')) + '">' + esc(x.method + '=' + x.result + (who ? ' ' + who : '') + (x.reason ? ' (' + x.reason + ')' : '')) + '</span>';
-      }
-      h += '</div></div>';
-    });
-    if (A.receivedSpf.length) h += '<p class="note">Received-SPF: ' + esc(A.receivedSpf[0].result) + (A.receivedSpf[0].props['envelope-from'] ? ' for ' + esc(A.receivedSpf[0].props['envelope-from']) : '') + (A.receivedSpf[0].props['client-ip'] ? ' from ' + esc(A.receivedSpf[0].props['client-ip']) : '') + '.</p>';
-    if (A.dkimSignatures.length) {
-      h += '<h2 style="margin-top:14px">DKIM signatures present</h2><div class="tbl"><table><thead><tr><th class="tag">d=</th><th class="tag">s=</th><th class="tag">a=</th><th class="tag">c=</th><th>Signed headers</th><th>Result</th></tr></thead><tbody>';
-      for (const s of A.dkimSignatures) {
-        const res = A.dkim.find(k => k.signature === s);
-        h += '<tr><td class="mono">' + esc(s.d) + '</td><td class="mono">' + esc(s.s) + '</td><td class="mono">' + esc(s.a) + '</td><td class="mono">' + esc(s.c) + '</td><td class="mono" style="font-size:12px">' + esc(s.signedHeaders.join(' ')) + '</td><td>' + (res && res.result ? lvlPill(resultLevel(res.result), res.result) : lvlPill('info', 'no result')) + '</td></tr>';
-      }
-      h += '</tbody></table></div>';
-    }
-    if (A.arc.present) {
-      h += '<h2 style="margin-top:14px">ARC chain</h2><div class="tbl"><table><thead><tr><th class="tag">i=</th><th>Sealer</th><th class="tag">cv=</th><th>Results at that hop</th></tr></thead><tbody>';
-      for (const set of A.arc.chain) {
-        const res = set.aar ? set.aar.results.map(x => x.method + '=' + x.result).join(', ') : '(no ARC-Authentication-Results)';
-        h += '<tr><td class="num">' + set.i + '</td><td class="mono">' + esc((set.seal && set.seal.d) || (set.ams && set.ams.d) || '') + '</td><td>' + (set.seal ? lvlPill(set.seal.cv === 'fail' ? 'bad' : set.seal.cv === 'pass' || set.seal.cv === 'none' ? 'ok' : 'warn', set.seal.cv || '?') : '') + '</td><td class="mono" style="font-size:12.5px">' + esc(res) + '</td></tr>';
-      }
-      h += '</tbody></table></div>';
-      if (A.arcResult) h += '<p class="note">Final receiver: arc=' + esc(A.arcResult.result) + '.</p>';
-    }
-    $('auth').innerHTML = h;
-  }
-
-  function renderHops(r) {
-    const c = r.chain;
-    let h = '<h2>Path (' + c.count + ' hop' + (c.count === 1 ? '' : 's') + (c.totalSec !== null ? ', ' + fmtDur(c.totalSec) + ' end to end' : '') + ')</h2>';
-    if (!c.count) { $('hops').innerHTML = h + '<p class="note">No Received headers. This copy never passed through a receiving server.</p>'; return; }
-    h += '<div class="tbl"><table><thead><tr><th class="num">#</th><th>From</th><th>By</th><th>Protocol</th><th>Time (UTC)</th><th class="num">Delay</th></tr></thead><tbody>';
-    c.hops.forEach((hop, i) => {
-      const cls = ['hop', hop.internal ? 'internal' : '', i === c.slowestIdx && c.slowestSec >= 60 ? 'slow' : '', hop.delaySec !== null && hop.delaySec < 0 ? 'skew' : ''].join(' ');
-      const tls = hop.tls === true ? (hop.tlsVersion || 'TLS') : hop.tls === false ? 'no TLS' : '';
-      h += '<tr class="' + cls + '"><td class="num">' + hop.index + '</td><td class="mono">' + esc(hop.fromHost || '(unnamed)') + (hop.fromIp ? '<br><span style="color:var(--muted)">' + esc(hop.fromIp) + '</span>' : '') + '</td><td class="mono">' + esc(hop.byHost || '') + '</td><td>' + esc(hop.protocol || '') + (tls ? '<br><span style="color:var(--muted);font-size:12.5px">' + esc(tls) + (hop.authenticated ? ', authenticated' : '') + '</span>' : (hop.authenticated ? '<br><span style="color:var(--muted);font-size:12.5px">authenticated</span>' : '')) + '</td><td class="mono" style="font-size:12.5px">' + esc(hop.date ? fmtDate(hop.date) : (hop.dateText || '')) + (hop.date && !hop.tzKnown ? '<br><span style="color:var(--muted)">zone unknown</span>' : '') + '</td><td class="num delay">' + (hop.delaySec === null ? '' : esc(fmtDur(hop.delaySec))) + '</td></tr>';
-    });
-    h += '</tbody></table></div>';
-    const notes = [];
-    if (c.slowestSec >= 60) notes.push('Longest wait is at hop ' + (c.slowestIdx + 1) + ' (' + fmtDur(c.slowestSec) + '). The delay on a row is the time between the previous server\'s stamp and this one\'s.');
-    if (c.hops.some(x => x.internal)) notes.push('Greyed rows are relays inside one operator.');
-    if (c.clockSkew) notes.push('A negative delay means two servers disagree about the time.');
-    if (notes.length) h += '<p class="note">' + esc(notes.join(' ')) + '</p>';
-    $('hops').innerHTML = h;
-  }
-
-  function renderProviders(r) {
-    const d = r.decoded;
-    let h = '<h2>Filter and platform headers</h2>';
-    if (!d.providers.length && !d.misc.length) { $('providers').innerHTML = h + '<p class="note">No filter verdict headers from Microsoft, Proofpoint, Mimecast, Cisco, Barracuda, or SpamAssassin, and no list headers.</p>'; return; }
-    h += '<div class="cards">';
-    for (const p of d.providers) {
-      h += '<div class="card"><h4>' + esc(p.name) + '</h4><div class="kv">' + p.items.map(it => '<span class="k">' + esc(it.key) + '</span><span class="v lvl-' + esc(it.level) + '"><b>' + esc(it.value) + '</b> ' + esc(it.meaning) + '</span>').join('') + '</div>' + (p.note ? '<p class="note">' + esc(p.note) + '</p>' : '') + '</div>';
-    }
-    if (d.misc.length) h += '<div class="card"><h4>Sending and list headers</h4><div class="kv">' + d.misc.map(it => '<span class="k">' + esc(it.key) + '</span><span class="v lvl-' + esc(it.level) + '"><b>' + esc(it.value) + '</b> ' + esc(it.meaning) + '</span>').join('') + '</div></div>';
-    h += '</div>';
-    $('providers').innerHTML = h;
-  }
-
-  function renderRaw(r) {
-    const fields = r.fields;
-    let h = '<details><summary>All ' + fields.length + ' headers</summary><div class="raw"><label for="filter" class="hidden">Filter headers</label><input id="filter" type="search" placeholder="Filter by name or value"><div class="rawlist" id="rawlist"></div></div></details>';
-    if (r.input.notes.length) h += '<p class="note">' + esc(r.input.notes.join(' ')) + '</p>';
-    if (r.input.bodyPresent) h += '<p class="note">A message body was included after the headers and was ignored.</p>';
+  function renderRaw() {
+    const fields = R.fields;
+    const b = R.input.block;
+    let h = '<details class="raw" id="raw-details"><summary>Raw headers <span class="count">' + fields.length + ' field' + (fields.length === 1 ? '' : 's') + (b ? ', lines ' + (b[0] + 1) + '–' + (b[1] + 1) + ' of the paste' : '') + '</span></summary>' +
+      '<div class="raw-tools"><label class="sr-only" for="raw-filter">Search the headers</label><input id="raw-filter" type="search" placeholder="Search names and values" autocomplete="off"><button class="btn" type="button" id="raw-clear-hl">Clear highlight</button><span class="status" id="raw-status"></span></div>' +
+      '<div class="rawbox" id="rawbox"></div></details>';
+    if (R.input.bodyPresent) h += '<p class="note-line">A message body followed the headers. It was not read.</p>';
     $('raw').innerHTML = h;
-    const list = $('rawlist');
-    const draw = (q) => {
-      q = (q || '').toLowerCase();
-      list.innerHTML = fields.filter(f => !q || f.lower.includes(q) || f.value.toLowerCase().includes(q)).map(f => '<div><span class="n">' + esc(f.name) + '</span><span class="v">' + esc(f.value) + '</span></div>').join('') || '<p class="note">No header matches.</p>';
-    };
-    draw('');
-    $('filter').addEventListener('input', (e) => draw(e.target.value));
+    drawRaw('');
+    $('raw-filter').addEventListener('input', (e) => drawRaw(e.target.value));
+    $('raw-clear-hl').addEventListener('click', () => highlight([]));
   }
 
-  function run() {
+  let lit = [];
+  function drawRaw(q) {
+    q = (q || '').trim().toLowerCase();
+    const mark = (t) => { if (!q) return esc(t); const i = t.toLowerCase().indexOf(q); return i < 0 ? esc(t) : esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length)); };
+    const shown = R.fields.filter(f => !q || f.raw.toLowerCase().includes(q));
+    $('rawbox').innerHTML = shown.map(f => '<div class="f' + (lit.includes(f.index) ? ' hl' : '') + '" data-field="' + f.index + '">' + f.raw.split('\n').map((t, k) => {
+      const body = k === 0 ? '<span class="nm">' + mark(t.slice(0, f.name.length + 1)) + '</span>' + mark(t.slice(f.name.length + 1)) : mark(t);
+      return '<div class="l"><span class="ln">' + (f.lines[0] + k + 1) + '</span><span class="tx">' + body + '</span></div>';
+    }).join('') + '</div>').join('') || '<p class="empty-raw">No header matches that search.</p>';
+    $('raw-status').textContent = q ? shown.length + ' of ' + R.fields.length + ' fields match' : '';
+  }
+
+  function highlight(src) {
+    lit = src.slice();
+    document.querySelectorAll('.prov.on, .src.on').forEach(el => el.classList.remove('on'));
+    document.querySelectorAll('#rawbox .f').forEach(el => el.classList.toggle('hl', lit.includes(+el.dataset.field)));
+    if (!lit.length) { $('live').textContent = 'Highlight cleared.'; return; }
+    const det = $('raw-details');
+    det.open = true;
+    const filter = $('raw-filter');
+    if (filter.value && !lit.every(i => document.querySelector('#rawbox .f[data-field="' + i + '"]'))) { filter.value = ''; drawRaw(''); }
+    const firstEl = document.querySelector('#rawbox .f[data-field="' + Math.min.apply(null, lit) + '"]');
+    if (firstEl) firstEl.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+    const names = lit.map(i => R.fields[i].name + ' (' + linesOf([i]) + ')');
+    $('live').textContent = 'Highlighted ' + names.join(', ') + ' in the raw headers.';
+  }
+
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-src]');
+    if (!el || !R) return;
+    if (el.closest('summary')) e.preventDefault(); // a source button inside a group row should not also toggle it
+    const src = el.dataset.src.split(',').filter(Boolean).map(Number);
+    highlight(src);
+    el.classList.add('on');
+  });
+
+  function setVoice(v) {
+    voice = v;
+    document.querySelectorAll('[data-voice]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.voice === v)));
+    try { localStorage.setItem('hv-voice', v); } catch (e) { /* storage blocked */ }
+    if (R) renderAll();
+  }
+
+  function renderAll() {
+    const open = $('raw-details') && $('raw-details').open;
+    const openGroups = Array.from(document.querySelectorAll('#path details[open]')).map(d => d.dataset.group);
+    $('read-as').textContent = 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + R.fields.length + ' fields, ' + R.chain.count + ' Received.';
+    renderVerdict(); renderMessage();
+    $('alignment').innerHTML = later('alignment');
+    $('auth').innerHTML = later('auth');
+    renderPath();
+    $('filters').innerHTML = later('filters');
+    renderRaw();
+    if (R.input.notes.length) $('raw').insertAdjacentHTML('beforeend', says(R.input.notes));
+    if (open) $('raw-details').open = true;
+    openGroups.forEach(g => { const d = document.querySelector('#path details[data-group="' + g + '"]'); if (d) d.open = true; });
+    if (lit.length) highlight(lit);
+  }
+
+  function run(scroll) {
     const text = $('headers').value;
-    if (!text.trim()) { $('results').hidden = true; return; }
-    let r;
-    try { r = HA.analyze(text); }
-    catch (e) {
-      $('results').hidden = false;
-      $('verdict').className = 'panel verdict';
-      $('verdict').innerHTML = '<div class="head">' + lvlPill('bad', 'Error') + '<h3>Could not read these headers</h3></div><p class="cause">' + esc(String(e && e.message || e)) + '</p>';
-      ['message', 'alignment', 'auth', 'hops', 'providers', 'raw'].forEach(id => { $(id).innerHTML = ''; });
-      return;
-    }
-    if (!r.input.blockFound) {
-      $('results').hidden = false;
-      $('verdict').className = 'panel verdict';
-      $('verdict').innerHTML = '<div class="head">' + lvlPill('info', 'Nothing to read') + '<h3>No header lines found</h3></div><p class="cause">Nothing in the paste looks like a header (a name, a colon, a value). Copy the raw source of the message, not the rendered view.</p>';
-      ['message', 'alignment', 'auth', 'hops', 'providers', 'raw'].forEach(id => { $(id).innerHTML = ''; });
-      return;
-    }
-    renderVerdict(r); renderMessage(r); renderAlignment(r); renderAuth(r); renderHops(r); renderProviders(r); renderRaw(r);
+    if (!text.trim()) { $('results').hidden = true; R = null; return; }
+    lit = [];
+    R = HA.analyze(text);
     $('results').hidden = false;
-    $('verdict').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!R.input.blockFound) {
+      $('read-as').textContent = '';
+      $('verdict').innerHTML = '<h2 id="h-verdict">Nothing to read</h2>' + says(R.input.notes);
+      ['message', 'alignment', 'auth', 'path', 'filters', 'raw'].forEach(id => { $(id).innerHTML = ''; $(id).hidden = true; });
+      return;
+    }
+    ['message', 'alignment', 'auth', 'path', 'filters', 'raw'].forEach(id => { $(id).hidden = false; });
+    renderAll();
+    if (scroll) $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
 
-  $('go').addEventListener('click', run);
-  $('clear').addEventListener('click', () => { $('headers').value = ''; $('results').hidden = true; $('headers').focus(); });
-  $('sample1').addEventListener('click', () => { $('headers').value = window.SAMPLES.unaligned; run(); });
-  $('sample2').addEventListener('click', () => { $('headers').value = window.SAMPLES.forwarded; run(); });
-  $('headers').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run(); });
+  $('go').addEventListener('click', () => run(true));
+  $('clear').addEventListener('click', () => { $('headers').value = ''; run(false); $('headers').focus(); });
+  document.querySelectorAll('[data-sample]').forEach(b => b.addEventListener('click', () => { $('headers').value = window.SAMPLES[b.dataset.sample]; run(true); }));
+  document.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', () => setVoice(b.dataset.voice)));
+  $('headers').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run(true); });
 
   const panel = $('input-panel');
   panel.addEventListener('dragover', (e) => { e.preventDefault(); panel.classList.add('drop'); });
@@ -180,10 +243,11 @@
     const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     if (!f) return;
     const reader = new FileReader();
-    reader.onload = () => { $('headers').value = String(reader.result || ''); run(); };
+    reader.onload = () => { $('headers').value = String(reader.result || ''); run(true); };
     reader.readAsText(f);
   });
 
+  setVoice(voice);
   // Open on a sample so the page shows what it does before anyone pastes.
-  if (!$('headers').value.trim()) { $('headers').value = window.SAMPLES.unaligned; run(); window.scrollTo(0, 0); }
+  if (!$('headers').value.trim()) { $('headers').value = window.SAMPLES.gmail; run(false); }
 })();
