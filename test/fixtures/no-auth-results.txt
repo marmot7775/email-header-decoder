@@ -1,0 +1,13 @@
+Return-Path: <alex@sender.example>
+Received: from mail.sender.example (mail.sender.example [192.0.2.45])
+        by mx.receiver.example (Postfix) with ESMTPS id 9Ss1
+        for <neil@receiver.example>; Fri, 23 Oct 2026 18:12:10 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sender.example; s=mail2026;
+	t=1792783928; h=from:to:subject:date:message-id;
+	bh=SyntheticBh0801=; b=NoArSig1SyntheticValue
+From: Alex Rivera <alex@sender.example>
+To: neil@receiver.example
+Subject: Lunch
+Date: Fri, 23 Oct 2026 18:12:08 +0000
+Message-ID: <l-801@sender.example>
+MIME-Version: 1.0

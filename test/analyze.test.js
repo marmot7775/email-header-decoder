@@ -14,15 +14,13 @@ function assertSentence(s, where) {
   assert.ok(Array.isArray(s.src), where + ' src');
 }
 
-test('result object: message, chain and fields filled; later sections null and pending names their step', () => {
+test('result object: step 2 fills alignment and auth; verdict and decoded stay null and pending names their step', () => {
   const r = HA.analyze(fixture('gmail-show-original.txt'));
-  assert.equal(r.step, 1);
+  assert.equal(r.step, 2);
   assert.equal(r.verdict, null);
-  assert.equal(r.alignment, null);
-  assert.equal(r.auth, null);
   assert.equal(r.decoded, null);
-  assert.deepEqual(r.pending, { verdict: 3, alignment: 2, auth: 2, decoded: 3 });
-  assert.ok(r.message && r.chain && r.fields.length);
+  assert.deepEqual(r.pending, { verdict: 3, decoded: 3 });
+  assert.ok(r.message && r.chain && r.fields.length && r.alignment && r.auth);
 });
 
 test('result object is JSON-safe', () => {

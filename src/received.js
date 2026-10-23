@@ -225,10 +225,42 @@
 
     const dated = hops.filter(h => h.time !== null);
     const totalSec = dated.length >= 2 ? Math.round((dated[dated.length - 1].time - dated[0].time) / 1000) : null;
-    const origin = hops.find(h => h.fromIp && !isPrivateIp(h.fromIp)) || null;
-    const chain = { hops, groups, totalSec, slowestIdx, slowestSec, clockSkew: skew, originIp: origin ? origin.fromIp : '', originHost: origin ? label(origin) : '', count: hops.length, notes: [] };
+    const trust = trustLine(hops);
+    const chain = { hops, groups, totalSec, slowestIdx, slowestSec, clockSkew: skew, originIp: trust.originIp, originHost: trust.originHelo, trust, count: hops.length, notes: [] };
     chain.notes = chainNotes(chain);
     return chain;
+  }
+
+  const sameHost = (a, b) => !!a && !!b && a.toLowerCase().replace(/\.$/, '') === b.toLowerCase().replace(/\.$/, '');
+
+  // Trust line. Each hop's receiving side gets an operator: its by host's
+  // own, or, when the by host has no usable name, the operator of the
+  // hop's internal group (step 1: private address, local handoff, two
+  // hosts of one operator) or of the next hop's from host when that is
+  // the same machine. The boundary is the earliest hop of the unbroken
+  // run, ending at the final hop, whose receiving side is the final
+  // operator. Its from address, the IP the receiver saw connect, is the
+  // origin. Every Received field before it was written by the sender's
+  // side and can be forged; a forged "by mx.google.com" line before a
+  // real hop from elsewhere does not move the boundary.
+  function trustLine(hops) {
+    const t = { boundaryIdx: -1, operator: '', sides: hops.map(() => ''), originIp: '', originHelo: '', originPrivate: false, src: [] };
+    for (let i = hops.length - 1; i >= 0; i--) {
+      const h = hops[i], next = hops[i + 1];
+      t.sides[i] = h.byOperator || (h.internal ? h.operator : '') ||
+        (next && sameHost(h.byHost, next.fromHost) ? (next.fromOperator || t.sides[i + 1]) : '');
+    }
+    if (!hops.length || !t.sides[hops.length - 1]) return t;
+    t.operator = t.sides[hops.length - 1];
+    let b = hops.length - 1;
+    while (b > 0 && t.sides[b - 1] === t.operator) b--;
+    const h = hops[b];
+    t.boundaryIdx = b;
+    t.src = h.src.slice();
+    t.originIp = h.fromIp;
+    t.originHelo = h.fromHost && !isIpLiteral(h.fromHost) ? h.fromHost : '';
+    t.originPrivate = !h.from || isPrivateIp(h.fromIp);
+    return t;
   }
 
   function chainNotes(c) {
@@ -237,6 +269,21 @@
     if (!c.count) {
       notes.push(say('unknown', 'No Received fields. This copy never passed through a receiving server, which is what a sent or draft copy looks like.', 'This copy has no delivery stamps, so it looks like a sent or draft copy rather than one that arrived in a mailbox. Paste the headers from the recipient\'s copy.', []));
       return notes;
+    }
+    const t = c.trust;
+    if (t.boundaryIdx < 0) {
+      notes.push(say('unknown', 'No trust line: the final Received field names no receiving host this page can tie to an operator, so it cannot say which stamps the receiver wrote.', 'It is not clear which delivery stamps the receiving mail system wrote, so treat all of them with care.', [c.hops[c.count - 1].src[0]]));
+    } else {
+      const before = t.boundaryIdx;
+      const tail = before ? ' The ' + (before === 1 ? 'Received field' : before + ' Received fields') + ' before it ' + (before === 1 ? 'was' : 'were') + ' written by the sender\'s side and can be forged.' : '';
+      const plainTail = before ? ' The ' + (before === 1 ? 'stamp' : before + ' stamps') + ' before that came from the sender\'s side and could be made up.' : '';
+      if (t.originPrivate) {
+        notes.push(say('caveat', 'Trust line at hop ' + (before + 1) + ': ' + t.operator + ' took custody from ' + (t.originIp ? 'private address ' + t.originIp : 'a local handoff') + ', so the message started inside ' + t.operator + '\'s own network and there is no outside origin address.' + tail,
+          'The message started inside the receiving organization\'s own mail system, so there is no outside sending address to show.' + plainTail, t.src));
+      } else {
+        notes.push(say('pass', 'Trust line at hop ' + (before + 1) + ': ' + t.operator + ' took custody from ' + (t.originIp || 'an address it did not record') + (t.originHelo ? ' (EHLO ' + t.originHelo + ', the name the sender gave)' : '') + '. That address is the origin as the receiver saw it.' + tail,
+          'The receiving mail system (' + t.operator + ') took the message from ' + (t.originIp || 'an address it did not record') + '. That part of the record can be trusted.' + plainTail, t.src));
+      }
     }
     if (c.totalSec !== null && c.totalSec >= 0) {
       const caveat = c.clockSkew || c.hops.some(h => h.time !== null && !h.tzKnown);
@@ -278,5 +325,5 @@
     return notes;
   }
 
-  HA.received = { parseReceived, buildChain, findIp, isPrivateIp, operatorOf, fmtDur, plainDur };
+  HA.received = { parseReceived, buildChain, findIp, isPrivateIp, isIpLiteral, operatorOf, fmtDur, plainDur };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

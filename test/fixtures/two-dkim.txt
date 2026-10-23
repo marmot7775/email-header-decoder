@@ -1,0 +1,34 @@
+Delivered-To: neil@example.org
+Received: by 2002:a05:7300:5c11:b0:1b2:3f4e:aa10 with SMTP id k17csp2201dyb;
+        Fri, 23 Oct 2026 10:02:11 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1792779730; cv=none; d=google.com; s=arc-20240605; b=SyntheticSeal0101
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605; h=from:to:subject:date:message-id; bh=SyntheticBh0101=; b=SyntheticAms0101
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@brand.example header.s=s1 header.b=Br4ndSig;
+       dkim=pass header.i=@esp-mail.example header.s=esp1 header.b=EspSig01;
+       spf=pass (google.com: domain of bounce-77@bounces.esp-mail.example designates 192.0.2.120 as permitted sender) smtp.mailfrom=bounce-77@bounces.esp-mail.example;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=brand.example
+Return-Path: <bounce-77@bounces.esp-mail.example>
+Received: from out-12.esp-mail.example (out-12.esp-mail.example. [192.0.2.120])
+        by mx.google.com with ESMTPS id a1b2c3d4e5si101.2026.10.23.10.02.10
+        for <neil@example.org>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 23 Oct 2026 10:02:10 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounce-77@bounces.esp-mail.example designates 192.0.2.120 as permitted sender) client-ip=192.0.2.120;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@brand.example header.s=s1 header.b=Br4ndSig;
+       dkim=pass header.i=@esp-mail.example header.s=esp1 header.b=EspSig01;
+       spf=pass (google.com: domain of bounce-77@bounces.esp-mail.example designates 192.0.2.120 as permitted sender) smtp.mailfrom=bounce-77@bounces.esp-mail.example;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=brand.example
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=brand.example; s=s1;
+        t=1792779728; h=from:to:subject:date:message-id:list-unsubscribe;
+        bh=SyntheticBh0102=; b=Br4ndSigSyntheticValue
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=esp-mail.example; s=esp1;
+        t=1792779728; h=from:to:subject:date:message-id:feedback-id;
+        bh=SyntheticBh0102=; b=EspSig01SyntheticValue
+From: Brand <offers@brand.example>
+To: neil@example.org
+Subject: Autumn offers
+Date: Fri, 23 Oct 2026 17:02:08 +0000
+Message-ID: <offer-1@brand.example>
+MIME-Version: 1.0

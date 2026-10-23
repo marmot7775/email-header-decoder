@@ -1,0 +1,28 @@
+Received: from mx-in.receiver.example (mx-in.receiver.example [10.1.0.5])
+        by store.receiver.example (Postfix) with LMTP id 7Qq1;
+        Fri, 23 Oct 2026 17:52:12 +0000 (UTC)
+Authentication-Results: mx-in.receiver.example;
+       arc=fail (i=3 cv=fail);
+       dkim=fail header.d=author.example header.s=a1;
+       spf=softfail smtp.mailfrom=sam@author.example;
+       dmarc=fail header.from=author.example
+Received: from relay.forward.example (relay.forward.example [198.51.100.90])
+        by mx-in.receiver.example (Postfix) with ESMTPS id 7Qq0
+        for <neil@receiver.example>; Fri, 23 Oct 2026 17:52:10 +0000 (UTC)
+ARC-Seal: i=3; a=rsa-sha256; t=1792782729; cv=fail; d=forward.example; s=arc3; b=SyntheticSeal0603
+ARC-Authentication-Results: i=3; relay.forward.example; dkim=fail header.d=author.example; arc=fail
+ARC-Seal: i=1; a=rsa-sha256; t=1792782720; cv=none; d=list.example; s=arc1; b=SyntheticSeal0601
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=list.example; s=arc1; h=from:to:subject; bh=SyntheticBh0601=; b=SyntheticAms0601
+ARC-Authentication-Results: i=1; mx.list.example; spf=pass smtp.mailfrom=sam@author.example; dkim=pass header.d=author.example; dmarc=pass header.from=author.example
+Received: from out.list.example (out.list.example [203.0.113.61])
+        by relay.forward.example (Postfix) with ESMTPS id 6Pp1;
+        Fri, 23 Oct 2026 17:52:05 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=author.example; s=a1;
+        t=1792782700; h=from:to:subject:date:message-id;
+        bh=SyntheticBh0600=; b=AuthSig2SyntheticValue
+From: Sam Author <sam@author.example>
+To: club@list.example
+Subject: [club] Minutes
+Date: Fri, 23 Oct 2026 17:51:58 +0000
+Message-ID: <m-601@author.example>
+MIME-Version: 1.0

@@ -124,3 +124,32 @@ test('every hop carries the index of the Received field it came from', () => {
     assert.deepEqual(r.chain.hops.map(h => h.src[0]), recv, name);
   }
 });
+
+test('trust line: the boundary is the receiver\'s first hop and the origin is the IP it saw, not the EHLO name', () => {
+  const cases = { 'gmail-show-original.txt': [2, 'Google', '192.0.2.45'], 'exchange-online-inbound.txt': [1, 'Microsoft', '203.0.113.20'], 'forwarded.txt': [1, 'Microsoft', '198.51.100.25'], 'icloud.txt': [0, 'Apple', '192.0.2.80'], 'arc-forwarded-i2.txt': [4, 'Google', '198.51.100.80'] };
+  for (const [name, [idx, op, ip]] of Object.entries(cases)) {
+    const c = chainOf(name);
+    assert.equal(c.trust.boundaryIdx, idx, name);
+    assert.equal(c.trust.operator, op, name);
+    assert.equal(c.trust.originIp, ip, name);
+    assert.equal(c.originIp, ip, name);
+    assert.deepEqual(c.trust.src, c.hops[idx].src, name);
+  }
+  assert.equal(chainOf('gmail-show-original.txt').trust.originHelo, 'mail.sender.example');
+});
+
+test('trust line: a forged Received naming the receiver before an outside hop does not move the boundary', () => {
+  const c = chainOf('ar-unknown-host.txt');
+  assert.equal(c.hops[0].byHost, 'mx.receiver.example'); // the forged line
+  assert.equal(c.trust.boundaryIdx, 2);
+  assert.equal(c.trust.originIp, '198.51.100.13');
+  const n = c.notes.find(x => /Trust line/.test(x.technical));
+  assert.match(n.technical, /2 Received fields before it were written by the sender's side and can be forged/);
+});
+
+test('trust line: mail from inside the receiver\'s own network has no outside origin', () => {
+  const c = chainOf('exchange-online-internal.txt');
+  assert.equal(c.trust.boundaryIdx, 0);
+  assert.equal(c.trust.originPrivate, true);
+  assert.equal(c.notes.find(x => /Trust line/.test(x.technical)).state, 'caveat');
+});

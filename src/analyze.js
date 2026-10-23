@@ -11,16 +11,16 @@
 //     consequence: Sentence | null, details: [Sentence], fixes: [Sentence],
 //     flags: [Sentence], forwarded: { yes, evidence: [Sentence] } }
 //
-// Step 1 fills input, message, chain and fields. The later sections are
-// null, and pending names the step that fills each one.
+// Step 2 adds alignment and auth beside input, message, chain and fields.
+// verdict and decoded stay null, and pending names the step that fills them.
 (function (root) {
   'use strict';
   const HA = (root.HA = root.HA || {});
   const P = HA.parse;
   const say = P.sentence;
 
-  const STEP = 1;
-  const PENDING = { verdict: 3, alignment: 2, auth: 2, decoded: 3 };
+  const STEP = 2;
+  const PENDING = { verdict: 3, decoded: 3 };
 
   function all(fields, name) { return fields.filter(f => f.lower === name); }
   function first(fields, name) { return fields.find(f => f.lower === name) || null; }
@@ -66,15 +66,18 @@
   function analyze(text) {
     const parsed = P.parseHeaders(text);
     const fields = parsed.fields;
+    const message = buildMessage(fields);
+    const chain = HA.received.buildChain(fields);
+    const { auth, alignment } = HA.auth.buildAuth(fields, chain, message);
     return {
-      version: '0.2',
+      version: '0.3',
       step: STEP,
       input: { blockFound: parsed.blockFound, format: parsed.format, block: parsed.block, fieldCount: fields.length, bodyPresent: parsed.bodyPresent, notes: parsed.notes },
-      message: buildMessage(fields),
-      chain: HA.received.buildChain(fields),
+      message,
+      chain,
       verdict: null,
-      alignment: null,
-      auth: null,
+      alignment,
+      auth,
       decoded: null,
       pending: Object.assign({}, PENDING),
       fields,

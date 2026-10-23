@@ -8,9 +8,9 @@ const path = require('path');
 
 const ROOT = __dirname;
 // Load order matters: each module reads the HA namespace the one before it filled.
-const SRC = ['parse.js', 'psl.js', 'received.js', 'analyze.js'];
+const SRC = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'analyze.js'];
 // Fixtures shown as samples on the page. Synthetic only; never real headers.
-const SAMPLES = { gmail: 'gmail-show-original.txt', exchange: 'exchange-online-inbound.txt', forwarded: 'forwarded.txt' };
+const SAMPLES = { gmail: 'gmail-show-original.txt', exchange: 'exchange-online-inbound.txt', forwarded: 'forwarded.txt', arc: 'arc-forwarded-i2.txt', twodkim: 'two-dkim.txt', relaxed: 'subdomain-relaxed.txt' };
 
 function read(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
 

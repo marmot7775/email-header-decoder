@@ -1,0 +1,23 @@
+Delivered-To: neil@example.org
+Received: by 2002:a05:7300:5c11:b0:1b2:3f4e:aa10 with SMTP id k17csp4401dyb;
+        Fri, 23 Oct 2026 10:22:11 -0700 (PDT)
+Return-Path: <bounce@em.brand.example>
+Received: from mta3.em.brand.example (mta3.em.brand.example. [203.0.113.31])
+        by mx.google.com with ESMTPS id k9l0m1si303.2026.10.23.10.22.10
+        for <neil@example.org>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Fri, 23 Oct 2026 10:22:10 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounce@em.brand.example designates 203.0.113.31 as permitted sender) client-ip=203.0.113.31;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@brand.example header.s=s1 header.b=SubSig01;
+       spf=pass (google.com: domain of bounce@em.brand.example designates 203.0.113.31 as permitted sender) smtp.mailfrom=bounce@em.brand.example;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=news.brand.example
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=brand.example; s=s1;
+        t=1792780928; h=from:to:subject:date:message-id;
+        bh=SyntheticBh0301=; b=SubSig01SyntheticValue
+From: Brand News <hello@news.brand.example>
+To: neil@example.org
+Subject: This month at Brand
+Date: Fri, 23 Oct 2026 17:22:08 +0000
+Message-ID: <n-301@news.brand.example>
+MIME-Version: 1.0

@@ -1,0 +1,23 @@
+Authentication-Results: mx.receiver.example;
+       spf=fail smtp.mailfrom=billing@payments.example;
+       dkim=none;
+       dmarc=fail header.from=payments.example
+Received: from bulk.cheap-host.example (bulk.cheap-host.example [198.51.100.13])
+        by mx.receiver.example (Postfix) with ESMTPS id 8Rr2
+        for <neil@receiver.example>; Fri, 23 Oct 2026 18:02:10 +0000 (UTC)
+Received: from localhost (localhost [127.0.0.1])
+        by bulk.cheap-host.example (Postfix) with ESMTP id 8Rr1;
+        Fri, 23 Oct 2026 18:02:08 +0000 (UTC)
+Authentication-Results: mx.trusted-filter.example;
+       spf=pass smtp.mailfrom=billing@payments.example;
+       dkim=pass header.d=payments.example;
+       dmarc=pass header.from=payments.example
+Received: from mail.payments.example (mail.payments.example [192.0.2.10])
+        by mx.receiver.example with ESMTPS id FAKE01;
+        Fri, 23 Oct 2026 18:01:00 +0000 (UTC)
+From: Payments <billing@payments.example>
+To: neil@receiver.example
+Subject: Invoice overdue
+Date: Fri, 23 Oct 2026 18:02:07 +0000
+Message-ID: <inv-701@payments.example>
+MIME-Version: 1.0

@@ -63,28 +63,45 @@ com.gr edu.gr gov.gr net.gr org.gr
   // Private-section suffixes relevant to mail and hosting.
   const PRIVATE = new Set(['github.io', 'herokuapp.com', 'blogspot.com', 'appspot.com', 'azurewebsites.net', 'netlify.app', 'vercel.app', 'pages.dev', 'workers.dev', 'web.app', 'firebaseapp.com', 'myshopify.com']);
 
+  // Two-letter TLDs whose second-level suffixes the list above covers, or
+  // whose registry sells names directly at the second level. Generic TLDs
+  // (three letters or more) register at the second level by policy. A
+  // ccTLD outside this set may have second-level suffixes this file does
+  // not know, so a name under it is an approximation.
+  const KNOWN_CC = new Set(`
+uk au nz jp br in za mx cn kr tw hk sg my id ph th vn tr ar co pe ve ec uy bo py gt sv hn ni pa do cu pr
+pl ru ua il eg sa ae pk bd ng ke gh tz ug zw bw na et kw qa om bh jo lb cy mt es fr at hu ro hr pt gr
+us ca de nl be ch li lu se no dk fi is ie it cz sk si ee lv lt bg rs eu io ai me tv cc ws fm am gg je im
+`.split(/\s+/).filter(Boolean));
+
+  function clean(domain) { return String(domain || '').toLowerCase().replace(/\.$/, ''); }
+
   function publicSuffix(domain) {
-    const labels = domain.toLowerCase().replace(/\.$/, '').split('.');
-    if (labels.length < 2) return domain;
+    const labels = clean(domain).split('.');
+    if (labels.length < 2) return labels[0] || '';
     const last3 = labels.slice(-3).join('.');
     const last2 = labels.slice(-2).join('.');
     if (US_STATE.test(last3)) return last3;
-    if (SUFFIXES.has(last2)) return last2;
+    if (SUFFIXES.has(last2) || PRIVATE.has(last2)) return last2;
     return labels[labels.length - 1];
   }
 
   // Organizational domain: public suffix plus one label (RFC 7489 3.2).
-  function orgDomain(domain) {
-    if (!domain) return '';
-    const d = domain.toLowerCase().replace(/\.$/, '');
+  // approximate is true when the name has three or more labels and its
+  // suffix is outside this list, so a longer suffix could exist.
+  function lookup(domain) {
+    const d = clean(domain);
+    if (!d) return { domain: '', org: '', suffix: '', approximate: false };
     const labels = d.split('.');
-    if (labels.length <= 2) return d;
-    const last2 = labels.slice(-2).join('.');
-    if (PRIVATE.has(last2)) return labels.slice(-3).join('.');
     const suffix = publicSuffix(d);
-    const n = suffix.split('.').length + 1;
-    return labels.slice(-n).join('.');
+    const n = suffix.split('.').length;
+    const org = labels.length <= n ? d : labels.slice(-(n + 1)).join('.');
+    const tld = labels[labels.length - 1];
+    const listed = n > 1 || tld.length !== 2 || KNOWN_CC.has(tld);
+    return { domain: d, org, suffix, approximate: labels.length >= 3 && !listed };
   }
 
-  HA.psl = { orgDomain, publicSuffix };
+  function orgDomain(domain) { return lookup(domain).org; }
+
+  HA.psl = { orgDomain, publicSuffix, lookup };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
