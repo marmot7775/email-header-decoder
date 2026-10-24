@@ -247,4 +247,6 @@
   }
 
   HA.verdict = { build, fmtDur, compauthText };
+  // Node: require() returns this layer; the browser reads HA instead.
+  if (typeof module !== 'undefined' && module.exports) module.exports = HA.verdict;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

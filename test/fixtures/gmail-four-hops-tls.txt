@@ -1,0 +1,27 @@
+Delivered-To: neil@example.org
+Received: from mx.google.com (mx.google.com [209.85.220.41])
+        by gmr-mx.google.com with ESMTPS id a1si2003
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 23 Oct 2026 09:14:06 -0700 (PDT)
+Received: from out2.relay.example (out2.relay.example. [198.51.100.20])
+        by mx.google.com with ESMTPS id 5b1f17b1804b1si1234
+        for <neil@example.org>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 23 Oct 2026 09:14:05 -0700 (PDT)
+Received: from smtp.sender.example (smtp.sender.example [192.0.2.45])
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
+        by out2.relay.example (Postfix) with ESMTPS id 4XbQ1
+        for <neil@example.org>; Fri, 23 Oct 2026 16:10:53 +0000 (UTC)
+Received: from [192.168.1.20] (host-203-0-113-9.isp.example [203.0.113.9])
+        (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits))
+        (Authenticated sender: alex@sender.example)
+        by smtp.sender.example (Postfix) with ESMTPSA id 7Hk2P
+        for <neil@example.org>; Fri, 23 Oct 2026 16:10:49 +0000 (UTC)
+From: Alex Rivera <alex@sender.example>
+To: Neil <neil@example.org>
+Subject: Four hops, all encrypted
+Date: Fri, 23 Oct 2026 16:10:48 +0000
+Message-ID: <four-hops-1@sender.example>
+Return-Path: <alex@sender.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"

@@ -386,4 +386,6 @@
   }
 
   HA.auth = { resultState, parseAuthResults, parseReceivedSpf, parseDkimSignature, buildArc, buildAuth, alignRow, splitOutside };
+  // Node: require() returns this layer; the browser reads HA instead.
+  if (typeof module !== 'undefined' && module.exports) module.exports = HA.auth;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

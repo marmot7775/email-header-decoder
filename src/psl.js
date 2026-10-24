@@ -103,5 +103,10 @@ us ca de nl be ch li lu se no dk fi is ie it cz sk si ee lv lt bg rs eu io ai me
 
   function orgDomain(domain) { return lookup(domain).org; }
 
-  HA.psl = { orgDomain, publicSuffix, lookup };
+  // Two hosts run by one operator share an organizational domain.
+  function sameOperator(a, b) { const x = orgDomain(a), y = orgDomain(b); return !!x && x === y; }
+
+  HA.psl = { orgDomain, organizationalDomain: orgDomain, sameOperator, publicSuffix, lookup };
+  // Node: require() returns this layer; the browser reads HA instead.
+  if (typeof module !== 'undefined' && module.exports) module.exports = HA.psl;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

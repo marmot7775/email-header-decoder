@@ -1,0 +1,8 @@
+Received: from mail.sender.example (mail.sender.example [192.0.2.45])
+        by mx.example.org with ESMTPS id 9a;
+        Fri, 23 Oct 2026 10:00:02 +0000
+From: =?UTF-8?B?SsO8cmdlbiBNw7xsbGVy?= <juergen@sender.example>
+To: "Neil" <neil@example.org>
+Subject: =?UTF-8?B?UmVjaG51bmcg?= =?ISO-8859-1?Q?f=FCr_Oktober?=
+Date: Fri, 23 Oct 2026 10:00:00 +0000
+Message-ID: <enc-1@sender.example>

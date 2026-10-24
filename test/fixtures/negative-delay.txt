@@ -1,0 +1,10 @@
+Received: from b.example.net (b.example.net [198.51.100.2])
+        by mx.example.org with ESMTPS id 3; Fri, 23 Oct 2026 12:00:10 +0000
+Received: from a.example.net (a.example.net [198.51.100.1])
+        by b.example.net with ESMTPS id 2; Fri, 23 Oct 2026 12:00:40 +0000
+Received: from client.example.net (client.example.net [198.51.100.9])
+        by a.example.net with ESMTPSA id 1; Fri, 23 Oct 2026 12:00:00 +0000
+From: a@example.net
+To: b@example.org
+Subject: Skewed clock
+Date: Fri, 23 Oct 2026 12:00:00 +0000

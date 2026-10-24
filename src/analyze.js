@@ -40,6 +40,7 @@
     if (froms.length > 1) {
       notes.push(say('fail', 'The message carries ' + froms.length + ' From fields. RFC 5322 3.6 allows exactly one; the card shows the first. Receivers handle this differently, and many reject the message.', 'This message names two different senders. That is not allowed, and it is a common trick in forged mail.', froms.map(f => f.index)));
     }
+    const list = (name) => { const f = first(fields, name); return f ? { addresses: P.parseAddresses(f.value), text: f.decoded, src: [f.index] } : null; };
     const toF = first(fields, 'to');
     const subjF = first(fields, 'subject');
     const dateF = first(fields, 'date');
@@ -55,6 +56,7 @@
     return {
       from, fromCount: froms.length,
       to: toF ? { addresses: P.parseAddresses(toF.value), text: toF.decoded, src: [toF.index] } : null,
+      cc: list('cc'), sender: list('sender'), replyTo: list('reply-to'), deliveredTo: list('delivered-to'),
       subject: subjF ? { value: subjF.decoded, src: [subjF.index] } : null,
       date,
       messageId: midF ? { value: midF.value.replace(/^<|>$/g, '').trim(), src: [midF.index] } : null,
@@ -62,6 +64,22 @@
       notes,
     };
   }
+
+  // Machine flags the tests and later steps key on. Sentences carry the
+  // wording; these carry only the condition.
+  function flagsOf(text, parsed, message, chain) {
+    const f = [];
+    if (!String(text || '').trim()) { f.push('empty-input'); return f; }
+    if (!parsed.blockFound) { f.push('not-headers'); return f; }
+    if (message.fromCount > 1) f.push('two-from');
+    if (!chain.count) f.push('no-received');
+    if (!message.date) f.push('no-date');
+    return f;
+  }
+
+  // The input kind: bare headers, a full .eml, a copy of Gmail's Show
+  // original page, or Outlook's Internet headers box.
+  const KINDS = { bare: 'headers', eml: 'eml', 'gmail-original': 'show-original', 'outlook-headers': 'outlook-headers', none: 'not-headers' };
 
   function analyze(text) {
     const parsed = P.parseHeaders(text);
@@ -72,7 +90,7 @@
     return {
       version: '0.3',
       step: STEP,
-      input: { blockFound: parsed.blockFound, format: parsed.format, block: parsed.block, fieldCount: fields.length, bodyPresent: parsed.bodyPresent, notes: parsed.notes },
+      input: { kind: String(text || '').trim() ? KINDS[parsed.format] || parsed.format : 'empty', bytes: typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(String(text || '')).length : String(text || '').length, repairedLines: parsed.repairedLines, blockFound: parsed.blockFound, format: parsed.format, block: parsed.block, fieldCount: fields.length, bodyPresent: parsed.bodyPresent, notes: parsed.notes },
       message,
       chain,
       verdict: null,
@@ -81,8 +99,11 @@
       decoded: null,
       pending: Object.assign({}, PENDING),
       fields,
+      flags: flagsOf(text, parsed, message, chain),
     };
   }
 
   HA.analyze = analyze;
+  // Node: require() returns this layer; the browser reads HA instead.
+  if (typeof module !== 'undefined' && module.exports) module.exports = HA.analyze;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

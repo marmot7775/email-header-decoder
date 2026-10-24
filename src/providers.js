@@ -244,4 +244,6 @@
   }
 
   HA.providers = { decodeAll, detectPlatform, decodeMicrosoft, decodeGateways, listAndMisc, PLATFORMS };
+  // Node: require() returns this layer; the browser reads HA instead.
+  if (typeof module !== 'undefined' && module.exports) module.exports = HA.providers;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

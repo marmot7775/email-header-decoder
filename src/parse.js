@@ -18,7 +18,10 @@
   const KNOWN = new Set(['from', 'to', 'cc', 'bcc', 'subject', 'date', 'message-id', 'mime-version', 'content-type', 'content-transfer-encoding',
     'reply-to', 'sender', 'in-reply-to', 'references', 'return-path', 'received', 'delivered-to', 'authentication-results', 'dkim-signature',
     'received-spf', 'list-unsubscribe', 'list-unsubscribe-post', 'list-id', 'thread-topic', 'thread-index', 'x-mailer', 'user-agent',
-    'arc-seal', 'arc-message-signature', 'arc-authentication-results', 'x-received', 'importance', 'precedence', 'feedback-id']);
+    'arc-seal', 'arc-message-signature', 'arc-authentication-results', 'x-received', 'importance', 'precedence', 'feedback-id',
+    'comments', 'keywords', 'organization', 'sensitivity', 'priority', 'autocrypt', 'encrypted', 'lines', 'path', 'newsgroups']);
+  // Structured fields: RFC 2047 encoded words are never decoded inside them.
+  const NO_DECODE = new Set(['received', 'dkim-signature', 'arc-seal', 'arc-message-signature', 'arc-authentication-results', 'authentication-results', 'x-google-dkim-signature', 'received-spf']);
 
   function normalizeText(text) {
     return String(text || '')
@@ -74,10 +77,12 @@
   }
 
   // Build fields. Continuation lines start with WSP (RFC 5322 folding).
-  // Pastes from some clients lose the leading whitespace, so a line that
-  // cannot be a field start is also treated as a continuation, and so is
-  // an unknown one-word name straight after a field with an empty value
-  // (Outlook drops the indent on X-Forefront-Antispam-Report's CIP: line).
+  // Pastes from Outlook and web pages lose the leading whitespace, so a
+  // line that cannot be a field start is a continuation, and so is one
+  // whose name is unknown, does not start with X-, and has no hyphen:
+  // that catches Re:, Fwd:, https:, times, and Outlook's unindented
+  // CIP: line under X-Forefront-Antispam-Report. Each such line is
+  // counted as repaired.
   // Every field keeps its index and the span of raw lines it came from.
   function parseHeaders(text) {
     const lines = normalizeText(text).split('\n');
@@ -85,20 +90,20 @@
     const notes = [];
     if (!block) {
       notes.push(sentence('unknown', 'No header block found: no line in the paste has the form Name: value with a field real mail carries.', 'This looks like the text of an email, not its headers. Copy the message source instead; the box below the paste area says where to find it.', []));
-      return { fields: [], notes, block: null, format: 'none', bodyPresent: false, blockFound: false };
+      return { fields: [], notes, block: null, format: 'none', bodyPresent: false, blockFound: false, repairedLines: 0 };
     }
     const fields = [];
-    let current = null;
+    let current = null, repaired = 0;
     for (let i = block.start; i < block.end; i++) {
       const line = lines[i];
       const m = isFieldStart(line);
       let continuation = /^[ \t]/.test(line) || !m;
-      if (!continuation && current && current.valueSoFar === '' && !KNOWN.has(m[1].toLowerCase()) && !m[1].includes('-')) continuation = true;
+      if (!continuation && current && !KNOWN.has(m[1].toLowerCase()) && !/^x-/i.test(m[1]) && !m[1].includes('-')) continuation = true;
       if (continuation && current) {
         current.rawLines.push(line);
         current.lastLine = i;
         current.valueSoFar += line.trim();
-        if (!/^[ \t]/.test(line)) current.looseFold = true;
+        if (!/^[ \t]/.test(line)) { current.looseFold = true; repaired++; }
         continue;
       }
       if (continuation) continue; // garbage before the first field
@@ -111,10 +116,10 @@
       // Unfold: join folded lines with a single space, collapse runs of WSP.
       const value = [first].concat(rest).map(s => s.replace(/^[ \t]+/, '')).join(' ').replace(/[ \t]+/g, ' ').trim();
       if (f.looseFold) notes.push(sentence('caveat', 'Lines under ' + f.name + ' had lost their leading whitespace and were rejoined as one field.', 'Some lines lost their indentation when they were copied, so they were joined back to the header they belong to.', [index]));
-      return { index, name: f.name, lower: f.name.toLowerCase(), value, decoded: decodeWords(value), raw: f.rawLines.join('\n'), lines: [f.firstLine, f.lastLine], looseFold: f.looseFold };
+      return { index, name: f.name, lower: f.name.toLowerCase(), value, decoded: NO_DECODE.has(f.name.toLowerCase()) ? value : decodeWords(value), raw: f.rawLines.join('\n'), lines: [f.firstLine, f.lastLine], looseFold: f.looseFold };
     });
     const bodyPresent = block.end < lines.length && lines.slice(block.end + 1).some(l => l.trim() !== '');
-    return { fields: out, notes, block: [block.start, block.end - 1], format: detectFormat(lines, block, bodyPresent), bodyPresent, blockFound: out.length > 0 };
+    return { fields: out, notes, block: [block.start, block.end - 1], format: detectFormat(lines, block, bodyPresent), bodyPresent, blockFound: out.length > 0, repairedLines: repaired };
   }
 
   // RFC 2047 encoded words: =?charset?B|Q?text?=
@@ -192,7 +197,12 @@
     if (!value) return [];
     const v = decodeWords(value);
     const out = [];
-    for (const box of splitMailboxes(v)) {
+    for (let box of splitMailboxes(v)) {
+      // Group syntax (RFC 5322 3.4): "name: a@x, b@y;" and the empty
+      // "Undisclosed recipients:;". The group name is not an address.
+      const g = /^\s*(?:"[^"]*"|[^<>"@:,])*:/.exec(box);
+      if (g && !/^\s*<?mailto:/i.test(box)) { box = box.slice(g[0].length); if (!box.replace(/[;\s]/g, '')) continue; }
+      box = box.replace(/;\s*$/, '');
       const m = /<([^<>]*)>/.exec(box);
       if (m) {
         const display = stripComments(box.slice(0, m.index)).replace(/^"|"$/g, '').trim();
@@ -227,7 +237,8 @@
     addr = addr.replace(/^mailto:/i, '');
     const at = addr.lastIndexOf('@');
     const domain = at >= 0 ? addr.slice(at + 1).replace(/^\[|\]$/g, '').toLowerCase() : '';
-    return { address: addr, display: display || '', domain, local: at >= 0 ? addr.slice(0, at) : addr, empty: addr === '' };
+    const local = at >= 0 ? addr.slice(0, at) : addr;
+    return { address: addr, display: display || '', name: display || '', domain, local, localPart: local, empty: addr === '' };
   }
 
   function domainOf(addrOrDomain) {
@@ -245,7 +256,7 @@
   const ZONES = { UT: 0, UTC: 0, GMT: 0, EST: -300, EDT: -240, CST: -360, CDT: -300, MST: -420, MDT: -360, PST: -480, PDT: -420 };
   const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
   function parseDate(text) {
-    const result = { time: null, tzKnown: false, text: (text || '').trim() };
+    const result = { time: null, tzKnown: false, zone: '', text: (text || '').trim() };
     if (!text) return result;
     const s = stripComments(text).replace(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s*/i, '');
     const m = /^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([+-]\d{4}|[A-Za-z]{1,5})?(?:\s|$)/.exec(s);
@@ -258,6 +269,7 @@
       if (mon === undefined) return result;
       let offsetMin = 0;
       const z = m[7];
+      result.zone = z || '';
       if (z && /^[+-]\d{4}$/.test(z)) {
         const sign = z[0] === '-' ? -1 : 1;
         offsetMin = sign * (parseInt(z.slice(1, 3), 10) * 60 + parseInt(z.slice(3, 5), 10));
@@ -298,4 +310,6 @@
   }
 
   HA.parse = { parseHeaders, sentence, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
+  // Node: require() returns this layer; the browser reads HA instead.
+  if (typeof module !== 'undefined' && module.exports) module.exports = HA.parse;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

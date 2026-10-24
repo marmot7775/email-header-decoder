@@ -1,0 +1,20 @@
+Received: from mail.isp.example ([198.51.100.40])
+	by mx.example.org with esmtps (TLS1.3) tls TLS_AES_256_GCM_SHA384
+	(Exim 4.97)
+	(envelope-from <jo@isp.example>)
+	id 1tQx4a-0007Ab-2c
+	for neil@example.org;
+	Fri, 23 Oct 2026 18:30:22 +0100
+Received: from [203.0.113.15] (helo=jos-laptop)
+	by mail.isp.example with esmtpsa  (TLS1.3) tls TLS_AES_128_GCM_SHA256
+	(Exim 4.97)
+	(envelope-from <jo@isp.example>)
+	id 1tQx4Z-0003Kd-1x
+	for neil@example.org;
+	Fri, 23 Oct 2026 18:30:20 +0100
+From: Jo Byrne <jo@isp.example>
+To: neil@example.org
+Subject: Sent from the laptop
+Date: Fri, 23 Oct 2026 18:30:19 +0100
+Message-ID: <laptop-1@isp.example>
+Return-Path: <jo@isp.example>

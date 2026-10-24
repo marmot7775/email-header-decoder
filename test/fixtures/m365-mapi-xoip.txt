@@ -1,0 +1,22 @@
+Received: from SA1PR12MB8123.namprd12.prod.outlook.com (2603:10b6:806:31b::9)
+ by DM4PR12MB6040.namprd12.prod.outlook.com with HTTPS; Thu, 22 Oct 2026
+ 14:02:14 +0000
+Received: from PH0PR12MB7744.namprd12.prod.outlook.com (2603:10b6:510:26d::5)
+ by SA1PR12MB8123.namprd12.prod.outlook.com (2603:10b6:806:31b::9) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9100.14; Thu, 22 Oct
+ 2026 14:02:12 +0000
+Received: from PH0PR12MB7744.namprd12.prod.outlook.com
+ ([fe80::4c1a:9b2e:77d0:1f3a]) by PH0PR12MB7744.namprd12.prod.outlook.com
+ ([fe80::4c1a:9b2e:77d0:1f3a%3]) with mapi id 15.20.9100.014; Thu, 22 Oct 2026
+ 14:02:10 +0000
+From: Sam Okafor <sam@client.example>
+To: Neil <neil@client.example>
+Cc: Priya Shah <priya@client.example>, ops@client.example
+Subject: Re: DMARC rollout
+Date: Thu, 22 Oct 2026 14:02:09 +0000
+Message-ID: <PH0PR12MB77441A2B@PH0PR12MB7744.namprd12.prod.outlook.com>
+Return-Path: sam@client.example
+X-Originating-IP: [203.0.113.77]
+X-MS-Exchange-Organization-AuthAs: Internal
+MIME-Version: 1.0

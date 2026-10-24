@@ -55,7 +55,8 @@
   const PROTO = /^(UTF8)?(E?SMTP|LMTP)(S)?(A)?$/i;
 
   function tlsVersion(text) {
-    const m = /(?:version=|using\s+)(TLS\s?v?[0-9._]+|SSLv?[0-9.]+)/i.exec(text) || /\b(TLS1_[0-3])\b/.exec(text);
+    // Google and Microsoft: version=TLS1_3. Postfix: using TLSv1.3. Exim: (TLS1.3).
+    const m = /(?:version=|using\s+)(TLS\s?v?[0-9._]+|SSLv?[0-9.]+)/i.exec(text) || /\b(TLS1_[0-3])\b/.exec(text) || /\((TLSv?1[._][0-3])\)/i.exec(text);
     if (!m) return '';
     return m[1].replace(/_/g, '.').replace(/^TLS\s?v?/i, 'TLS ').replace(/^SSL\s?v?/i, 'SSL ');
   }
@@ -142,6 +143,13 @@
     const rdnsM = /(?:^|\s)([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)\.?\s*\[/.exec(hop.fromComment);
     const rdns = rdnsM && !isIpLiteral(rdnsM[1]) ? rdnsM[1] : '';
     hop.fromName = hop.fromHost && hop.fromHost.includes('.') && !isIpLiteral(hop.fromHost) ? hop.fromHost : rdns;
+    // The name the sender stated: Exim writes helo= in the comment,
+    // Postfix and Sendmail put it first. Reverse DNS is the name in the comment.
+    const heloM = /\bhelo=([^\s)\]]+)/i.exec(hop.fromComment);
+    hop.helo = heloM ? heloM[1] : hop.fromHost;
+    hop.rdns = rdns;
+    const envM = /envelope-from\s+<([^>]*)>/i.exec(value);
+    hop.envelopeFrom = envM ? envM[1] : '';
     hop.fromOperator = operatorOf(hop.fromName);
     hop.byOperator = operatorOf(hop.byHost);
     return { hop, value };
@@ -167,10 +175,11 @@
   function fmtDur(sec) {
     if (sec === null || sec === undefined) return '';
     const s = Math.abs(sec), neg = sec < 0 ? '-' : '';
-    if (s < 60) return neg + s + ' s';
-    if (s < 3600) return neg + Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
-    if (s < 86400) return neg + Math.floor(s / 3600) + ' h ' + Math.floor((s % 3600) / 60) + ' min';
-    return neg + Math.floor(s / 86400) + ' d ' + Math.floor((s % 86400) / 3600) + ' h';
+    const two = (a, ua, b, ub) => a + ua + (b ? ' ' + b + ub : '');
+    if (s < 60) return neg + s + 's';
+    if (s < 3600) return neg + two(Math.floor(s / 60), 'm', s % 60, 's');
+    if (s < 86400) return neg + two(Math.floor(s / 3600), 'h', Math.floor((s % 3600) / 60), 'm');
+    return neg + two(Math.floor(s / 86400), 'd', Math.floor((s % 86400) / 3600), 'h');
   }
 
   function plainDur(sec) {
@@ -226,7 +235,11 @@
     const dated = hops.filter(h => h.time !== null);
     const totalSec = dated.length >= 2 ? Math.round((dated[dated.length - 1].time - dated[0].time) / 1000) : null;
     const trust = trustLine(hops);
-    const chain = { hops, groups, totalSec, slowestIdx, slowestSec, clockSkew: skew, originIp: trust.originIp, originHost: trust.originHelo, trust, count: hops.length, notes: [] };
+    // A stated origin is what the submitting client or server claims, kept
+    // apart from the observed one because the sender's side can write it.
+    const xo = fields.find(f => f.lower === 'x-originating-ip' || f.lower === 'x-sender-ip');
+    const statedOriginIp = xo ? { ip: findIp(xo.value) || xo.value.replace(/[\[\]]/g, '').trim(), name: xo.name, src: [xo.index] } : null;
+    const chain = { hops, groups, totalSec, slowestIdx, slowestSec, clockSkew: skew, originIp: trust.originIp, originHost: trust.originHelo, statedOriginIp, trust, count: hops.length, notes: [] };
     chain.notes = chainNotes(chain);
     return chain;
   }
@@ -285,6 +298,12 @@
           'The receiving mail system (' + t.operator + ') took the message from ' + (t.originIp || 'an address it did not record') + '. That part of the record can be trusted.' + plainTail, t.src));
       }
     }
+    if (c.statedOriginIp) {
+      const so = c.statedOriginIp;
+      const same = so.ip && so.ip === t.originIp;
+      notes.push(say('unknown', so.name + ' states ' + so.ip + ' as the client address.' + (same ? ' That matches the observed origin.' : ' This is what the sender\'s side wrote, kept apart from the observed origin' + (t.originIp ? ' ' + t.originIp : '') + '; it is not verified.'),
+        'The sending system says the message was written on a device at ' + so.ip + '. That is its own claim, not something the receiver checked.', so.src));
+    }
     if (c.totalSec !== null && c.totalSec >= 0) {
       const caveat = c.clockSkew || c.hops.some(h => h.time !== null && !h.tzKnown);
       notes.push(say(caveat ? 'caveat' : 'pass',
@@ -326,4 +345,6 @@
   }
 
   HA.received = { parseReceived, buildChain, findIp, isPrivateIp, isIpLiteral, operatorOf, fmtDur, plainDur };
+  // Node: require() returns this layer; the browser reads HA instead.
+  if (typeof module !== 'undefined' && module.exports) module.exports = HA.received;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

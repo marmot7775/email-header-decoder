@@ -7,6 +7,14 @@
   const esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtDur = HA.received.fmtDur;
 
+  // Delay bands, upper bounds in seconds. The colors are the --delay-*
+  // tokens in page.html. Tune both against real mail.
+  const DELAY_BANDS = [[2, 'neutral'], [60, 'info'], [600, 'warn'], [Infinity, 'fail']];
+  const band = (sec) => DELAY_BANDS.find(b => sec < b[0])[1];
+  // Bars run on a log scale so a 2 second hop still shows next to a 2 hour one.
+  const barPct = (sec, max) => sec > 0 && max > 0 ? Math.max(2, Math.round(Math.log1p(sec) / Math.log1p(max) * 100)) : 0;
+  const bar = (sec, max) => '<div class="bar" aria-hidden="true"><i class="d-' + band(Math.max(0, sec)) + '" style="width:' + barPct(sec, max) + '%"></i></div>';
+
   const STATES = { pass: ['✓', 'Pass'], caveat: ['!', 'Caveat'], fail: ['✕', 'Fail'], unknown: ['?', 'Unknown'] };
   const FORMATS = { 'gmail-original': 'a Gmail Show original copy', 'outlook-headers': 'Outlook Internet headers', eml: 'a full message (.eml)', bare: 'a header block' };
   const STEP_FILLS = {
@@ -32,7 +40,7 @@
     for (const i of src || []) { const f = R.fields[i]; if (f) ls.push(f.lines[0] + 1, f.lines[1] + 1); }
     if (!ls.length) return '';
     const lo = Math.min.apply(null, ls), hi = Math.max.apply(null, ls);
-    return lo === hi ? 'L' + lo : 'L' + lo + '–' + hi;
+    return lo === hi ? 'L' + lo : 'L' + lo + ' to ' + hi;
   }
   function srcAttr(src) { return ' data-src="' + esc((src || []).join(',')) + '"'; }
   function srcBtn(src) {
@@ -76,6 +84,8 @@
       const who = m.from.display ? esc(m.from.display) + ' <span class="sub mono">&lt;' + esc(m.from.address) + '&gt;</span>' : '<span class="mono">' + esc(m.from.address) + '</span>';
       rows += row('From', prov(m.from.src, who) + (m.fromCount > 1 ? ' ' + chip('fail', m.fromCount + ' From fields') : ''));
     } else rows += row('From', absent('No From field in these headers.'));
+    const addrList = (x) => esc(x.addresses.map(a => a.display ? a.display + ' <' + a.address + '>' : a.address).join(', ') || x.text);
+    if (m.replyTo) rows += row('Reply-To', prov(m.replyTo.src, addrList(m.replyTo)));
     rows += row('To', m.to ? prov(m.to.src, esc(m.to.addresses.map(a => a.display ? a.display + ' <' + a.address + '>' : a.address).join(', ') || m.to.text)) : absent('No To field in these headers.'));
     rows += row('Subject', m.subject ? prov(m.subject.src, esc(m.subject.value || '(empty)')) : absent('No Subject field in these headers.'));
     if (m.date) {
@@ -143,7 +153,7 @@
       '<span class="how">' + esc(rec.matchedBy ? MATCHED[rec.matchedBy] + (rec.hopIdx >= 0 ? ', hop ' + (rec.hopIdx + 1) : '') : 'no Received by host matches') + '</span>' + srcBtn(rec.src) + '</div>';
     if (!rec.entries.length) h += '<p class="absent">' + (rec.none ? 'Reports none: no methods were checked.' : 'No method results could be read.') + '</p>';
     else h += '<div class="ents">' + rec.entries.map(e => '<div class="ent"><span class="m">' + esc(e.method) + '</span>' + chip(e.state, e.result) +
-      '<span class="id mono">' + esc(idText(e) || '–') + '</span>' + (e.reason ? '<span class="why">reason ' + esc(e.reason) + '</span>' : '') + '</div>').join('') + '</div>';
+      '<span class="id mono">' + esc(idText(e) || 'no identifiers') + '</span>' + (e.reason ? '<span class="why">reason ' + esc(e.reason) + '</span>' : '') + '</div>').join('') + '</div>';
     return h + '</div>';
   }
   function cvState(set) { return (set.i === 1 && set.cv === 'none') || (set.i > 1 && set.cv === 'pass') ? 'pass' : set.cv ? 'fail' : 'unknown'; }
@@ -159,7 +169,7 @@
     if (a.receivedSpf.length) {
       h += '<div class="arf"><div class="arh"><span class="who">Received-SPF</span>' + srcBtn(a.receivedSpf.flatMap(x => x.src)) + '</div><div class="ents">' +
         a.receivedSpf.map(x => '<div class="ent"><span class="m">spf</span>' + chip(HA.auth.resultState(x.result), x.result || 'unreadable') + '<span class="id mono">' +
-          esc(['client-ip', 'envelope-from', 'helo', 'receiver'].filter(k => x.props[k]).map(k => k + '=' + x.props[k]).join(' ') || '–') + '</span></div>').join('') + '</div></div>';
+          esc(['client-ip', 'envelope-from', 'helo', 'receiver'].filter(k => x.props[k]).map(k => k + '=' + x.props[k]).join(' ') || 'no details') + '</span></div>').join('') + '</div></div>';
     }
     // ARC chain, one row per instance.
     const arc = a.arc;
@@ -194,23 +204,36 @@
     $('auth').innerHTML = h;
   }
 
-  function tlsChip(h) { return chip(h.tls.state, h.tls.state === 'pass' || h.tls.state === 'caveat' ? h.tls.label : h.tls.state === 'fail' ? 'Plain' : h.tls.label); }
+  // The protocol chip carries the TLS version when the stamp records one.
+  // With no evidence it says so; the page does not claim the hop was plain.
+  function tlsChip(h) {
+    const proto = h.protocol ? h.protocol + ' ' : '';
+    if (h.tls.state === 'pass' || h.tls.state === 'caveat') return chip(h.tls.state, proto + h.tls.label);
+    if (h.tls.state === 'fail') return chip('fail', proto + 'plain');
+    return chip('unknown', h.tls.label === 'No connection' ? 'No connection' : 'TLS not recorded');
+  }
 
   function hopRow(h, maxDelay, numberLabel) {
-    const from = h.from ? esc(h.fromHost || '(unnamed)') + (h.fromIp && h.fromHost.indexOf(h.fromIp) === -1 ? ' <span class="ip">' + esc(h.fromIp) + '</span>' : '') : '<span class="ip">(handoff inside the server)</span>';
+    const from = h.from ? esc(h.fromHost || '(unnamed)') + (h.fromIp && h.fromHost.indexOf(h.fromIp) === -1 ? ' <span class="ip">' + esc(h.fromIp) + '</span>' : '') +
+      (h.fromIp && HA.received.isPrivateIp(h.fromIp) ? ' <span class="tag">private</span>' : '') : '<span class="ip">(handoff inside the server)</span>';
     const route = from + '<span class="arrow" aria-label="to">→</span>' + esc(h.byHost || '(unnamed)');
     const facts = [];
     facts.push(tlsChip(h));
-    if (h.protocol) facts.push('<span>with ' + esc(h.protocol) + (h.authenticated ? ', authenticated' : '') + '</span>');
+    if (h.authenticated) facts.push(chip('pass', 'Authenticated'));
+    // The stated HELO name, when it says something the route line does not.
+    const norm = (x) => (x || '').toLowerCase().replace(/\.$/, '');
+    if (h.helo && norm(h.helo) !== norm(h.fromHost) || h.helo && h.rdns && norm(h.helo) !== norm(h.rdns)) {
+      facts.push('<span>said HELO <span class="mono">' + esc(h.helo) + '</span>' + (h.rdns && norm(h.rdns) !== norm(h.helo) ? ', reverse DNS <span class="mono">' + esc(h.rdns) + '</span>' : '') + '</span>');
+    }
     if (h.internal) facts.push('<span title="' + esc(h.internalReason) + '">internal</span>');
     if (h.time !== null) facts.push('<span class="time">' + esc(fmtUtc(h.time)) + (h.tzKnown ? '' : ' (zone unknown)') + '</span>');
     else facts.push(chip('unknown', 'No readable date'));
     facts.push(srcBtn(h.src));
     let delay = '';
     if (h.delaySec !== null) {
-      const pct = h.delaySec > 0 && maxDelay > 0 ? Math.max(1, Math.round(h.delaySec / maxDelay * 100)) : 0;
-      delay = '<div class="delay"><div class="bar" aria-hidden="true">' + (h.skew ? '' : '<i style="width:' + pct + '%"></i>') + '</div><span class="val">' + esc(fmtDur(h.delaySec)) + '</span></div>';
-      if (h.skew) delay += '<div class="facts">' + chip('caveat', 'Clock skew') + '<span>stamped earlier than the hop before it</span></div>';
+      // Clock skew shows as 0s with a chip, never as a negative bar.
+      delay = '<div class="delay">' + bar(h.skew ? 0 : h.delaySec, maxDelay) + '<span class="val">' + esc(fmtDur(h.skew ? 0 : h.delaySec)) + '</span></div>';
+      if (h.skew) delay += '<div class="facts">' + chip('caveat', 'Clock skew') + '<span>stamped ' + esc(fmtDur(-h.delaySec)) + ' earlier than the hop before it</span></div>';
     } else if (h.index === 0) delay = '<div class="facts"><span class="absent">First stamp, so no delay to measure.</span></div>';
     const forgeable = R.chain.trust.boundaryIdx > h.index;
     return '<li class="hop' + (h.slowest ? ' slowest' : '') + (forgeable ? ' sender-side' : '') + '"><span class="n">' + numberLabel + '</span><div class="body">' +
@@ -231,10 +254,12 @@
 
   function renderPath() {
     const c = R.chain;
-    let h = '<h2 id="h-path">Path <span class="count">' + c.count + ' hop' + (c.count === 1 ? '' : 's') + ', oldest first</span></h2>';
+    const slow = c.slowestIdx >= 0 ? ', slowest is hop ' + (c.slowestIdx + 1) + ' at ' + fmtDur(c.hops[c.slowestIdx].delaySec) : '';
+    const total = c.totalSec !== null && c.totalSec >= 0 ? ', ' + fmtDur(c.totalSec) + ' end to end' : '';
+    let h = '<h2 id="h-path">Path <span class="count">' + c.count + ' hop' + (c.count === 1 ? '' : 's') + ' oldest first' + total + slow + '</span></h2>';
     if (!c.count) { $('path').innerHTML = h + says(c.notes); return; }
     const maxDelay = Math.max.apply(null, [0].concat(c.hops.map(x => x.delaySec || 0), c.groups.map(g => g.delaySec || 0)));
-    h += '<div class="summary"><span class="big">' + (c.totalSec !== null && c.totalSec >= 0 ? esc(fmtDur(c.totalSec)) : '–') + '</span><span class="lbl">end to end</span>' +
+    h += '<div class="summary"><span class="big">' + (c.totalSec !== null && c.totalSec >= 0 ? esc(fmtDur(c.totalSec)) : 'Unknown') + '</span><span class="lbl">end to end, ' + c.count + ' hop' + (c.count === 1 ? '' : 's') + '</span>' +
       (c.clockSkew ? chip('caveat', 'Clock skew') : '') + (c.trust.boundaryIdx >= 0 && !c.trust.originPrivate && c.originIp ? '<span class="lbl">origin <span class="mono">' + esc(c.originIp) + '</span></span>' : '') + '</div>';
     h += '<ol class="hops">';
     const t = c.trust;
@@ -244,12 +269,11 @@
       const hs = g.hops.map(i => c.hops[i]);
       const states = hs.map(x => x.tls.state);
       const worst = ['fail', 'caveat', 'unknown', 'pass'].find(s => states.includes(s));
-      const pct = g.delaySec > 0 && maxDelay > 0 ? Math.max(1, Math.round(g.delaySec / maxDelay * 100)) : 0;
       const slow = hs.some(x => x.slowest);
-      h += '<li class="hop group' + (slow ? ' slowest' : '') + '"><span class="n">' + (g.hops[0] + 1) + '–' + (g.hops[g.hops.length - 1] + 1) + '</span><div class="body"><details data-group="' + g.hops[0] + '"><summary>' +
+      h += '<li class="hop group' + (slow ? ' slowest' : '') + '"><span class="n">' + (g.hops[0] + 1) + ' to ' + (g.hops[g.hops.length - 1] + 1) + '</span><div class="body"><details data-group="' + g.hops[0] + '"><summary>' +
         '<span class="grp-title">' + hs.length + ' internal hops inside ' + esc(g.operator) + (slow ? ' <span class="slow-word">slowest</span>' : '') + ' <span class="chev"><span class="closed">Show hops</span><span class="open">Hide hops</span></span></span>' +
         '<span class="facts">' + chip(worst, worst === 'pass' ? 'TLS on every hop' : worst === 'unknown' ? 'TLS not recorded on every hop' : worst === 'caveat' ? 'TLS with caveats' : 'Plain on a hop') + srcBtn(g.src) + '</span>' +
-        (g.delaySec !== null ? '<span class="delay"><span class="bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span><span class="val">' + esc(fmtDur(g.delaySec)) + '</span></span>' : '') +
+        (g.delaySec !== null ? '<span class="delay">' + bar(g.delaySec, maxDelay).replace(/div/g, 'span') + '<span class="val">' + esc(fmtDur(Math.max(0, g.delaySec))) + '</span></span>' : '') +
         '</summary><ol class="inner">' + hs.map(x => hopRow(x, maxDelay, String(x.index + 1))).join('') + '</ol></details></div></li>';
     }
     h += '</ol>';
@@ -262,7 +286,7 @@
   function renderRaw() {
     const fields = R.fields;
     const b = R.input.block;
-    let h = '<details class="raw" id="raw-details"><summary>Raw headers <span class="count">' + fields.length + ' field' + (fields.length === 1 ? '' : 's') + (b ? ', lines ' + (b[0] + 1) + '–' + (b[1] + 1) + ' of the paste' : '') + '</span></summary>' +
+    let h = '<details class="raw" id="raw-details"><summary>Raw headers <span class="count">' + fields.length + ' field' + (fields.length === 1 ? '' : 's') + (b ? ', lines ' + (b[0] + 1) + ' to ' + (b[1] + 1) + ' of the paste' : '') + '</span></summary>' +
       '<div class="raw-tools"><label class="sr-only" for="raw-filter">Search the headers</label><input id="raw-filter" type="search" placeholder="Search names and values" autocomplete="off"><button class="btn" type="button" id="raw-clear-hl">Clear highlight</button><span class="status" id="raw-status"></span></div>' +
       '<div class="rawbox" id="rawbox"></div></details>';
     if (R.input.bodyPresent) h += '<p class="note-line">A message body followed the headers. It was not read.</p>';
@@ -318,7 +342,12 @@
   function renderAll() {
     const open = $('raw-details') && $('raw-details').open;
     const openGroups = Array.from(document.querySelectorAll('#path details[open]')).map(d => d.dataset.group);
-    $('read-as').textContent = 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + R.fields.length + ' fields, ' + R.chain.count + ' Received.';
+    // One line above the cards until step 3 puts the verdict here.
+    const c = R.chain;
+    const parts = [R.fields.length + ' field' + (R.fields.length === 1 ? '' : 's'), c.count + ' hop' + (c.count === 1 ? '' : 's')];
+    if (c.totalSec !== null && c.totalSec >= 0) parts.push('transit ' + fmtDur(c.totalSec));
+    if (c.originIp && !c.trust.originPrivate) parts.push('origin ' + c.originIp);
+    $('read-as').textContent = 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + ' line' + (R.input.repairedLines === 1 ? '' : 's') + ' had lost their indentation and were rejoined.' : '');
     renderVerdict(); renderMessage();
     renderAlignment();
     renderAuth();
@@ -352,6 +381,7 @@
   $('clear').addEventListener('click', () => { $('headers').value = ''; run(false); $('headers').focus(); });
   document.querySelectorAll('[data-sample]').forEach(b => b.addEventListener('click', () => { $('headers').value = window.SAMPLES[b.dataset.sample]; run(true); }));
   document.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', () => setVoice(b.dataset.voice)));
+  $('headers').addEventListener('paste', () => setTimeout(() => run(true), 0));
   $('headers').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run(true); });
 
   const panel = $('input-panel');

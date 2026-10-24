@@ -1,0 +1,10 @@
+Received: from c.example.net (c.example.net [198.51.100.3])
+        by d.example.org with ESMTPS id 4; 23 Oct 26 17:05 GMT
+Received: from b.example.net (b.example.net [198.51.100.2])
+        by c.example.net with ESMTPS id 3; Fri, 23 Oct 2026 17:04:00 Z
+Received: from a.example.net (a.example.net [198.51.100.1])
+        by b.example.net with ESMTPS id 2; Fri, 23 Oct 2026 10:03:00 PDT (Pacific Daylight Time)
+From: a@example.net
+To: b@example.org
+Subject: Dates
+Date: Fri, 23 Oct 2026 10:02:30 -0700
