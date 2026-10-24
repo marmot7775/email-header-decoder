@@ -1,0 +1,55 @@
+Delivered-To: neil@example.org
+Received: by 2002:a05:7300:5c11:b0:1b2:3f4e:aa10 with SMTP id k17csp6601dyb;
+        Fri, 23 Oct 2026 10:42:20 -0700 (PDT)
+Return-Path: <SRS0=ab12=QX=list.example=owner@forward.example>
+Received: from out.forward.example (out.forward.example. [198.51.100.80])
+        by mx.google.com with ESMTPS id t5u6v7si505.2026.10.23.10.42.19
+        for <neil@example.org>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 23 Oct 2026 10:42:19 -0700 (PDT)
+Received-SPF: pass (google.com: domain of srs0=ab12=qx=list.example=owner@forward.example designates 198.51.100.80 as permitted sender) client-ip=198.51.100.80;
+Authentication-Results: mx.google.com;
+       dkim=fail header.i=@author.example header.s=a1 header.b=AuthSig1;
+       dkim=pass header.i=@list.example header.s=l1 header.b=ListSig1;
+       arc=pass (i=3 spf=pass spfdomain=list.example dkim=pass dkdomain=list.example dmarc=fail fromdomain=author.example);
+       spf=pass (google.com: domain of srs0=ab12=qx=list.example=owner@forward.example designates 198.51.100.80 as permitted sender) smtp.mailfrom="SRS0=ab12=QX=list.example=owner@forward.example";
+       dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=author.example
+ARC-Seal: i=3; a=rsa-sha256; t=1792782138; cv=pass; d=forward.example; s=arc2; b=SyntheticSeal0502
+ARC-Message-Signature: i=3; a=rsa-sha256; c=relaxed/relaxed; d=forward.example; s=arc2; h=from:to:subject:date:message-id:list-id; bh=SyntheticBh0501=; b=SyntheticAms0502
+ARC-Authentication-Results: i=3; mx.forward.example;
+       spf=pass smtp.mailfrom=owner@list.example;
+       dkim=fail header.d=author.example header.s=a1;
+       dkim=pass header.d=list.example header.s=l1;
+       arc=pass (i=1);
+       dmarc=fail header.from=author.example
+Received: from mx.forward.example (mx.forward.example [10.9.0.4])
+        by out.forward.example (Postfix) with ESMTP id 5Ab2;
+        Fri, 23 Oct 2026 17:42:18 +0000 (UTC)
+Received: from out.list.example (out.list.example [203.0.113.60])
+        by mx.forward.example (Postfix) with ESMTPS id 5Ab1
+        for <neil@forward.example>; Fri, 23 Oct 2026 17:42:15 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=list.example; s=l1;
+        t=1792782130; h=from:to:subject:date:message-id:list-id;
+        bh=SyntheticBh0502=; b=ListSig1SyntheticValue
+ARC-Seal: i=1; a=rsa-sha256; t=1792782128; cv=none; d=list.example; s=arc1; b=SyntheticSeal0501
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=list.example; s=arc1; h=from:to:subject:date:message-id; bh=SyntheticBh0501=; b=SyntheticAms0501
+ARC-Authentication-Results: i=1; mx.list.example;
+       spf=pass smtp.mailfrom=sam@author.example;
+       dkim=pass header.d=author.example header.s=a1;
+       dmarc=pass header.from=author.example
+Received: from mx.list.example (mx.list.example [10.7.0.2])
+        by out.list.example (Postfix) with ESMTP id 4Zz9;
+        Fri, 23 Oct 2026 17:42:09 +0000 (UTC)
+Received: from mail.author.example (mail.author.example [192.0.2.55])
+        by mx.list.example (Postfix) with ESMTPS id 4Zz8
+        for <club@list.example>; Fri, 23 Oct 2026 17:42:06 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=author.example; s=a1;
+        t=1792782125; h=from:to:subject:date:message-id;
+        bh=SyntheticBh0500=; b=AuthSig1SyntheticValue
+From: Sam Author <sam@author.example>
+To: club@list.example
+Subject: [club] Meeting moved to Thursday
+List-Id: <club.list.example>
+Date: Fri, 23 Oct 2026 17:42:04 +0000
+Message-ID: <m-501@author.example>
+MIME-Version: 1.0

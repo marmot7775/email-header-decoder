@@ -193,8 +193,9 @@
       rep += chip(d.state, 'dmarc=' + d.result) + (d.headerFrom ? '<span class="sub mono">header.from=' + esc(d.headerFrom) + '</span>' : '') + (pol ? '<span class="sub mono">' + esc(pol) + '</span>' : '') + srcBtn(d.src);
     } else rep += chip('unknown', 'Not reported') + '<span class="sub">No dmarc= result in the receiver\'s Authentication-Results.</span>';
     let cmp = '<span class="k">Computed here</span>';
-    if (c.result === 'unknown') cmp += chip('unknown', 'Cannot compute') + '<span class="sub">' + (c.why === 'no-from' ? 'There is no From domain to align with.' : 'The receiver reported no SPF or DKIM results to combine.') + '</span>';
-    else if (c.result === 'depends') cmp += '<span class="modes">' + chip('pass', 'relaxed: pass') + chip('fail', 'strict: fail') + '</span><span class="sub">The DMARC record decides: ' + esc(c.tags.join(' and ')) + ' (relaxed when absent).</span>' + srcBtn(c.src);
+    const NONE_WHY = { 'no-from': 'There is no From domain to align with.', 'two-from': 'There is more than one From field, so there is no single domain to align with.', 'multi-domain': 'The From field names addresses in more than one domain, so there is no single domain to align with.', 'no-trusted-results': 'No Authentication-Results field here was written by the receiver.' };
+    if (c.result === 'none') cmp += chip('unknown', 'Cannot compute') + '<span class="sub">' + (NONE_WHY[c.why] || 'The receiver reported no SPF or DKIM results to combine.') + '</span>';
+    else if (c.differ) cmp += '<span class="modes">' + chip('pass', 'relaxed: pass') + chip('fail', 'strict: fail') + '</span><span class="sub">The DMARC record decides: ' + esc(c.tags.join(' and ')) + ' (relaxed when absent).</span>' + srcBtn(c.src);
     else cmp += chip(c.result, 'dmarc=' + c.result) + '<span class="sub">' + (c.result === 'pass' ? 'Aligned pass from ' + esc((c.by.strict.length ? c.by.strict : c.by.relaxed).join(', ')) + '.' : 'No method that passed aligns with the From domain.') + '</span>' + srcBtn(c.src);
     h += '<div class="dmt">' + rep + '</div><div class="dmt">' + cmp + '</div></div>';
     if (d.disagreement) h += says([d.disagreement]);

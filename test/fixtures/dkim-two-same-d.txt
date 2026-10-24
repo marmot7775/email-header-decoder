@@ -1,0 +1,21 @@
+Authentication-Results: mx.receiver.example;
+       dkim=pass header.d=news.example header.s=k1;
+       dkim=fail (signature expired) header.d=news.example header.b=BBBB2222;
+       spf=pass smtp.mailfrom=bounce@news.example;
+       dmarc=pass header.from=news.example
+Received: from out.news.example (out.news.example [192.0.2.80])
+        by mx.receiver.example (Postfix) with ESMTPS id 7Uu1
+        for <neil@receiver.example>; Fri, 23 Oct 2026 18:00:04 +0000 (UTC)
+Return-Path: <bounce@news.example>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=news.example; s=k2;
+        t=1792605600; x=1792692000; h=from:to:subject:date:message-id;
+        bh=SyntheticBodyHash0704=; b=BBBB2222SyntheticValue0704
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=news.example; s=k1;
+        t=1792778390; l=1200; h=from:to:subject:date:message-id;
+        bh=SyntheticBodyHash0705=; b=AAAA1111SyntheticValue0705
+From: News <letters@news.example>
+To: neil@receiver.example
+Subject: This week
+Date: Fri, 23 Oct 2026 18:00:00 +0000
+Message-ID: <week-0704@news.example>
+MIME-Version: 1.0

@@ -28,7 +28,7 @@
 
   const PROP_RE = /([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s;]+)/g;
   // The identifiers the page shows for every method (RFC 8601 2.7).
-  const IDS = ['header.d', 'header.i', 'header.s', 'smtp.mailfrom', 'smtp.helo', 'header.from'];
+  const IDS = ['header.d', 'header.i', 'header.s', 'header.b', 'smtp.mailfrom', 'smtp.helo', 'header.from'];
 
   function parseAuthResults(value) {
     const out = { raw: value, authserv: '', version: '', instance: null, results: [], none: false };
@@ -66,6 +66,9 @@
         if (key === 'reason') r.reason = val; else r.props[key] = val;
       }
       for (const k of IDS) if (r.props[k]) r.ids[k] = r.props[k];
+      // policy.* properties (RFC 8601 2.7.7), keyed by what follows the dot.
+      r.policy = {};
+      for (const k of Object.keys(r.props)) if (k.startsWith('policy.')) r.policy[k.slice(7)] = r.props[k];
       out.results.push(r);
     }
     return out;
@@ -94,11 +97,14 @@
 
   function parseDkimSignature(value) {
     const { tags } = P.parseTagList(value);
-    const sig = { d: (tags.d || '').toLowerCase(), s: tags.s || '', i: tags.i || '', a: tags.a || '', c: tags.c || 'simple/simple', bh: tags.bh || '', h: (tags.h || '').toLowerCase(), t: int(tags.t), x: int(tags.x), l: int(tags.l), bPrefix: (tags.b || '').slice(0, 8) };
+    const sig = { v: tags.v || '', d: (tags.d || '').toLowerCase(), s: tags.s || '', i: tags.i || '', a: tags.a || '', c: tags.c || 'simple/simple', bh: tags.bh || '', h: (tags.h || '').toLowerCase(), t: int(tags.t), x: int(tags.x), l: int(tags.l), b: tags.b || '', bPrefix: (tags.b || '').slice(0, 8) };
     sig.signedHeaders = sig.h.split(':').map(s => s.trim()).filter(Boolean);
+    sig.partialBody = sig.l !== null;
+    // expired is set against the arrival time in buildAuth; null means unknown.
+    sig.expired = sig.x === null ? false : sig.t !== null && sig.x < sig.t ? true : null;
     sig.notes = [];
     if (!sig.signedHeaders.includes('from')) sig.notes.push('h= does not list From, which RFC 6376 5.4 requires.');
-    if (sig.l !== null) sig.notes.push('l= body length limit present; content appended after ' + sig.l + ' bytes is unsigned.');
+    if (sig.l !== null) sig.notes.push('l= body length limit present; the signature covers only the first ' + sig.l + ' bytes of the body, and content appended after that is unsigned.');
     if (sig.x !== null && sig.t !== null && sig.x < sig.t) sig.notes.push('x= expiry is earlier than t= timestamp.');
     if (/sha1/i.test(sig.a)) sig.notes.push('rsa-sha1 is historic (RFC 8301); receivers may ignore it.');
     return sig;
@@ -121,11 +127,11 @@
   // wrote it and whether the Received chain backs that up. RFC 8601 5
   // has receivers delete fields that carry their own authserv-id, so a
   // field whose host the chain never names could have come from anyone.
-  function readArField(f, chain) {
+  function readArField(f, chain, exo) {
     const ar = parseAuthResults(f.value);
     const rec = { index: f.index, src: [f.index], authserv: ar.authserv, version: ar.version, none: ar.none, writer: ar.authserv, writerNamed: !!ar.authserv, hopIdx: -1, matchedBy: '', trust: 'unverified', primary: false, entries: [] };
     if (ar.authserv) Object.assign(rec, hopForHost(ar.authserv, chain));
-    else {
+    else if (exo) {
       // Exchange Online names no authserv-id. The field usually sits just
       // above the Received field of the hop that wrote it, sometimes just
       // below. Only Microsoft writes this form, so the Received directly
@@ -137,7 +143,11 @@
       if (pick) { rec.hopIdx = pick.index; rec.matchedBy = 'position'; rec.writer = pick.byHost; }
     }
     if (rec.hopIdx >= 0) rec.trust = chain.trust.boundaryIdx >= 0 && rec.hopIdx >= chain.trust.boundaryIdx ? 'receiver' : 'sender-side';
-    rec.entries = ar.results.map(r => ({ method: r.method, result: r.result, state: resultState(r.result), reason: r.reason, ids: r.ids, props: r.props, comments: r.comments, text: r.text, field: f.index, src: [f.index] }));
+    // RFC 8601 5 has a receiver strip only fields that carry its own
+    // authserv-id, so anything not written by the final receiver could
+    // have come from the sender or a hop before.
+    rec.untrusted = rec.trust !== 'receiver';
+    rec.entries = ar.results.map(r => ({ method: r.method, result: r.result, state: resultState(r.result), reason: r.reason, ids: r.ids, props: r.props, policy: r.policy, comments: r.comments, text: r.text, field: f.index, src: [f.index] }));
     return rec;
   }
 
@@ -182,7 +192,9 @@
       set.preForward = set.aar ? set.aar.results : [];
     });
     const state = !instances.length ? 'none' : problems.length ? 'fail' : 'pass';
-    return { present: instances.length > 0, instances, problems, state, sealers: instances.map(s => s.sealer.domain) };
+    // ARC-Authentication-Results i=1 is written by the first forwarder.
+    const firstForwarder = instances[0] && instances[0].i === 1 && instances[0].aar ? instances[0].aar.authserv : '';
+    return { present: instances.length > 0, instances, problems, state, sealers: instances.map(s => s.sealer.domain), firstForwarder };
   }
 
   // Alignment of one authenticated identifier with the From domain,
@@ -193,6 +205,9 @@
     const relaxed = strict || (!!from.org && !!L.org && L.org === from.org);
     const passed = result === 'pass';
     let state, word;
+    if (!from.defined) {
+      return { kind, domain: L.domain, org: L.org, approximate: L.approximate, result, passed, strict: false, relaxed: false, relaxedOnly: false, modes: { relaxed: false, strict: false }, aligned: null, mode: '', state: 'unknown', word: 'No single From domain' };
+    }
     if (!result || result === 'none') { state = 'unknown'; word = result === 'none' ? 'None' : 'Not reported'; }
     else if (!passed) { state = 'fail'; word = 'Failed'; }
     else if (strict) { state = 'pass'; word = 'Aligned'; }
@@ -214,93 +229,172 @@
     return policy;
   }
 
-  function buildAuth(fields, chain, message) {
-    const fromInfo = message.from && message.from.domain ? HA.psl.lookup(message.from.domain) : { domain: '', org: '', approximate: false };
-    const from = { domain: fromInfo.domain, org: fromInfo.org, approximate: fromInfo.approximate, src: message.from ? message.from.src.slice() : [] };
-    const notes = [];
+  // The disposition the receiver applied. Google writes dis=; Microsoft
+  // writes action=. Microsoft's own pages disagree on what oreject and
+  // pct.* did to the message, so for those value stays empty and the
+  // raw word, the policy it names, and the sampling are kept.
+  const MS_ACTION = { oreject: ['', 'reject', false], 'pct.quarantine': ['', 'quarantine', true], 'pct.reject': ['', 'reject', true] };
+  function readDisposition(e, policy) {
+    const out = { value: '', source: '', raw: '', policy: policy.p || '', sampled: false, src: e ? e.src.slice() : [] };
+    if (!e) return out;
+    const word = (w) => ['none', 'quarantine', 'reject'].includes(w) ? w : '';
+    if (policy.dis) {
+      const m = /\bdis=([A-Za-z0-9]+)/i.exec(e.comments.join(' '));
+      Object.assign(out, { value: word(policy.dis), source: 'dis', raw: m ? m[0] : 'dis=' + policy.dis });
+    } else if (policy.action) {
+      Object.assign(out, { value: word(policy.action), source: 'action', raw: 'action=' + e.props.action });
+      const ms = MS_ACTION[policy.action];
+      if (ms) Object.assign(out, { value: ms[0], policy: ms[1], sampled: ms[2] });
+    }
+    return out;
+  }
 
-    const all = fields.filter(f => f.lower === 'authentication-results').map(f => readArField(f, chain));
-    let primary = all.find(r => r.trust === 'receiver') || all[0] || null;
+  // The From domain DMARC evaluates: one From field whose addresses share
+  // one domain. Two From fields, or addresses in two domains, leave it
+  // undefined, and nothing is computed from any of them.
+  function fromOf(message) {
+    const src = message.from ? message.from.src.slice() : [];
+    const none = (why) => ({ domain: '', org: '', approximate: false, defined: false, why, src });
+    if (message.fromCount > 1) return none('two-from');
+    if (!message.from || !message.from.domain) return none('no-from');
+    const domains = message.from.domains || [message.from.domain];
+    if (domains.length > 1) return none('multi-domain');
+    const L = HA.psl.lookup(message.from.domain);
+    return { domain: L.domain, org: L.org, approximate: L.approximate, defined: true, why: '', src };
+  }
+
+  function buildAuth(fields, chain, message) {
+    const from = fromOf(message);
+    const notes = [];
+    const exo = fields.some(f => f.lower.startsWith('x-ms-exchange-organization-'));
+
+    const all = fields.filter(f => f.lower === 'authentication-results').map(f => readArField(f, chain, exo));
+    // The primary field is the final receiver's: the topmost one whose
+    // authserv-id shares an operator with the last hop's by host, or, at
+    // Exchange Online, the topmost one with no authserv-id. Never one the
+    // sender could have written.
+    const primary = all.find(r => !r.untrusted) || null;
     if (primary) primary.primary = true;
+    const primaryRule = !primary ? '' : primary.authserv ? 'operator' : 'exchange-online';
     // The receiver's own fields. iCloud writes one field per method, so
     // results are gathered from all of them, the first per method winning.
-    const receiverSet = all.filter(r => r.trust === 'receiver');
-    const reportSet = receiverSet.length ? receiverSet : (primary ? [primary] : []);
+    const reportSet = all.filter(r => !r.untrusted);
     const reported = (method) => { for (const r of reportSet) { const es = r.entries.filter(e => e.method === method); if (es.length) return es; } return []; };
 
+    // Received-SPF counts when the receiver wrote it: above the Received
+    // field of the last hop before the receiver took custody.
+    const b = chain.trust.boundaryIdx;
+    const senderTop = b > 0 ? chain.hops[b - 1].src[0] : Infinity;
     const rspfFields = fields.filter(f => f.lower === 'received-spf');
-    const receivedSpf = rspfFields.map(f => Object.assign(parseReceivedSpf(f.value), { src: [f.index] }));
+    const receivedSpf = rspfFields.map(f => Object.assign(parseReceivedSpf(f.value), { src: [f.index], trusted: b >= 0 && f.index < senderTop }));
     const dkimFields = fields.filter(f => f.lower === 'dkim-signature');
     const signatures = dkimFields.map(f => Object.assign(parseDkimSignature(f.value), { src: [f.index] }));
     const arc = buildArc(fields, chain);
 
-    // SPF: the domain checked is smtp.mailfrom, else the envelope-from in
-    // Received-SPF (the same identity), else the Return-Path.
+    // x= against the time the receiver stamped, else the Date field.
+    const lastHop = chain.count ? chain.hops[chain.count - 1] : null;
+    const arrival = lastHop && lastHop.time !== null ? lastHop.time : message.date && message.date.time !== null ? message.date.time : null;
+    for (const sig of signatures) {
+      if (sig.x !== null && arrival !== null) sig.expired = sig.x * 1000 < arrival;
+      if (sig.expired && !(sig.t !== null && sig.x < sig.t)) sig.notes.push('x= expiry ' + new Date(sig.x * 1000).toISOString().replace('.000Z', 'Z') + ' expired before the message arrived.');
+    }
+
+    // SPF: the primary A-R's spf, else a Received-SPF the receiver wrote.
+    // The identifier is smtp.mailfrom, else the envelope-from (or helo)
+    // Received-SPF names, else the Return-Path. A null reverse path means
+    // SPF checked the HELO domain (RFC 7208 2.4).
     const spfE = reported('spf')[0] || null;
-    const rspf = receivedSpf[0] || null;
+    const rspf = receivedSpf.find(x => x.trusted) || null;
     const rpF = fields.find(f => f.lower === 'return-path');
     const rp = rpF ? (P.parseAddresses(rpF.value)[0] || null) : null;
-    let spfDomain = '', spfFrom = '', spfSrc = [];
-    if (spfE && spfE.ids['smtp.mailfrom']) { spfDomain = P.domainOf(spfE.ids['smtp.mailfrom']); spfFrom = 'smtp.mailfrom'; spfSrc = spfE.src.slice(); }
-    else if (rspf && rspf.props['envelope-from']) { spfDomain = P.domainOf(rspf.props['envelope-from']); spfFrom = 'Received-SPF envelope-from'; spfSrc = rspf.src.slice(); }
+    const isNull = (v) => !v || /^<?\s*>?$/.test(v);
+    let spfDomain = '', spfFrom = '', spfSrc = [], nullPath = false;
+    const rspfId = rspf ? (rspf.props.identity || '').toLowerCase() : '';
+    if (spfE && !isNull(spfE.ids['smtp.mailfrom'])) { spfDomain = P.domainOf(spfE.ids['smtp.mailfrom']); spfFrom = 'smtp.mailfrom'; spfSrc = spfE.src.slice(); }
+    else if (!spfE && rspf && rspfId === 'helo' && rspf.props.helo) { spfDomain = P.domainOf(rspf.props.helo); spfFrom = 'Received-SPF helo'; spfSrc = rspf.src.slice(); }
+    else if (rspf && !isNull(rspf.props['envelope-from'])) { spfDomain = P.domainOf(rspf.props['envelope-from']); spfFrom = 'Received-SPF envelope-from'; spfSrc = rspf.src.slice(); }
     else if (rp && rp.domain) { spfDomain = rp.domain; spfFrom = 'Return-Path'; spfSrc = [rpF.index]; }
-    const spfResult = spfE ? spfE.result : rspf ? rspf.result : '';
-    const spfResultSrc = spfE ? spfE.src : rspf ? rspf.src : [];
+    else if (rp && rp.empty) {
+      nullPath = true;
+      const recvHop = b >= 0 ? chain.hops[b] : null;
+      if (spfE && spfE.ids['smtp.helo']) { spfDomain = P.domainOf(spfE.ids['smtp.helo']); spfFrom = 'smtp.helo'; spfSrc = spfE.src.slice(); }
+      else if (rspf && rspf.props.helo) { spfDomain = P.domainOf(rspf.props.helo); spfFrom = 'Received-SPF helo'; spfSrc = rspf.src.slice(); }
+      else if (recvHop && recvHop.fromHost && !HA.received.isIpLiteral(recvHop.fromHost)) { spfDomain = P.domainOf(recvHop.fromHost); spfFrom = 'Received HELO'; spfSrc = recvHop.src.slice(); }
+      spfSrc = spfSrc.concat([rpF.index]);
+    }
+    const spfR = spfE || rspf;
+    const spfResult = spfR ? spfR.result : '';
+    const spfResultSrc = spfR ? spfR.src : [];
     const spf = Object.assign(alignRow('spf', spfDomain, spfResult, from), {
-      identity: spfFrom, helo: spfE ? P.domainOf(spfE.ids['smtp.helo'] || '') : '', ip: (spfE && (spfE.props['smtp.remote-ip'] || spfE.props['client-ip'])) || (rspf && rspf.props['client-ip']) || '',
+      identity: spfFrom, helo: spfE ? P.domainOf(spfE.ids['smtp.helo'] || '') : rspf ? P.domainOf(rspf.props.helo || '') : '', ip: (spfE && (spfE.props['smtp.remote-ip'] || spfE.props['client-ip'])) || (rspf && rspf.props['client-ip']) || '',
       reason: spfE ? spfE.reason : '', comments: spfE ? spfE.comments : rspf ? rspf.comments : [], reportedBy: spfE ? 'Authentication-Results' : rspf ? 'Received-SPF' : '',
-      src: Array.from(new Set(spfSrc.concat(spfResultSrc))).sort((a, b) => a - b), absent: !spfDomain });
+      src: Array.from(new Set(spfSrc.concat(spfResultSrc))).sort((a, b) => a - b), absent: !spfDomain, nullPath });
 
     // DKIM: every result the receiver reported, matched to a signature by
-    // header.b, else by d= and s=. Signatures it reported nothing for follow.
+    // header.d, and by header.s or header.b when two signatures share d=.
+    // Two candidates and neither tag is ambiguous, and the page says so
+    // instead of picking one. Signatures it reported nothing for follow.
     const used = new Set();
     const dkim = reported('dkim').map(e => {
       let d = P.domainOf(e.ids['header.d'] || e.ids['header.i'] || '');
       if (d === 'none') d = '';
       const s = e.ids['header.s'] || '';
-      const b = (e.props['header.b'] || '').slice(0, 8);
-      const sig = signatures.find(x => !used.has(x) && b && x.bPrefix === b) || signatures.find(x => !used.has(x) && x.d === d && (!s || x.s === s)) || null;
+      const bTag = (e.ids['header.b'] || '').replace(/\s+/g, '');
+      const free = signatures.filter(x => !used.has(x));
+      const sameD = d ? free.filter(x => x.d === d) : free;
+      let sig = null, matchedBy = '', candidates = [];
+      if (bTag && (sig = sameD.find(x => x.b.startsWith(bTag)) || null)) matchedBy = 'header.b';
+      else if (s && (sig = sameD.find(x => x.s === s) || null)) matchedBy = 'header.s';
+      else if (d && sameD.length === 1) { sig = sameD[0]; matchedBy = 'header.d'; }
+      else if (d && sameD.length > 1) candidates = sameD;
       if (sig) used.add(sig);
+      for (const c of candidates) used.add(c);
       if (!d && sig) d = sig.d;
-      return Object.assign(alignRow('dkim', d, e.result, from), { selector: s || (sig ? sig.s : ''), reason: e.reason, comments: e.comments, signature: sig ? signatures.indexOf(sig) : -1, src: (sig ? [sig.src[0]] : []).concat(e.src).sort((a, b) => a - b), absent: !d });
+      const ambiguous = candidates.length > 1;
+      return Object.assign(alignRow('dkim', d, e.result, from), { selector: s || (sig ? sig.s : ''), reason: e.reason, comments: e.comments, signature: sig ? signatures.indexOf(sig) : -1, matchedBy, ambiguous, candidates: candidates.map(c => signatures.indexOf(c)),
+        src: (sig ? [sig.src[0]] : candidates.map(c => c.src[0])).concat(e.src).sort((a, b) => a - b), absent: !d });
     }).filter(r => !(r.absent && r.result === 'none'));
     for (const sig of signatures) {
       if (used.has(sig)) continue;
-      dkim.push(Object.assign(alignRow('dkim', sig.d, '', from), { selector: sig.s, reason: '', comments: [], signature: signatures.indexOf(sig), src: sig.src.slice(), absent: false }));
+      dkim.push(Object.assign(alignRow('dkim', sig.d, '', from), { selector: sig.s, reason: '', comments: [], signature: signatures.indexOf(sig), matchedBy: '', ambiguous: false, candidates: [], src: sig.src.slice(), absent: false }));
     }
 
-    // Reported DMARC, with the policy the receiver quoted.
+    // Reported DMARC, with the policy and disposition the receiver quoted.
     const dmarcE = reported('dmarc')[0] || null;
-    const dmarc = { result: dmarcE ? dmarcE.result : '', state: resultState(dmarcE ? dmarcE.result : ''), headerFrom: dmarcE ? P.domainOf(dmarcE.ids['header.from'] || '') : '', policy: readPolicy(dmarcE), reason: dmarcE ? dmarcE.reason : '', comments: dmarcE ? dmarcE.comments : [], reported: !!dmarcE, src: dmarcE ? dmarcE.src.slice() : [] };
+    const policy = readPolicy(dmarcE);
+    const dmarc = { result: dmarcE ? dmarcE.result : '', state: resultState(dmarcE ? dmarcE.result : ''), headerFrom: dmarcE ? P.domainOf(dmarcE.ids['header.from'] || '') : '', policy, disposition: readDisposition(dmarcE, policy), reason: dmarcE ? dmarcE.reason : '', comments: dmarcE ? dmarcE.comments : [], reported: !!dmarcE, src: dmarcE ? dmarcE.src.slice() : [] };
 
+    // The receiver's own arc= result, kept beside the chain check.
     const arcE = reported('arc')[0] || null;
     const arcResult = arcE ? { result: arcE.result, props: arcE.props, comments: arcE.comments, text: arcE.text, src: arcE.src.slice() } : null;
     const caE = reported('compauth')[0] || null;
     const compauth = caE ? { result: caE.result, reason: caE.reason || caE.props.reason || '', raw: caE.text, src: caE.src.slice() } : null;
 
     const rows = dkim.concat(spf.absent ? [] : [spf]);
-    const computed = computeDmarc(from, rows, dkim, spf);
+    const computed = computeDmarc(from, rows, dkim, spf, all, primary);
     dmarc.disagreement = compare(dmarc, computed, from, rows, arc, arcResult);
 
-    const auth = { all, primary: primary ? all.indexOf(primary) : -1, spf, dkim, signatures, receivedSpf, dmarc, computed, arc, arcResult, compauth, notes };
+    const auth = { all, primary: primary ? all.indexOf(primary) : -1, primaryRule, exchangeOnline: exo, spf, dkim, signatures, receivedSpf, dmarc, computed, arc, arcResult, compauth, notes };
     authNotes(auth);
     return { auth, alignment: alignmentOf(from, dkim, spf, computed) };
   }
 
-  // The page's own DMARC result: pass when any method the receiver
-  // reported as pass also aligns. adkim and aspf live in the DMARC record,
-  // which needs DNS, so the result is worked out under both modes.
-  function computeDmarc(from, rows, dkim, spf) {
-    const c = { result: 'unknown', relaxed: null, strict: null, differ: false, by: { relaxed: [], strict: [] }, tags: [], src: [] };
-    const reportedAny = rows.some(r => r.result);
-    if (!from.domain || !reportedAny) { c.why = !from.domain ? 'no-from' : 'no-results'; return c; }
+  // The page's own DMARC result: pass when SPF passed on an aligned
+  // identifier or any DKIM passed on an aligned d=, otherwise fail, and
+  // none when there is no trusted A-R or no single From domain. adkim and
+  // aspf live in the DMARC record, which needs DNS, so relaxed (the
+  // default) decides the result and strict is computed beside it.
+  function computeDmarc(from, rows, dkim, spf, all, primary) {
+    const c = { result: 'none', mode: 'relaxed', relaxed: null, strict: null, differ: false, by: { relaxed: [], strict: [] }, tags: [], src: [] };
+    if (!from.defined) { c.why = from.why; c.src = from.src.slice(); return c; }
+    if (!primary) { c.why = all.length ? 'no-trusted-results' : 'no-results'; return c; }
     const name = (r) => (r.kind === 'dkim' ? 'DKIM ' : 'SPF ') + r.domain;
     c.by.relaxed = rows.filter(r => r.modes.relaxed).map(name);
     c.by.strict = rows.filter(r => r.modes.strict).map(name);
     c.relaxed = c.by.relaxed.length > 0;
     c.strict = c.by.strict.length > 0;
     c.differ = c.relaxed !== c.strict;
-    c.result = c.relaxed && c.strict ? 'pass' : !c.relaxed ? 'fail' : 'depends';
+    c.result = c.relaxed ? 'pass' : 'fail';
     // The tags that decide it when the modes differ.
     if (c.differ) {
       if (dkim.some(r => r.relaxedOnly)) c.tags.push('adkim');
@@ -315,11 +409,10 @@
   // the likely reason instead of hiding it.
   function compare(dmarc, computed, from, rows, arc, arcResult) {
     const rep = dmarc.result;
-    if (!['pass', 'fail'].includes(rep) || computed.result === 'unknown') return null;
+    if (!['pass', 'fail'].includes(rep) || computed.result === 'none') return null;
     const src = Array.from(new Set(dmarc.src.concat(computed.src))).sort((a, b) => a - b);
-    if (rep === 'pass' && computed.result !== 'fail') return null;
-    if (rep === 'fail' && computed.result === 'fail') return null;
-    if (rep === 'fail' && computed.result === 'depends') {
+    if (rep === computed.result) return null;
+    if (rep === 'fail' && computed.differ) {
       return { reason: 'strict-mode', state: 'caveat', technical: 'The receiver reported dmarc=fail and the identifiers align only in relaxed mode, so the record most likely sets ' + computed.tags.map(t => t + '=s').join(' and ') + '. The DMARC record decides; this page cannot read it without DNS.', plain: 'The sending domain\'s DMARC record probably demands an exact domain match, and this message only matches the wider organization.', src };
     }
     const approx = rows.some(r => r.approximate) || from.approximate;
@@ -349,11 +442,22 @@
     if (approx.length) {
       notes.push(say('caveat', 'The organizational domain of ' + Array.from(new Set(approx.map(x => x.domain))).join(', ') + ' is an approximation without DNS: its suffix is outside this page\'s list, so a longer public suffix could apply and relaxed alignment could come out differently.', 'This page is not sure where the sender\'s organization begins for this kind of domain, so the relaxed match is a best guess.', from.src));
     }
-    return { from, rows, notes };
+    // Always beside the result: the page cannot see the alignment mode.
+    const modeNote = computed.result === 'none' ? null : say('unknown', 'Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.',
+      'This page assumes the usual, looser domain match. The sender\'s policy can demand an exact match, and that setting is not in the headers.', computed.src);
+    return { from, rows, notes, modeNote };
   }
 
   function authNotes(auth) {
     const n = auth.notes;
+    const why = auth.computed.why;
+    if (why === 'two-from' || why === 'multi-domain') {
+      n.push(say('fail', why === 'two-from' ? 'With more than one From field there is no single author domain, so alignment is undefined and DMARC is not computed from either address.' : 'The From field holds addresses in more than one domain, so alignment is undefined and DMARC is not computed from any of them.',
+        'The message does not name one clear sender, so this page cannot check whether the sender is genuine.', auth.computed.src));
+    }
+    if (auth.all.length && auth.primary < 0) {
+      n.push(say('unknown', 'No Authentication-Results field here was written by the final receiver, so there are no reported results to recompute from.', 'None of the check results in these headers can be tied to the system that delivered the message.', auth.all.flatMap(r => r.src)));
+    }
     if (!auth.all.length) {
       n.push(say('unknown', 'No Authentication-Results field. The receiver reported no SPF, DKIM or DMARC results here, so there is nothing to recompute; the alignment shows identifiers only.', 'The receiving mail system did not record any authentication checks in these headers.', []));
     }
@@ -361,7 +465,8 @@
       if (r.trust === 'unverified') {
         n.push(say('unknown', r.authserv
           ? 'Authentication-Results from ' + r.authserv + ' is unverified: no Received by host in the chain matches it, so the sender could have added it. A hint, not a verdict.'
-          : 'An Authentication-Results field with no authserv-id has no Received field below it to tie it to a host, so it is unverified.',
+          : auth.exchangeOnline ? 'An Authentication-Results field with no authserv-id has no Received field below it to tie it to a host, so it is unverified.'
+            : 'An Authentication-Results field with no authserv-id is unverified: that form is Exchange Online\'s, and these headers carry no X-MS-Exchange-Organization fields to show Exchange Online received the message.',
           'One set of check results cannot be tied to any server the message passed through. The sender could have written it.', r.src));
       } else if (r.trust === 'sender-side') {
         n.push(say('unknown', 'Authentication-Results from ' + (r.writer || 'an unnamed host') + ' was written at hop ' + (r.hopIdx + 1) + ', before the receiver took custody, so the receiver does not vouch for it.', 'One set of check results was written before the message reached the receiving mail system.', r.src));
@@ -378,7 +483,7 @@
     }
     for (const sig of auth.signatures) for (const t of sig.notes) n.push(say('caveat', 'DKIM-Signature d=' + sig.d + ': ' + t, 'One of the message\'s signatures is set up in a weak or unusual way.', sig.src));
     const c = auth.computed;
-    if (c.result === 'depends') {
+    if (c.differ) {
       n.push(say('caveat', 'Computed DMARC passes in relaxed mode (' + c.by.relaxed.join(', ') + ') and fails in strict mode. The record\'s ' + c.tags.join(' and ') + ' decide' + (c.tags.length === 1 ? 's' : '') + '; relaxed is the default when the tag is absent.', 'Whether this passes depends on a setting in the sender\'s DMARC record that this page cannot see.', c.src));
     }
     if (auth.dmarc.disagreement) { const d = auth.dmarc.disagreement; n.push(say(d.state, d.technical, d.plain, d.src)); }

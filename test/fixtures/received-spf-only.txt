@@ -1,0 +1,19 @@
+Received-SPF: Pass (mailfrom) identity=mailfrom; client-ip=192.0.2.70;
+ helo=out.shop.example; envelope-from=orders@mail.shop.example;
+ receiver=mx.receiver.example; mechanism=ip4:192.0.2.64/28
+Authentication-Results: mx.receiver.example;
+       dkim=pass header.d=shop.example header.s=k1 header.b=Kk11Sig0;
+       dmarc=pass header.from=shop.example
+Received: from out.shop.example (out.shop.example [192.0.2.70])
+        by mx.receiver.example (Postfix) with ESMTPS id 7Tt1
+        for <neil@receiver.example>; Fri, 23 Oct 2026 18:00:04 +0000 (UTC)
+Return-Path: <orders@mail.shop.example>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=shop.example; s=k1;
+        t=1792778400; h=from:to:subject:date:message-id;
+        bh=SyntheticBodyHash0703=; b=Kk11Sig0SyntheticValue0703
+From: Shop Orders <orders@shop.example>
+To: neil@receiver.example
+Subject: Your order has shipped
+Date: Fri, 23 Oct 2026 18:00:00 +0000
+Message-ID: <ship-0703@shop.example>
+MIME-Version: 1.0

@@ -1,0 +1,35 @@
+Received: from DM8PR02MB7777.namprd02.prod.outlook.com (2603:10b6:8:2b::11)
+ by SN7PR02MB8888.namprd02.prod.outlook.com with HTTPS; Fri, 23 Oct 2026
+ 18:00:07 +0000
+Received: from BN0PR04CA0123.namprd04.prod.outlook.com (2603:10b6:408:ed::8)
+ by DM8PR02MB7777.namprd02.prod.outlook.com (2603:10b6:8:2b::11) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9100.14; Fri, 23 Oct
+ 2026 18:00:06 +0000
+Received: from BN3PEPF0000B077.namprd04.prod.outlook.com
+ (2603:10b6:408:ed:cafe::4c) by BN0PR04CA0123.outlook.office365.com
+ (2603:10b6:408:ed::8) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9100.14 via Frontend Transport; Fri,
+ 23 Oct 2026 18:00:06 +0000
+Authentication-Results: spf=fail (sender IP is 198.51.100.44)
+ smtp.mailfrom=bank.example; dkim=none (message not signed)
+ header.d=none;dmarc=fail action=oreject
+ header.from=bank.example;compauth=fail reason=000
+Received-SPF: Fail (protection.outlook.com: domain of bank.example does not
+ designate 198.51.100.44 as permitted sender) receiver=protection.outlook.com;
+ client-ip=198.51.100.44; helo=mail.lookalike.example;
+Received: from mail.lookalike.example (198.51.100.44) by
+ BN3PEPF0000B077.mail.protection.outlook.com (10.167.243.77) with Microsoft
+ SMTP Server (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.20.9100.14 via Frontend Transport; Fri, 23 Oct 2026 18:00:05 +0000
+From: Bank Security <security@bank.example>
+To: Neil <neil@client.example>
+Subject: Verify your account
+Date: Fri, 23 Oct 2026 18:00:01 +0000
+Message-ID: <verify-0702@mail.lookalike.example>
+Return-Path: security@bank.example
+X-MS-Exchange-Organization-AuthSource:
+ BN3PEPF0000B077.namprd04.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Exchange-Organization-SCL: 9
+MIME-Version: 1.0

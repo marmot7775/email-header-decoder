@@ -1,0 +1,14 @@
+Authentication-Results: mx.receiver.example;
+       spf=pass (domain of mta.notify.example designates 192.0.2.90 as permitted sender) smtp.helo=mta.notify.example;
+       dkim=none (message not signed);
+       dmarc=pass header.from=notify.example
+Received: from mta.notify.example (mta.notify.example [192.0.2.90])
+        by mx.receiver.example (Postfix) with ESMTPS id 7Vv1
+        for <neil@receiver.example>; Fri, 23 Oct 2026 18:00:04 +0000 (UTC)
+Return-Path: <>
+From: Notify <alerts@notify.example>
+To: neil@receiver.example
+Subject: Delivery report
+Date: Fri, 23 Oct 2026 18:00:00 +0000
+Message-ID: <dsn-0706@mta.notify.example>
+MIME-Version: 1.0

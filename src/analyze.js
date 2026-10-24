@@ -31,7 +31,7 @@
     let from = null;
     if (froms.length) {
       const addrs = P.parseAddresses(froms[0].value);
-      if (addrs[0]) from = Object.assign({}, addrs[0], { src: [froms[0].index], count: addrs.length });
+      if (addrs[0]) from = Object.assign({}, addrs[0], { src: [froms[0].index], count: addrs.length, domains: Array.from(new Set(addrs.map(a => a.domain).filter(Boolean))) });
       if (addrs.length > 1) notes.push(say('caveat', 'The From field lists ' + addrs.length + ' addresses. DMARC evaluates one author domain; receivers differ on how they treat the rest.', 'The message names more than one sender, which some mail systems treat with suspicion.', [froms[0].index]));
       if (!addrs[0] || !addrs[0].domain) notes.push(say('fail', 'The From field holds no usable address, so there is no author domain to check.', 'The sender\'s address is missing or broken.', [froms[0].index]));
     } else if (fields.length) {
@@ -67,13 +67,17 @@
 
   // Machine flags the tests and later steps key on. Sentences carry the
   // wording; these carry only the condition.
-  function flagsOf(text, parsed, message, chain) {
+  function flagsOf(text, parsed, message, chain, auth) {
     const f = [];
     if (!String(text || '').trim()) { f.push('empty-input'); return f; }
     if (!parsed.blockFound) { f.push('not-headers'); return f; }
     if (message.fromCount > 1) f.push('two-from');
     if (!chain.count) f.push('no-received');
     if (!message.date) f.push('no-date');
+    if (auth.all.some(r => r.untrusted)) f.push('untrusted-ar');
+    if (auth.signatures.some(s => s.partialBody)) f.push('dkim-body-limit');
+    if (auth.signatures.some(s => s.expired)) f.push('dkim-expired');
+    if (auth.dmarc.disagreement) f.push('dmarc-disagreement');
     return f;
   }
 
@@ -99,7 +103,7 @@
       decoded: null,
       pending: Object.assign({}, PENDING),
       fields,
-      flags: flagsOf(text, parsed, message, chain),
+      flags: flagsOf(text, parsed, message, chain, auth),
     };
   }
 

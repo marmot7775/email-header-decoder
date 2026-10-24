@@ -114,7 +114,7 @@ test('subdomain From aligns only in relaxed mode: both modes shown, the record d
   assert.equal(c.relaxed, true);
   assert.equal(c.strict, false);
   assert.equal(c.differ, true);
-  assert.equal(c.result, 'depends');
+  assert.equal(c.result, 'pass'); // relaxed is the default; strict is beside it
   assert.deepEqual(c.tags, ['adkim', 'aspf']);
   assert.equal(r.alignment.from.org, 'brand.example');
   assert.ok(r.alignment.rows.every(x => x.relaxedOnly && x.state === 'pass' && x.word === 'Aligned, relaxed'));
@@ -203,11 +203,11 @@ test('Authentication-Results from a host missing from the Received chain is unve
   assert.equal(a.dmarc.result, 'fail');
 });
 
-test('no Authentication-Results: identifiers still drawn, every connector grey, computed DMARC unknown', () => {
+test('no Authentication-Results: identifiers still drawn, every connector grey, computed DMARC none', () => {
   const r = run('no-auth-results.txt');
   assert.equal(r.auth.all.length, 0);
   assert.equal(r.auth.primary, -1);
-  assert.equal(r.auth.computed.result, 'unknown');
+  assert.equal(r.auth.computed.result, 'none');
   assert.equal(r.auth.computed.why, 'no-results');
   const dk = row(r, 'dkim', 'sender.example');
   assert.equal(dk.state, 'unknown');

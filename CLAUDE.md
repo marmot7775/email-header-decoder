@@ -25,6 +25,32 @@ comes in step 4 as a static site; the droplet never serves it.
 - Do not push, and do not touch GitHub, the droplet, or dns-audit.com
   until Neil says so.
 
+## Settled by the step 2 check
+
+- Primary Authentication-Results: the topmost field whose authserv-id
+  shares an operator with the by host of the last Received hop, or, when
+  X-MS-Exchange-Organization-* fields are present, the topmost one with
+  no authserv-id. Never one a sender could have written.
+- Untrusted: every other Authentication-Results field, whether its host
+  is missing from the chain or sits on the sender's side. It is kept and
+  shown, never used for reported results. RFC 8601 section 5 only has a
+  receiver strip fields that carry its own authserv-id. No trusted field
+  means no primary and computed DMARC is none.
+- An id-less field without Exchange Online headers is untrusted.
+- Received-SPF counts only when it sits above the last sender-side
+  Received field, and is the SPF source only when the primary set has no
+  spf= result.
+- Alignment defaults to relaxed, with strict computed beside it.
+  computed.result is pass, fail or none and follows relaxed; adkim and
+  aspf are not in the headers, and alignment.modeNote says so.
+- One From domain or none: two From fields, or one From field naming two
+  domains, leave alignment undefined and nothing is computed.
+- A DKIM result naming neither s= nor b= when two signatures share d= is
+  marked ambiguous, not matched by order.
+- Microsoft action=oreject and pct.* keep value empty in
+  dmarc.disposition: Microsoft Learn pages contradict each other on what
+  those did to the message. raw, policy and sampled are kept.
+
 ## Layout
 
     src/parse.js      text in, field list out
@@ -39,6 +65,7 @@ comes in step 4 as a static site; the droplet never serves it.
     build.js          dist/index.html (full document, CSP, opens from disk)
                       and dist/artifact.html (body only, for claude.ai)
     test/             node:test suite, fixtures under test/fixtures
+    wip/step3/        rescued step 3 work; not built, not tested
 
 Each src file attaches to the HA namespace and sets module.exports under
 Node. build.js SRC lists what ships; test/load.js loads the same list.

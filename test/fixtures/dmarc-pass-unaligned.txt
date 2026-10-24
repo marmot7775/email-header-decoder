@@ -1,0 +1,17 @@
+Authentication-Results: mx.receiver.example;
+       spf=pass smtp.mailfrom=bounce@esp.example;
+       dkim=pass header.d=esp.example header.s=e1;
+       dmarc=pass header.from=brand.example
+Received: from out.esp.example (out.esp.example [192.0.2.95])
+        by mx.receiver.example (Postfix) with ESMTPS id 7Ww1
+        for <neil@receiver.example>; Fri, 23 Oct 2026 18:00:04 +0000 (UTC)
+Return-Path: <bounce@esp.example>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=esp.example; s=e1;
+        t=1792778390; h=from:to:subject:date:message-id;
+        bh=SyntheticBodyHash0707=; b=EspSyntheticValue0707
+From: Brand <hello@brand.example>
+To: neil@receiver.example
+Subject: Spring sale
+Date: Fri, 23 Oct 2026 18:00:00 +0000
+Message-ID: <sale-0707@brand.example>
+MIME-Version: 1.0

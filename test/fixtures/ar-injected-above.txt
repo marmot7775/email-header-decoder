@@ -1,0 +1,27 @@
+Authentication-Results: mail.sender.example;
+       spf=pass smtp.mailfrom=alex@sender.example;
+       dkim=pass header.d=sender.example header.s=mail2026;
+       dmarc=pass header.from=sender.example
+Delivered-To: neil@example.org
+Received: by 2002:a05:7300:5c11:b0:1b2:3f4e:aa10 with SMTP id k17csp2201dyb;
+        Fri, 23 Oct 2026 11:00:03 -0700 (PDT)
+Return-Path: <alex@sender.example>
+Received: from relay.cheap-host.example (relay.cheap-host.example. [198.51.100.13])
+        by mx.google.com with ESMTPS id 7c2f19b1804b1-4317d6a2c61si7654321f8f.412.2026.10.23.11.00.02
+        for <neil@example.org>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 23 Oct 2026 11:00:02 -0700 (PDT)
+Received-SPF: softfail (google.com: domain of transitioning alex@sender.example does not designate 198.51.100.13 as permitted sender) client-ip=198.51.100.13;
+Authentication-Results: mx.google.com;
+       dkim=fail header.i=@sender.example header.s=mail2026 header.b=Qq77Rr88;
+       spf=softfail (google.com: domain of transitioning alex@sender.example does not designate 198.51.100.13 as permitted sender) smtp.mailfrom=alex@sender.example;
+       dmarc=fail (p=REJECT sp=QUARANTINE dis=QUARANTINE) header.from=sender.example
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sender.example; s=mail2026;
+        t=1792778390; h=from:to:subject:date:message-id;
+        bh=SyntheticBodyHash0701=; b=Qq77Rr88SyntheticSignature0701
+From: Alex Rivera <alex@sender.example>
+To: neil@example.org
+Subject: Updated wire details
+Date: Fri, 23 Oct 2026 18:00:00 +0000
+Message-ID: <wire-0701@sender.example>
+MIME-Version: 1.0
