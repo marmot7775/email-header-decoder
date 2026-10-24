@@ -1,0 +1,17 @@
+Authentication-Results: mx.receiver.example;
+       dkim=pass header.d=bakery.example header.s=b1;
+       spf=pass smtp.mailfrom=info@bakery.example;
+       dmarc=none header.from=bakery.example
+Received: from mail.bakery.example (mail.bakery.example [192.0.2.140])
+        by mx.receiver.example (Postfix) with ESMTPS id 8Bb1
+        for <pat@receiver.example>; Fri, 23 Oct 2026 08:00:04 +0000 (UTC)
+Return-Path: <info@bakery.example>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bakery.example; s=b1;
+        t=1792742400; h=from:to:subject:date:message-id;
+        bh=SyntheticBh0603=; b=BakerySyntheticValue0603
+From: Bakery <info@bakery.example>
+To: pat@receiver.example
+Subject: Fresh bread on Saturday
+Date: Fri, 23 Oct 2026 08:00:00 +0000
+Message-ID: <bread-603@bakery.example>
+MIME-Version: 1.0

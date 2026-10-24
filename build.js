@@ -11,7 +11,7 @@ const path = require('path');
 
 const ROOT = __dirname;
 // Load order matters: each module reads the HA namespace the one before it filled.
-const SRC = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'analyze.js'];
+const SRC = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'providers.js', 'finding.js', 'analyze.js'];
 // Fixtures shown as samples on the page. Synthetic only; never real headers.
 const SAMPLES = { gmail: 'gmail-show-original.txt', exchange: 'exchange-online-inbound.txt', forwarded: 'forwarded.txt', arc: 'arc-forwarded-i2.txt', twodkim: 'two-dkim.txt', relaxed: 'subdomain-relaxed.txt' };
 const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'";

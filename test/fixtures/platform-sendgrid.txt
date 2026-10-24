@@ -1,0 +1,26 @@
+Delivered-To: pat@example.org
+Received: by 2002:a05:7300:5c11:b0:1b2:3f4e:aa10 with SMTP id k17csp3302dyb;
+        Fri, 23 Oct 2026 09:20:03 -0700 (PDT)
+Return-Path: <bounces+2210-ab12-pat=example.org@em2210.sendgrid.net>
+Received: from o3.ptr2210.sendgrid.net (o3.ptr2210.sendgrid.net. [198.51.100.150])
+        by mx.google.com with ESMTPS id a1b2c3d4e5si602.2026.10.23.09.20.02
+        for <pat@example.org>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 23 Oct 2026 09:20:02 -0700 (PDT)
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@sendgrid.net header.s=smtpapi header.b=SgSig001;
+       spf=pass (google.com: domain of bounces+2210-ab12-pat=example.org@em2210.sendgrid.net designates 198.51.100.150 as permitted sender) smtp.mailfrom="bounces+2210-ab12-pat=example.org@em2210.sendgrid.net";
+       dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=club.example
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sendgrid.net; s=smtpapi;
+        t=1792772400; h=from:to:subject:date:message-id:list-unsubscribe:list-unsubscribe-post;
+        bh=SyntheticBh0602=; b=SgSig001SyntheticValue
+X-SG-EID: SyntheticEid0602
+From: Club <hello@club.example>
+To: pat@example.org
+Subject: October newsletter
+Date: Fri, 23 Oct 2026 16:20:00 +0000
+Message-ID: <nl-602@club.example>
+List-Unsubscribe: <https://u2210.ct.sendgrid.net/unsub/602>, <mailto:unsub-602@club.example>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+Feedback-ID: 2210:club:sendgrid
+MIME-Version: 1.0

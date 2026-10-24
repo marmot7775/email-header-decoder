@@ -1,0 +1,37 @@
+Received: from DM6PR11MB4000.namprd11.prod.outlook.com (2603:10b6:5:1234::20)
+ by BY5PR11MB4100.namprd11.prod.outlook.com with HTTPS; Fri, 23 Oct 2026
+ 14:00:09 +0000
+Received: from DM6PR11CA0100.namprd11.prod.outlook.com (2603:10b6:5:1234::30)
+ by DM6PR11MB4000.namprd11.prod.outlook.com (2603:10b6:5:1234::20) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9100.14; Fri, 23 Oct
+ 2026 14:00:08 +0000
+Authentication-Results: spf=pass (sender IP is 198.51.100.60)
+ smtp.mailfrom=partner.example; dkim=pass (signature was verified)
+ header.d=partner.example;dmarc=pass action=none
+ header.from=partner.example;compauth=pass reason=100
+Received: from mx0a-001234.pphosted.com (198.51.100.60) by
+ DM6PR11CA0100.mail.protection.outlook.com (10.167.243.170) with Microsoft
+ SMTP Server (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384)
+ id 15.20.9100.14 via Frontend Transport; Fri, 23 Oct 2026 14:00:07 +0000
+X-Proofpoint-Spam-Details: rule=notspam policy=default score=0 spamscore=0
+ phishscore=0 bulkscore=0 malwarescore=0 mlxscore=0 adultscore=0
+ suspectscore=0 clxscore=1015 impostorscore=0 engine=8.19.0-2510230000
+X-Proofpoint-GUID: SyntheticGuid0607
+Received: from mail.partner.example (mail.partner.example [203.0.113.70])
+ by mx0a-001234.pphosted.com (PPS) with ESMTPS id 4Ab1
+ for <pat@client.example>; Fri, 23 Oct 2026 14:00:05 +0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=partner.example;
+ s=p1; h=from:to:subject:date:message-id;
+ bh=SyntheticBh0607=; b=PartnerSyntheticValue0607
+From: Partner <sam@partner.example>
+To: Pat <pat@client.example>
+Subject: Contract draft
+Date: Fri, 23 Oct 2026 14:00:00 +0000
+Message-ID: <draft-607@partner.example>
+Return-Path: sam@partner.example
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-Forefront-Antispam-Report:
+ CIP:198.51.100.60;CTRY:US;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:mx0a-001234.pphosted.com;PTR:mx0a-001234.pphosted.com;CAT:NONE;DIR:INB;
+X-Microsoft-Antispam: BCL:0;
+MIME-Version: 1.0

@@ -1,7 +1,7 @@
-Header Verdict, plan
+Email Header Decoder, plan
 
 Four steps. Each ends with a report and a commit, and the next prompt
-is handed out only after that. Status as of 2026-10-23.
+is handed out only after that. Status as of 2026-10-24.
 
 1  Repo, parser, hop timeline, page skeleton, tests, build.    DONE
    parse.js (header block in a bare paste, a full .eml, a Show
@@ -24,11 +24,16 @@ is handed out only after that. Status as of 2026-10-23.
    DKIM matching by s= or b=, HELO identity for a null reverse path,
    computed DMARC as pass, fail or none, two From fields.
 
-3  Verdict sentence and provider decode.                    NOT STARTED
-   verdict.js and providers.js hold the 15 Oct prototype and are not
-   in the build. A first rewrite of providers.js against Microsoft's
-   published tables is in wip/step3 (rescued from Scripts\scratch,
-   commit e6226af). Step 3 picks it up and deletes the folder.
+3  Finding sentence and provider decode.                    DONE
+   finding.js (status pass, fail, forwarded, none, error or unknown;
+   headline, cause, policy consequence, details, fixes, flags, and
+   limits; forwarded mail from the ARC chain with the pre-forward
+   results quoted) and providers.js (Microsoft, Google, Proofpoint,
+   Mimecast, Cisco, Barracuda, SpamAssassin, Rspamd; platform with
+   a confidence; list and sending headers with RFC 8058), both in
+   the build. The product name is Email Header Decoder; the repo
+   rename waits for step 4. wip/step3 and the 15 Oct verdict.js are
+   gone.
 
 4  Copy pass, mobile, hosting.                              NOT STARTED
    Hosting is a static site, likely headers.dns-audit.com on

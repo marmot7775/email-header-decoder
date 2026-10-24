@@ -14,13 +14,14 @@ function assertSentence(s, where) {
   assert.ok(Array.isArray(s.src), where + ' src');
 }
 
-test('result object: step 2 fills alignment and auth; verdict and decoded stay null and pending names their step', () => {
+test('result object: step 3 fills finding and decoded beside alignment and auth', () => {
   const r = HA.analyze(fixture('gmail-show-original.txt'));
-  assert.equal(r.step, 2);
-  assert.equal(r.verdict, null);
-  assert.equal(r.decoded, null);
-  assert.deepEqual(r.pending, { verdict: 3, decoded: 3 });
+  assert.equal(r.step, 3);
+  assert.ok(r.finding && r.finding.headline);
+  assert.ok(r.decoded && Array.isArray(r.decoded.filters) && r.decoded.platform && Array.isArray(r.decoded.list));
   assert.ok(r.message && r.chain && r.fields.length && r.alignment && r.auth);
+  assert.equal('verdict' in r, false);
+  assert.equal('pending' in r, false);
 });
 
 test('result object is JSON-safe', () => {
@@ -104,7 +105,9 @@ test('folded garbage: analyze survives and keeps the fields it can read', () => 
 test('every sentence in the result carries both readers and provenance', () => {
   for (const name of ['gmail-show-original.txt', 'exchange-online-inbound.txt', 'exchange-online-internal.txt', 'icloud.txt', 'forwarded.txt', 'folded-garbage.txt', 'missing-received.txt', 'two-from.txt', 'no-header-block.txt']) {
     const r = HA.analyze(fixture(name));
-    for (const s of [].concat(r.input.notes, r.message.notes, r.chain.notes)) {
+    const f = r.finding;
+    const fs = f ? [f.headline, f.cause].concat(f.consequence ? [f.consequence] : [], f.details, f.fixes, f.flags, f.limits) : [];
+    for (const s of [].concat(r.input.notes, r.message.notes, r.chain.notes, fs, r.decoded.notes, [r.decoded.platform.statement])) {
       assertSentence(s, name);
       for (const i of s.src) assert.ok(r.fields[i], name + ' src ' + i);
     }

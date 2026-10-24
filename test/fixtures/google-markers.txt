@@ -1,0 +1,29 @@
+Delivered-To: pat@example.org
+Received: by 2002:a05:7300:5c11:b0:1b2:3f4e:aa10 with SMTP id k17csp3308dyb;
+        Fri, 23 Oct 2026 12:00:04 -0700 (PDT)
+X-Google-Smtp-Source: SyntheticSmtpSource0608
+X-Received: by 2002:a17:906:1111:b0:a1:2222:3333 with SMTP id x1mr608;
+        Fri, 23 Oct 2026 12:00:03 -0700 (PDT)
+Return-Path: <friend@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id s1si608.2026.10.23.12.00.03
+        for <pat@example.org>
+        (Google Transport Security);
+        Fri, 23 Oct 2026 12:00:03 -0700 (PDT)
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=GmSig001;
+       spf=pass (google.com: domain of friend@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=friend@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=1e100.net; s=20230601; h=to:subject:message-id:date:from:mime-version; bh=SyntheticBh0608=; b=GoogleInternal0608
+X-Gm-Message-State: SyntheticState0608
+X-Gm-Spam: 0
+X-Gm-Phishy: 0
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20230601;
+        t=1792782000; h=to:subject:message-id:date:from:mime-version;
+        bh=SyntheticBh0608=; b=GmSig001SyntheticValue
+From: Friend <friend@gmail.com>
+To: pat@example.org
+Subject: Lunch
+Date: Fri, 23 Oct 2026 19:00:00 +0000
+Message-ID: <CAsynthetic608@mail.gmail.com>
+MIME-Version: 1.0

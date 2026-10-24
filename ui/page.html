@@ -1,8 +1,8 @@
-<title>Header Verdict</title>
+<title>Email Header Decoder</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Layout: one reading column, phone first. Verdict, message, alignment,
-   authentication, path, filter headers, raw headers. Palette and type are
+/* Layout: one reading column, phone first. Finding, filter headers,
+   message, alignment, authentication, path, raw headers. Palette and type are
    dns-audit.com's own tokens (static/style.css), dark first like the site.
    No web fonts: the page makes no requests, so the stacks are system ones. */
 :root {
@@ -117,6 +117,7 @@ button { font: inherit; cursor: pointer; }
 .st.caveat { color: var(--caveat); background: var(--caveat-bg); border-color: var(--caveat-border); }
 .st.fail { color: var(--fail); background: var(--fail-bg); border-color: var(--fail-border); }
 .st.unknown { color: var(--unknown); background: var(--unknown-bg); border-color: var(--unknown-border); }
+.st.info { color: var(--info); background: var(--info-bg); border-color: var(--info-border); }
 
 /* Sentences */
 .says { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
@@ -138,9 +139,24 @@ button { font: inherit; cursor: pointer; }
 .meta .sub { color: var(--text-2); font-size: var(--font-sm); }
 .absent { color: var(--muted); font-size: var(--font-sm); }
 
-/* Later steps */
-.later { color: var(--text-2); font-size: var(--font-sm); margin: 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-.later b { color: var(--text); font-weight: 600; }
+/* Finding */
+.fhead { display: grid; gap: 10px; }
+.fhead .st { justify-self: start; }
+.headline { margin: 0; font-size: var(--font-lg); font-weight: 600; line-height: 1.45; max-width: 68ch; overflow-wrap: anywhere; }
+.fpara { margin: 0; font-size: var(--font-base); line-height: 1.6; color: var(--text-2); max-width: 68ch; overflow-wrap: anywhere; }
+.fpara .src { margin-left: 6px; }
+
+/* Filter headers: one row per decoded value, the raw value beside it */
+.fgroup { margin-top: 14px; }
+.fgroup:first-of-type { margin-top: 4px; }
+.fgroup .arh { margin-bottom: 6px; }
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--border); }
+.it { display: grid; grid-template-columns: minmax(6.5rem, max-content) 1fr; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: var(--font-sm); line-height: 1.5; min-width: 0; }
+.it .kv { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.it .k { font-family: var(--font-mono); font-weight: 600; overflow-wrap: anywhere; }
+.it .raw { font-family: var(--font-mono); font-size: var(--font-xs); color: var(--muted); overflow-wrap: anywhere; }
+.it .txt { min-width: 0; display: grid; gap: 4px; justify-items: start; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .it { grid-template-columns: 1fr; } }
 
 /* Path timeline */
 .summary { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline; margin-bottom: 12px; }
@@ -306,8 +322,8 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
 
 <div class="wrap">
   <header class="top">
-    <span class="eyebrow">Step 2 of 4: authentication, ARC and alignment</span>
-    <h1>Header Verdict</h1>
+    <span class="eyebrow">Step 3 of 4: the finding and filter headers</span>
+    <h1>Email Header Decoder</h1>
     <p>Paste headers and read what failed and why.</p>
     <details class="policy">
       <summary>Nothing you paste leaves your browser. Read how.</summary>
@@ -347,12 +363,12 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
         <button type="button" data-voice="plain" aria-pressed="false">Plain</button>
       </span>
     </div>
-    <section class="card" id="verdict" aria-labelledby="h-verdict"></section>
+    <section class="card" id="finding" aria-labelledby="h-finding"></section>
+    <section class="card" id="filters" aria-labelledby="h-filters"></section>
     <section class="card" id="message" aria-labelledby="h-message"></section>
     <section class="card" id="alignment" aria-labelledby="h-alignment"></section>
     <section class="card" id="auth" aria-labelledby="h-auth"></section>
     <section class="card" id="path" aria-labelledby="h-path"></section>
-    <section class="card" id="filters" aria-labelledby="h-filters"></section>
     <section class="card" id="raw"></section>
   </div>
   <p class="sr-only" id="live" aria-live="polite"></p>

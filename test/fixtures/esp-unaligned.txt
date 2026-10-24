@@ -1,0 +1,23 @@
+Delivered-To: pat@example.org
+Received: by 2002:a05:7300:5c11:b0:1b2:3f4e:aa10 with SMTP id k17csp3301dyb;
+        Fri, 23 Oct 2026 09:14:03 -0700 (PDT)
+Return-Path: <b-4471@bounce.mailer.example>
+Received: from o1.mailer.example (o1.mailer.example. [203.0.113.90])
+        by mx.google.com with ESMTPS id a1b2c3d4e5si601.2026.10.23.09.14.02
+        for <pat@example.org>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 23 Oct 2026 09:14:02 -0700 (PDT)
+Received-SPF: pass (google.com: domain of b-4471@bounce.mailer.example designates 203.0.113.90 as permitted sender) client-ip=203.0.113.90;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@mailer.example header.s=m1 header.b=MailerS1;
+       spf=pass (google.com: domain of b-4471@bounce.mailer.example designates 203.0.113.90 as permitted sender) smtp.mailfrom=b-4471@bounce.mailer.example;
+       dmarc=fail (p=QUARANTINE sp=QUARANTINE dis=QUARANTINE) header.from=shop.example
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=mailer.example; s=m1;
+        t=1792772040; h=from:to:subject:date:message-id;
+        bh=SyntheticBh0601=; b=MailerS1SyntheticValue
+From: Shop <orders@shop.example>
+To: pat@example.org
+Subject: Your order has shipped
+Date: Fri, 23 Oct 2026 16:14:00 +0000
+Message-ID: <ship-601@mailer.example>
+MIME-Version: 1.0

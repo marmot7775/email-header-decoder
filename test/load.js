@@ -4,10 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { SRC } = require('../build.js');
 
-const ALL = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'providers.js', 'verdict.js', 'analyze.js'];
-
-const files = process.env.HV_SRC === 'all' ? ALL : SRC;
-for (const f of files) require(path.join(__dirname, '..', 'src', f));
+for (const f of SRC) require(path.join(__dirname, '..', 'src', f));
 
 function fixture(name) { return fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8'); }
 

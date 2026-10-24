@@ -1,0 +1,20 @@
+X-Mimecast-Spam-Score: 2
+X-Mimecast-Impersonation-Protect: Policy=CLT - Impersonation Protection Definition;Similar Internal Domain=false;Similar Monitored External Domain=false;Custom External Domain=false;Mimecast External Domain=false;Newly Observed Domain=false;Internal User Name=false;Custom Display Name List=false;Reply-to Address Mismatch=false;Targeted Threat Dictionary=false;Mimecast Threat Dictionary=false;Custom Threat Dictionary=false
+X-Mimecast-MFC-PROC-ID: SyntheticProc0610
+Authentication-Results: mx.receiver.example;
+       dkim=pass header.d=sender.example header.s=s1;
+       spf=pass smtp.mailfrom=news@sender.example;
+       dmarc=pass header.from=sender.example
+Received: from out.sender.example (out.sender.example [192.0.2.150])
+        by mx.receiver.example (Postfix) with ESMTPS id 9Dd1
+        for <pat@receiver.example>; Fri, 23 Oct 2026 13:00:04 +0000 (UTC)
+Return-Path: <news@sender.example>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sender.example; s=s1;
+        t=1792760400; h=from:to:subject:date:message-id;
+        bh=SyntheticBh0609=; b=SenderSyntheticValue0609
+From: Sender <news@sender.example>
+To: pat@receiver.example
+Subject: Hello
+Date: Fri, 23 Oct 2026 13:00:00 +0000
+Message-ID: <hello-mimecast@sender.example>
+MIME-Version: 1.0

@@ -17,7 +17,7 @@ are ready. Nothing in the first release needs DNS.
 First release
 1. Paste box and .eml drop. Headers unfolded, encoded words
    decoded, duplicates kept in order.
-2. Verdict first. One sentence naming the cause, for example:
+2. Finding first. One sentence naming the cause, for example:
    DMARC failed because DKIM signed as mailer.example and SPF
    checked bounce.mailer.example, so neither aligned with the
    From domain. Then the fix in plain words.
@@ -55,7 +55,7 @@ Authentication-Results, two From headers.
 Build plan
 Four steps, each published as a page Neil can try that day:
 parser and hop timeline; Authentication-Results, ARC, and
-alignment; verdict sentence and provider decode; copy pass and
+alignment; finding sentence and provider decode; copy pass and
 mobile. Claude about 25 hours. Neil about 2 hours total: paste
 headers, say what reads wrong.
 

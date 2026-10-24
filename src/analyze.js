@@ -7,20 +7,23 @@
 //     not count or carries a condition. technical and plain are the same
 //     finding for two readers. src lists the field indexes it came from.
 //   Any value the page shows carries src the same way.
-//   verdict (step 3) = { state, headline: Sentence, cause: Sentence,
-//     consequence: Sentence | null, details: [Sentence], fixes: [Sentence],
-//     flags: [Sentence], forwarded: { yes, evidence: [Sentence] } }
+//   finding = { status, state, headline: Sentence, cause: Sentence,
+//     consequence: Sentence | null, details, fixes, flags, limits: [Sentence],
+//     forwarded: { yes, by, preForward, src } }; see finding.js.
+//   decoded = { filters: [{ id, name, items, note, outcome, src, side }],
+//     platform: { name, confidence, evidence, mailer, statement },
+//     list: [item], notes: [Sentence] }, where an item is
+//     { key, raw, level, technical, plain, src }; see providers.js.
 //
-// Step 2 adds alignment and auth beside input, message, chain and fields.
-// verdict and decoded stay null, and pending names the step that fills them.
+// Step 3 adds finding and decoded beside input, message, chain,
+// alignment, auth and fields.
 (function (root) {
   'use strict';
   const HA = (root.HA = root.HA || {});
   const P = HA.parse;
   const say = P.sentence;
 
-  const STEP = 2;
-  const PENDING = { verdict: 3, decoded: 3 };
+  const STEP = 3;
 
   function all(fields, name) { return fields.filter(f => f.lower === name); }
   function first(fields, name) { return fields.find(f => f.lower === name) || null; }
@@ -91,19 +94,22 @@
     const message = buildMessage(fields);
     const chain = HA.received.buildChain(fields);
     const { auth, alignment } = HA.auth.buildAuth(fields, chain, message);
+    const decoded = HA.providers.decodeAll(fields, message, auth, chain);
+    const finding = parsed.blockFound ? HA.finding.build({ message, chain, auth, alignment, decoded }) : null;
+    const flags = flagsOf(text, parsed, message, chain, auth);
+    if (finding && finding.status === 'forwarded') flags.push('forwarded');
     return {
-      version: '0.3',
+      version: '0.4',
       step: STEP,
       input: { kind: String(text || '').trim() ? KINDS[parsed.format] || parsed.format : 'empty', bytes: typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(String(text || '')).length : String(text || '').length, repairedLines: parsed.repairedLines, blockFound: parsed.blockFound, format: parsed.format, block: parsed.block, fieldCount: fields.length, bodyPresent: parsed.bodyPresent, notes: parsed.notes },
       message,
       chain,
-      verdict: null,
+      finding,
       alignment,
       auth,
-      decoded: null,
-      pending: Object.assign({}, PENDING),
+      decoded,
       fields,
-      flags: flagsOf(text, parsed, message, chain, auth),
+      flags,
     };
   }
 

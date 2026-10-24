@@ -1,4 +1,8 @@
-# Header Verdict
+# Email Header Decoder
+
+The repo is still named header-verdict; the rename comes with step 4
+hosting. The one sentence result is the finding; the word verdict is
+not used in the code.
 
 A single page email header analyzer. Paste raw headers, a full .eml, or a
 copy of a Show original page, and the first thing you read is what failed
@@ -57,15 +61,14 @@ comes in step 4 as a static site; the droplet never serves it.
     src/psl.js        organizational domain, abbreviated suffix list
     src/received.js   Received fields into a hop chain and trust line
     src/auth.js       Authentication-Results, ARC, alignment, computed DMARC
-    src/providers.js  step 3: filter verdicts, platform, list headers
-    src/verdict.js    step 3: the sentence and the fix
+    src/providers.js  filter results, sending platform, list headers
+    src/finding.js    the finding: one sentence, cause, policy, fixes
     src/analyze.js    analyze(text) returns one plain result object
     ui/page.html      markup and CSS tokens
     ui/app.js         rendering only
     build.js          dist/index.html (full document, CSP, opens from disk)
                       and dist/artifact.html (body only, for claude.ai)
     test/             node:test suite, fixtures under test/fixtures
-    wip/step3/        rescued step 3 work; not built, not tested
 
 Each src file attaches to the HA namespace and sets module.exports under
 Node. build.js SRC lists what ships; test/load.js loads the same list.
@@ -74,14 +77,13 @@ Node. build.js SRC lists what ships; test/load.js loads the same list.
 
     node --test test/        run the suite
     node build.js            write dist/
-    HV_SRC=all node --test test/   also load the not yet shipped modules
 
 Browser check: Playwright from /home/neil/projects/dns-security-auditor/.venv
 runs Chromium headless on this machine; load dist/index.html as file://.
 
 ## Steps
 
-See docs/plan.md. 1 done, 2 done, 3 next, 4 after.
+See docs/plan.md. 1, 2 and 3 done, 4 next.
 
 ## End of step report
 

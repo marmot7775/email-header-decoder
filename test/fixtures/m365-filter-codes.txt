@@ -1,0 +1,31 @@
+Received: from BN9PR03CA0500.namprd03.prod.outlook.com (2603:10b6:408:111::40)
+ by SA1PR12MB8200.namprd12.prod.outlook.com with HTTPS; Fri, 23 Oct 2026
+ 15:00:07 +0000
+Received: from BN2PEPF000044B1.namprd04.prod.outlook.com
+ (2603:10b6:408:111:cafe::e1) by BN9PR03CA0500.outlook.office365.com
+ (2603:10b6:408:111::40) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9100.14 via Frontend Transport; Fri,
+ 23 Oct 2026 15:00:06 +0000
+Authentication-Results: spf=pass (sender IP is 203.0.113.30)
+ smtp.mailfrom=deals.example; dkim=pass (signature was verified)
+ header.d=deals.example;dmarc=pass action=none
+ header.from=deals.example;compauth=pass reason=123
+Received: from mta.deals.example (203.0.113.30) by
+ BN2PEPF000044B1.mail.protection.outlook.com (10.167.243.160) with Microsoft
+ SMTP Server (version=TLS1_3, cipher=TLS_AES_256_GCM_SHA384) id 15.20.9100.14
+ via Frontend Transport; Fri, 23 Oct 2026 15:00:05 +0000
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=deals.example;
+ s=d1; h=from:to:subject:date:message-id;
+ bh=SyntheticBh0606=; b=DealsSyntheticValue0606
+From: Deals <offers@deals.example>
+To: Pat <pat@client.example>
+Subject: Weekend deals
+Date: Fri, 23 Oct 2026 15:00:00 +0000
+Message-ID: <deal-606@deals.example>
+Return-Path: bounce@deals.example
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Exchange-Organization-SCL: 3
+X-Forefront-Antispam-Report:
+ CIP:203.0.113.30;CTRY:US;LANG:en;SCL:7;SRV:BULK;IPV:CAL;SFV:QQQ;H:mta.deals.example;PTR:mta.deals.example;CAT:BULK;SFTY:9.99;DIR:INB;SFS:(13230040);
+X-Microsoft-Antispam: BCL:8;ARA:13230040;
+MIME-Version: 1.0

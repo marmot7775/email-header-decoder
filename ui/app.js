@@ -15,13 +15,11 @@
   const barPct = (sec, max) => sec > 0 && max > 0 ? Math.max(2, Math.round(Math.log1p(sec) / Math.log1p(max) * 100)) : 0;
   const bar = (sec, max) => '<div class="bar" aria-hidden="true"><i class="d-' + band(Math.max(0, sec)) + '" style="width:' + barPct(sec, max) + '%"></i></div>';
 
-  const STATES = { pass: ['✓', 'Pass'], caveat: ['!', 'Caveat'], fail: ['✕', 'Fail'], unknown: ['?', 'Unknown'] };
+  const STATES = { pass: ['✓', 'Pass'], caveat: ['!', 'Caveat'], fail: ['✕', 'Fail'], unknown: ['?', 'Unknown'], info: ['i', 'Info'] };
+  // Filter items carry a level; each maps to a chip class and its word.
+  const LEVELS = { pass: ['pass', 'Pass'], info: ['info', 'Info'], warn: ['caveat', 'Warn'], fail: ['fail', 'Fail'] };
+  const STATUS_WORD = { pass: 'Passed', fail: 'Failed', forwarded: 'Broken by a forward', none: 'No DMARC policy', error: 'DMARC error', unknown: 'Cannot judge' };
   const FORMATS = { 'gmail-original': 'a Gmail Show original copy', 'outlook-headers': 'Outlook Internet headers', eml: 'a full message (.eml)', bare: 'a header block' };
-  const STEP_FILLS = {
-    verdict: [3, 'Step 3 writes the verdict here: what failed and why in one sentence, with the fix, in technical and plain wording.'],
-    filters: [3, 'Step 3 fills this: Microsoft, Google, Proofpoint and Mimecast filter verdicts decoded in one place.'],
-  };
-  const TITLES = { verdict: 'Verdict', alignment: 'Alignment', auth: 'Authentication', filters: 'Filter headers' };
 
   let R = null;
   let voice = 'technical';
@@ -63,16 +61,45 @@
     return new Date(ms).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
   }
 
-  function later(key) {
-    const [step, text] = STEP_FILLS[key];
-    return '<h2 id="h-' + key + '">' + TITLES[key] + '</h2><p class="later">' + chip('unknown', 'Step ' + step) + '<span>' + esc(text) + '</span></p>';
+  // The finding: status, the one sentence, why, what the policy did, then
+  // what to do, the supporting details, and what the headers cannot show.
+  function renderFinding() {
+    const f = R.finding;
+    const para = (s) => s ? '<p class="fpara">' + esc(s[voice]) + srcBtn(s.src) + '</p>' : '';
+    let h = '<h2 id="h-finding">Finding</h2><div class="fhead">' + chip(f.state, STATUS_WORD[f.status]) +
+      '<p class="headline">' + esc(f.headline[voice]) + '</p>' + srcBtn(f.headline.src) + '</div>';
+    h += para(f.cause) + para(f.consequence);
+    if (f.flags.length) h += '<h3>Also worth knowing</h3>' + says(f.flags);
+    if (f.fixes.length) h += '<h3>What to do</h3>' + says(f.fixes);
+    if (f.details.length) h += '<h3>Details</h3>' + says(f.details);
+    if (f.limits.length) h += '<h3>What these headers cannot show</h3>' + says(f.limits);
+    $('finding').innerHTML = h;
   }
 
-  function renderVerdict() {
-    let h = later('verdict');
-    const fails = [].concat(R.message.notes, R.alignment.notes, R.auth.notes, R.chain.notes).filter(s => s.state === 'fail');
-    if (fails.length) h += '<p class="note-line">Until then, these findings are marked as failures:</p>' + says(fails);
-    $('verdict').innerHTML = h;
+  function itemRow(it) {
+    const lv = LEVELS[it.level] || LEVELS.info;
+    return '<li class="it"><div class="kv"><span class="k">' + esc(it.key) + '</span><span class="raw">' + esc(it.raw) + '</span></div>' +
+      '<div class="txt">' + chip(lv[0], lv[1]) + '<span>' + esc(it[voice]) + '</span>' + srcBtn(it.src) + '</div></li>';
+  }
+  const items = (list) => '<ul class="items">' + list.map(itemRow).join('') + '</ul>';
+
+  // Filter headers, then the sending platform, then list and sending headers.
+  function renderFilters() {
+    const d = R.decoded;
+    let h = '<h2 id="h-filters">Filter headers <span class="count">' + d.filters.length + ' filter' + (d.filters.length === 1 ? '' : 's') + ' found</span></h2>';
+    for (const g of d.filters) {
+      h += '<div class="fgroup"><div class="arh"><span class="who">' + esc(g.name) + '</span>' +
+        (g.side === 'before-custody' ? chip('caveat', 'Before custody') : g.side === 'receiver' ? chip('pass', 'Receiver') : '') + srcBtn(g.src) + '</div>';
+      if (g.items.length) h += items(g.items);
+      if (g.note) h += says([g.note]);
+      h += '</div>';
+    }
+    h += says(d.notes);
+    const p = d.platform;
+    h += '<h3>Sending platform' + (p.name ? ' <span class="count">' + esc(p.confidence) + ' confidence</span>' : '') + '</h3>' + says([p.statement]);
+    if (p.mailer) h += '<p class="raw-line"><span class="lbl">' + esc(p.mailer.name) + ':</span> <span class="mono">' + prov(p.mailer.src, esc(p.mailer.value)) + '</span> <span class="absent">the sender\'s own software label, not verified</span></p>';
+    h += '<h3>List and sending headers</h3>' + (d.list.length ? items(d.list) : '<p class="absent">No unsubscribe, list, Reply-To, Sender, Precedence, Auto-Submitted or Feedback-ID fields that say something here.</p>');
+    $('filters').innerHTML = h;
   }
 
   function renderMessage() {
@@ -199,7 +226,7 @@
     else cmp += chip(c.result, 'dmarc=' + c.result) + '<span class="sub">' + (c.result === 'pass' ? 'Aligned pass from ' + esc((c.by.strict.length ? c.by.strict : c.by.relaxed).join(', ')) + '.' : 'No method that passed aligns with the From domain.') + '</span>' + srcBtn(c.src);
     h += '<div class="dmt">' + rep + '</div><div class="dmt">' + cmp + '</div></div>';
     if (d.disagreement) h += says([d.disagreement]);
-    if (a.compauth) h += '<p class="raw-line"><span class="lbl">Microsoft compauth, raw:</span> <span class="mono">' + prov(a.compauth.src, esc(a.compauth.raw)) + '</span> <span class="absent">Step 3 decodes the reason code.</span></p>';
+    if (a.compauth) h += '<p class="raw-line"><span class="lbl">Microsoft compauth, raw:</span> <span class="mono">' + prov(a.compauth.src, esc(a.compauth.raw)) + '</span> <span class="absent">The reason code is decoded under Filter headers.</span></p>';
     const shown = (n) => (d.disagreement && n.technical === d.disagreement.technical) || /^Microsoft composite authentication/.test(n.technical);
     h += says(a.notes.filter(n => !shown(n)));
     $('auth').innerHTML = h;
@@ -343,17 +370,18 @@
   function renderAll() {
     const open = $('raw-details') && $('raw-details').open;
     const openGroups = Array.from(document.querySelectorAll('#path details[open]')).map(d => d.dataset.group);
-    // One line above the cards until step 3 puts the verdict here.
+    // One line above the cards: what the paste was read as.
     const c = R.chain;
     const parts = [R.fields.length + ' field' + (R.fields.length === 1 ? '' : 's'), c.count + ' hop' + (c.count === 1 ? '' : 's')];
     if (c.totalSec !== null && c.totalSec >= 0) parts.push('transit ' + fmtDur(c.totalSec));
     if (c.originIp && !c.trust.originPrivate) parts.push('origin ' + c.originIp);
     $('read-as').textContent = 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + ' line' + (R.input.repairedLines === 1 ? '' : 's') + ' had lost their indentation and were rejoined.' : '');
-    renderVerdict(); renderMessage();
+    renderFinding();
+    renderFilters();
+    renderMessage();
     renderAlignment();
     renderAuth();
     renderPath();
-    $('filters').innerHTML = later('filters');
     renderRaw();
     if (R.input.notes.length) $('raw').insertAdjacentHTML('beforeend', says(R.input.notes));
     if (open) $('raw-details').open = true;
@@ -369,11 +397,11 @@
     $('results').hidden = false;
     if (!R.input.blockFound) {
       $('read-as').textContent = '';
-      $('verdict').innerHTML = '<h2 id="h-verdict">Nothing to read</h2>' + says(R.input.notes);
-      ['message', 'alignment', 'auth', 'path', 'filters', 'raw'].forEach(id => { $(id).innerHTML = ''; $(id).hidden = true; });
+      $('finding').innerHTML = '<h2 id="h-finding">Nothing to read</h2>' + says(R.input.notes);
+      ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).innerHTML = ''; $(id).hidden = true; });
       return;
     }
-    ['message', 'alignment', 'auth', 'path', 'filters', 'raw'].forEach(id => { $(id).hidden = false; });
+    ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).hidden = false; });
     renderAll();
     if (scroll) $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }

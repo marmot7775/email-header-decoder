@@ -1,0 +1,17 @@
+Authentication-Results: mx.receiver.example;
+       dkim=pass header.d=tools.example header.s=t1;
+       spf=pass smtp.mailfrom=alerts@tools.example;
+       dmarc=permerror header.from=tools.example
+Received: from out.tools.example (out.tools.example [192.0.2.141])
+        by mx.receiver.example (Postfix) with ESMTPS id 8Bb2
+        for <pat@receiver.example>; Fri, 23 Oct 2026 08:05:04 +0000 (UTC)
+Return-Path: <alerts@tools.example>
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=tools.example; s=t1;
+        t=1792742700; h=from:to:subject:date:message-id;
+        bh=SyntheticBh0604=; b=ToolsSyntheticValue0604
+From: Tools <alerts@tools.example>
+To: pat@receiver.example
+Subject: Build finished
+Date: Fri, 23 Oct 2026 08:05:00 +0000
+Message-ID: <build-604@tools.example>
+MIME-Version: 1.0

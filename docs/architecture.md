@@ -1,4 +1,4 @@
-Header Verdict, architecture
+Email Header Decoder, architecture
 
 Shape
 One static page. No server, no network calls, no storage. Pasted
@@ -31,24 +31,25 @@ src/auth.js      Authentication-Results per RFC 8601 (Google form
                  8617 with chain checks, and identifier alignment.
                  Produces reported results and a computed DMARC
                  result side by side.
-src/providers.js Decodes filter verdicts (Microsoft SCL, BCL, CAT,
-                 SFV, IPV; Proofpoint; Mimecast; Cisco; Barracuda;
+src/providers.js Decodes filter results (Microsoft SCL, BCL, CAT,
+                 SFV, IPV, compauth; Google; Proofpoint; Mimecast; Cisco; Barracuda;
                  SpamAssassin; Rspamd) into plain statements with a
                  level, fingerprints the sending platform from
                  headers, DKIM d=, Return-Path and first relay, and
                  reads list and sending headers (RFC 8058 one-click).
                  Unknown codes are shown raw, never guessed.
-src/verdict.js   The sentence. Reads everything above and writes
-                 status, headline, cause, policy consequence,
-                 details, fixes, and flags. Forwarded mail is
+src/finding.js   The finding, the one sentence result. Reads
+                 everything above and writes status, headline,
+                 cause, policy consequence, details, fixes, flags,
+                 and limits. Forwarded mail is
                  recognised from ARC and the pre-forward results are
                  quoted, so the failure is blamed on the forward
                  when that is what happened.
 src/analyze.js   analyze(text) returns one plain result object.
                  The page renders it; the tests assert on it.
 
-ui/page.html     Markup and tokens. Verdict first, then message,
-                 alignment, authentication, path, filter headers,
+ui/page.html     Markup and tokens. Finding first, then filter
+                 headers, message, alignment, authentication, path,
                  raw headers collapsed.
 ui/app.js        Rendering only. No parsing logic lives here.
 build.js         Concatenates src and ui into dist/index.html
@@ -61,15 +62,15 @@ test/            node:test suite over analyze() with synthetic
 Rules that keep it honest
 No DNS, no signature verification, no guessing. Every sentence is
 built from identifiers in the headers. Where the page cannot know
-(adkim/aspf, the organizational domain, Gmail's spam verdict) it
+(adkim/aspf, the organizational domain, Gmail's spam decision) it
 says so in the output rather than defaulting silently.
 
 Result object (what the page renders)
-input, message, verdict, alignment (rows per identifier with
+input, message, finding, alignment (rows per identifier with
 aligned, strict, mode), auth (all A-R, primary, spf, dkim, dmarc,
 computed, arc, arcResult, compauth), chain (hops, totalSec,
-slowestIdx, clockSkew, originIp), decoded (providers, platform,
-misc), fields.
+slowestIdx, clockSkew, originIp), decoded (filters, platform,
+list, notes), fields, flags.
 
 Parked for later releases
 DKIM key lookup through a DNS API. Bounce and SMTP code decoding.

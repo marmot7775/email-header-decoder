@@ -464,7 +464,7 @@
     for (const r of auth.all) {
       if (r.trust === 'unverified') {
         n.push(say('unknown', r.authserv
-          ? 'Authentication-Results from ' + r.authserv + ' is unverified: no Received by host in the chain matches it, so the sender could have added it. A hint, not a verdict.'
+          ? 'Authentication-Results from ' + r.authserv + ' is unverified: no Received by host in the chain matches it, so the sender could have added it. A hint, not a result.'
           : auth.exchangeOnline ? 'An Authentication-Results field with no authserv-id has no Received field below it to tie it to a host, so it is unverified.'
             : 'An Authentication-Results field with no authserv-id is unverified: that form is Exchange Online\'s, and these headers carry no X-MS-Exchange-Organization fields to show Exchange Online received the message.',
           'One set of check results cannot be tied to any server the message passed through. The sender could have written it.', r.src));
@@ -487,7 +487,7 @@
       n.push(say('caveat', 'Computed DMARC passes in relaxed mode (' + c.by.relaxed.join(', ') + ') and fails in strict mode. The record\'s ' + c.tags.join(' and ') + ' decide' + (c.tags.length === 1 ? 's' : '') + '; relaxed is the default when the tag is absent.', 'Whether this passes depends on a setting in the sender\'s DMARC record that this page cannot see.', c.src));
     }
     if (auth.dmarc.disagreement) { const d = auth.dmarc.disagreement; n.push(say(d.state, d.technical, d.plain, d.src)); }
-    if (auth.compauth) n.push(say('unknown', 'Microsoft composite authentication: compauth=' + auth.compauth.result + (auth.compauth.reason ? ' reason=' + auth.compauth.reason : '') + '. Shown raw; step 3 decodes the reason code.', 'Microsoft recorded its own combined check result. The next step explains it.', auth.compauth.src));
+    if (auth.compauth) n.push(say('unknown', 'Microsoft composite authentication: compauth=' + auth.compauth.result + (auth.compauth.reason ? ' reason=' + auth.compauth.reason : '') + '. The Filter headers section decodes the reason code.', 'Microsoft recorded its own combined check result. The Filter headers section explains it.', auth.compauth.src));
   }
 
   HA.auth = { resultState, parseAuthResults, parseReceivedSpf, parseDkimSignature, buildArc, buildAuth, alignRow, splitOutside };
