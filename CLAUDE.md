@@ -1,8 +1,7 @@
 # Email Header Decoder
 
-The repo is still named header-verdict; the rename comes with step 4
-hosting. The one sentence result is the finding; the word verdict is
-not used in the code.
+The repo and directory are email-header-decoder. The one sentence
+result is the finding; the word verdict is not used in the code.
 
 A single page email header analyzer. Paste raw headers, a full .eml, or a
 copy of a Show original page, and the first thing you read is what failed

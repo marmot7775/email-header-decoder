@@ -31,9 +31,9 @@ is handed out only after that. Status as of 2026-10-24.
    results quoted) and providers.js (Microsoft, Google, Proofpoint,
    Mimecast, Cisco, Barracuda, SpamAssassin, Rspamd; platform with
    a confidence; list and sending headers with RFC 8058), both in
-   the build. The product name is Email Header Decoder; the repo
-   rename waits for step 4. wip/step3 and the 15 Oct verdict.js are
-   gone.
+   the build. The product name is Email Header Decoder and the repo
+   is email-header-decoder (renamed 24 Oct). wip/step3 and the
+   15 Oct verdict.js are gone.
 
 4  Copy pass, mobile, hosting.                              NOT STARTED
    Hosting is a static site, likely headers.dns-audit.com on
