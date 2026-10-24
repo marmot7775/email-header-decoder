@@ -26,10 +26,9 @@ than defaulting silently. Unknown filter codes show raw, with no
 meaning attached. Unnamed beats guessed, for platforms and for
 codes alike.
 
-No model name, plan, tier, or version appears in any file in the
-repo: no Max, Opus, Sonnet, Haiku, Fable, or version number, in
-docs, comments, commit messages, or the page. Claude Code as the
-name of the tool is fine.
+No model name, plan, tier, or model version appears in any file
+in the repo: not in docs, comments, commit messages, or the page.
+Claude Code as the name of the tool is fine.
 
 Do not push. Commit each step locally and wait for the word.
 
