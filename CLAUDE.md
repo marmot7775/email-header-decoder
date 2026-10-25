@@ -46,9 +46,15 @@ No model name, plan, tier, or model version appears in any file
 in the repo: not in docs, comments, commit messages, or the page.
 Claude Code as the name of the tool is fine.
 
-Do not push. Commit each step locally and wait for the word. Do
-not touch GitHub, the droplet, or dns-audit.com until Neil says
-so.
+Links may point only at dns-audit.com, Neil's LinkedIn, and the
+GitHub repo; build.js refuses any other host. The page loads
+nothing from anywhere.
+
+Commit each step locally. Publishing was approved on 2026-10-25:
+the public GitHub repo, hosting at headers.dns-audit.com on
+Cloudflare, and the nav link on dns-audit.com. Push and deploy only
+work that passed tests, the build, and the browser check. The
+droplet never serves this page.
 
 ## Layout
 
@@ -78,14 +84,19 @@ src/finding.js    The sentence. Status, headline, cause, policy
                   consequence, details, fixes, flags, and limits.
 src/analyze.js    analyze(text) returns one plain result object.
                   The page renders it; the tests assert on it.
-ui/page.html      Markup and tokens. Finding first, then message,
-                  alignment, authentication, path, filter headers,
-                  raw headers collapsed.
+ui/page.html      Markup and tokens. Site bar, paste box, then
+                  finding with the check tiles, message, alignment,
+                  authentication, path, filter headers, raw headers
+                  collapsed. Static guide and FAQ below the tool.
 ui/app.js         Rendering only. No parsing logic lives here.
 build.js          Builds dist/index.html (full document with a
-                  CSP, opens from disk) and dist/artifact.html
-                  (body only, for the claude.ai preview). dist is
+                  CSP, title, description, canonical, share tags,
+                  and JSON-LD; opens from disk) and
+                  dist/artifact.html (body only, for the claude.ai
+                  preview), plus _headers, robots.txt, sitemap.xml,
+                  and the share card for the static host. dist is
                   gitignored.
+ui/og-card.png    The share card, 1200 by 630.
 test/             node:test suite over analyze() with synthetic
                   fixtures and hostile input. Fixtures are under
                   test/fixtures.

@@ -48,14 +48,26 @@ src/finding.js   The finding, the one sentence result. Reads
 src/analyze.js   analyze(text) returns one plain result object.
                  The page renders it; the tests assert on it.
 
-ui/page.html     Markup and tokens. Finding first, then filter
-                 headers, message, alignment, authentication, path,
-                 raw headers collapsed.
-ui/app.js        Rendering only. No parsing logic lives here.
-build.js         Concatenates src and ui into dist/index.html
-                 (artifact form) and dist/standalone.html (full
-                 document, host anywhere, including static/ on
-                 dns-audit.com with one route).
+ui/page.html     Markup and tokens. The dns-audit.com site bar,
+                 the paste box, then the results: finding (with
+                 the four check tiles), message, alignment,
+                 authentication, path, filter headers, raw headers
+                 collapsed. Below the tool, static text for readers
+                 and search engines: what it reads, how to copy the
+                 headers, and the FAQ. Then the site footer.
+ui/app.js        Rendering only. No parsing logic lives here. The
+                 tiles and the copied report read values already
+                 in the result; they decide nothing new.
+ui/og-card.png   The share card, 1200 by 630.
+build.js         Inlines src and ui into dist/index.html (full
+                 document: head with CSP, title, description,
+                 canonical, share tags, and JSON-LD whose FAQ is
+                 read from the page's own FAQ) and dist/artifact.html
+                 (body only, for the claude.ai preview). Also writes
+                 what the static host serves beside the page:
+                 _headers (the CSP as a real header, with
+                 frame-ancestors), robots.txt, sitemap.xml, and the
+                 share card.
 test/            node:test suite over analyze() with synthetic
                  fixtures and hostile input. Run: node --test test/
 
@@ -75,4 +87,5 @@ list, notes), fields, flags.
 Parked for later releases
 DKIM key lookup through a DNS API. Bounce and SMTP code decoding.
 Full public suffix list or a DMARCbis tree walk via DNS. Link from a
-failing From domain to its dns-audit.com audit.
+failing From domain to its dns-audit.com audit. Compare two messages
+side by side.

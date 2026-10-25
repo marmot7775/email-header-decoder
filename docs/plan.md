@@ -1,7 +1,7 @@
 Email Header Decoder, plan
 
 Four steps. Each ends with a report and a commit, and the next prompt
-is handed out only after that. Status as of 2026-10-24.
+is handed out only after that. Status as of 2026-10-25.
 
 1  Repo, parser, hop timeline, page skeleton, tests, build.    DONE
    parse.js (header block in a bare paste, a full .eml, a Show
@@ -35,7 +35,43 @@ is handed out only after that. Status as of 2026-10-24.
    is email-header-decoder (renamed 24 Oct). wip/step3 and the
    15 Oct verdict.js are gone.
 
-4  Copy pass, mobile, hosting.                              NOT STARTED
-   Hosting is a static site, likely headers.dns-audit.com on
-   Cloudflare with a link in the dns-audit.com nav. The droplet never
-   serves it.
+4  Copy pass, design, mobile, hosting.                      IN PROGRESS
+   Design pass done 2026-10-25: dns-audit.com site bar and footer,
+   Beta label, check tiles, plain first with the technical line
+   under it, numbered fixes, evidence folded, quieter line chips,
+   filter headers after the path, Copy report, samples labelled,
+   static guide and FAQ, head with JSON-LD, share card, host files.
+   Still to do: real headers from Neil, the copy pass they drive,
+   public repo, hosting at headers.dns-audit.com, and the
+   dns-audit.com nav link.
+
+Decisions
+
+2026-10-15  Runs entirely in the browser. No server, no network
+            calls, no DNS, no signature verification.
+2026-10-23  Step 2 check rules, as listed in CLAUDE.md under
+            Settled by the step 2 check.
+2026-10-24  Renamed Header Verdict to Email Header Decoder; the one
+            sentence result is the finding.
+2026-10-25  Hosted at headers.dns-audit.com as a static site on
+            Cloudflare, styled as part of the dns-audit.com family.
+            A subdomain, not a path, for simplicity; neither harms
+            search.
+2026-10-25  Public repo with a Beta label; version stays under 1.0.
+2026-10-25  Plain wording first. The plain headline leads and the
+            technical one sits under it; the switch changes the rest.
+            The voice choice is no longer kept in localStorage, so
+            the no storage rule holds.
+2026-10-25  Links to dns-audit.com, Neil's LinkedIn, and the GitHub
+            repo are allowed on the page. A link sends nothing until
+            followed; the CSP still blocks every request the page
+            itself could make. The build refuses any other host.
+2026-10-25  Static guide and FAQ under the tool, for readers and for
+            search and AI crawlers. The JSON-LD FAQ is generated
+            from the page's FAQ so the two match; a test checks it.
+2026-10-25  The page opens on the forwarded sample, labelled as a
+            sample.
+2026-10-25  Check tiles and Copy report read values already in the
+            result. When the finding blames a forward, the tiles say
+            failed after the forward and passed before it, from the
+            first ARC set.

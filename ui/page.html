@@ -67,16 +67,30 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-optical-sizing: auto; font-size: var(--font-base); line-height: 1.6; -webkit-font-smoothing: antialiased; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-optical-sizing: auto; font-size: var(--font-base); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+.site-bar-in, main.wrap, .site-foot-in { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main.wrap { padding-block: 28px 48px; }
+#results.wrap { padding: 0; }
 .wrap { max-width: var(--max-width); margin: 0 auto; display: grid; gap: 16px; min-width: 0; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-sm); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .mono { font-family: var(--font-mono); font-size: var(--font-sm); }
 
-header.top { display: grid; gap: 6px; }
-header.top .eyebrow { font-size: var(--font-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-header.top h1 { font-size: var(--font-3xl); font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.2; text-wrap: balance; }
-header.top p { margin: 0; color: var(--text-2); max-width: 62ch; }
+/* Site bar: the same wordmark and links as dns-audit.com */
+.site-bar { border-bottom: 1px solid var(--border); background: var(--raised); }
+.site-bar-in { max-width: var(--max-width); margin: 0 auto; min-height: 56px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; }
+.logo { color: var(--text); text-decoration: none; font-weight: 700; font-size: var(--font-lg); letter-spacing: -0.01em; display: inline-flex; align-items: center; min-height: 44px; }
+.logo .accent { color: var(--primary); }
+.site-bar nav { display: flex; flex-wrap: wrap; gap: 2px; margin-inline: -8px; }
+.site-bar nav a { color: var(--text-2); text-decoration: none; font-size: var(--font-sm); font-weight: 500; padding: 0 8px; min-height: 44px; display: inline-flex; align-items: center; border-radius: var(--radius); }
+.site-bar nav a:hover { color: var(--text); background: var(--surface-hover); }
+.site-bar nav a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--primary); border-radius: 0; }
+
+header.top { display: grid; gap: 8px; }
+header.top h1 { font-size: var(--font-3xl); font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.2; text-wrap: balance; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+header.top .lede { margin: 0; color: var(--text-2); max-width: 60ch; font-size: var(--font-md); }
+.beta { display: inline-flex; align-items: center; font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--caveat); border: 1px solid var(--caveat-border); background: var(--caveat-bg); border-radius: 999px; padding: 3px 9px; line-height: 1.2; }
+.policy summary svg { width: 16px; height: 16px; margin-right: 6px; flex: none; color: var(--pass); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; min-width: 0; }
 .card > h2 { font-size: var(--font-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
@@ -99,7 +113,7 @@ button { font: inherit; cursor: pointer; }
 .btn:hover { background: var(--surface-hover); }
 .btn.primary { background: var(--primary-solid); border-color: var(--primary-solid); color: var(--on-solid); }
 .btn.primary:hover { background: var(--primary-solid-hover); }
-.samples { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--font-sm); color: var(--muted); }
+.samples { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; font-size: var(--font-sm); color: var(--muted); }
 .link-btn { background: none; border: 0; padding: 6px 4px; min-height: 44px; color: var(--primary); font-size: var(--font-sm); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--primary-border); }
 .hint { margin: 10px 0 0; font-size: var(--font-sm); color: var(--muted); }
 
@@ -124,12 +138,12 @@ button { font: inherit; cursor: pointer; }
 .say { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; font-size: var(--font-sm); line-height: 1.55; }
 .say .st { margin-top: 1px; }
 .say .txt { min-width: 0; max-width: 68ch; overflow-wrap: anywhere; }
-.say .src { grid-column: 2; justify-self: start; }
 
 /* Provenance: anything with a source can light its raw lines */
 .prov { background: none; border: 0; padding: 0; color: inherit; text-align: left; font: inherit; border-bottom: 1px dotted var(--border-strong); cursor: pointer; overflow-wrap: anywhere; }
 .prov:hover, .prov.on { border-bottom-color: var(--primary); background: var(--hl); }
-.src { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--muted); font-family: var(--font-mono); font-size: 0.6875rem; padding: 2px 6px; min-height: 24px; line-height: 1.3; cursor: pointer; white-space: nowrap; }
+.src { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--muted); font-family: var(--font-mono); font-size: 0.6875rem; padding: 2px 5px; min-height: 24px; min-width: 24px; line-height: 1.3; cursor: pointer; white-space: nowrap; vertical-align: baseline; margin-left: 4px; opacity: 0.8; }
+.src:hover, .src:focus-visible { opacity: 1; border-color: var(--border); }
 .src:hover, .src.on { color: var(--primary); border-color: var(--primary-border); background: var(--primary-subtle); }
 
 /* Message card */
@@ -139,7 +153,42 @@ button { font: inherit; cursor: pointer; }
 .meta .sub { color: var(--text-2); font-size: var(--font-sm); }
 .absent { color: var(--muted); font-size: var(--font-sm); }
 
-/* Finding */
+/* Finding: the answer first, then the four checks at a glance */
+.card.finding { border-width: 1px; border-top-width: 4px; padding: 20px; }
+.card.finding.s-pass { border-top-color: var(--pass); }
+.card.finding.s-caveat { border-top-color: var(--caveat); }
+.card.finding.s-fail { border-top-color: var(--fail); }
+.card.finding.s-unknown { border-top-color: var(--unknown); }
+.finding .headline { font-size: var(--font-xl); line-height: 1.4; }
+.finding .tech-line { margin: 0; font-family: var(--font-mono); font-size: var(--font-xs); color: var(--muted); line-height: 1.6; max-width: 90ch; overflow-wrap: anywhere; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 16px 0 4px; }
+@media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { display: grid; gap: 2px; align-content: start; text-align: left; font: inherit; color: inherit; border: 1px solid var(--border); border-left: 4px solid var(--unknown); border-radius: var(--radius); background: var(--raised); padding: 10px 12px; min-width: 0; min-height: 44px; cursor: pointer; }
+.tile:hover { background: var(--surface-hover); }
+.tile.pass { border-left-color: var(--pass); }
+.tile.caveat { border-left-color: var(--caveat); }
+.tile.fail { border-left-color: var(--fail); }
+.tile .tk { font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.tile .tq { font-size: var(--font-xs); color: var(--muted); }
+.tile .tv { display: flex; align-items: baseline; gap: 6px; font-weight: 700; font-size: var(--font-md); }
+.tile .tv .sym { font-family: var(--font-mono); }
+.tile.pass .tv { color: var(--pass); }
+.tile.caveat .tv { color: var(--caveat); }
+.tile.fail .tv { color: var(--fail); }
+.tile.unknown .tv { color: var(--unknown); }
+.tile .td { font-family: var(--font-mono); font-size: var(--font-xs); color: var(--text-2); overflow-wrap: anywhere; }
+.steps { margin: 8px 0 0; padding-left: 1.4em; display: grid; gap: 8px; font-size: var(--font-base); max-width: 72ch; }
+.steps li::marker { color: var(--primary); font-weight: 700; }
+.steps .txt { overflow-wrap: anywhere; }
+.more { margin-top: 14px; border-top: 1px solid var(--border); }
+.more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--font-sm); color: var(--primary); }
+.more > summary .count { color: var(--text-2); font-weight: 400; }
+.toolbar .tools { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn.small { min-height: 44px; padding: 6px 12px; }
+.btn.done { border-color: var(--pass-border); color: var(--pass); }
+.journey { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 12px 0 0; font-size: var(--font-sm); color: var(--text-2); }
+.journey .stop { font-family: var(--font-mono); font-size: var(--font-xs); color: var(--text); background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 6px; overflow-wrap: anywhere; }
+.journey .arr { color: var(--muted); }
 .fhead { display: grid; gap: 10px; }
 .fhead .st { justify-self: start; }
 .headline { margin: 0; font-size: var(--font-lg); font-weight: 600; line-height: 1.45; max-width: 68ch; overflow-wrap: anywhere; }
@@ -213,8 +262,29 @@ details.raw > summary .count { font-weight: 400; color: var(--text-2); font-size
 .rawbox mark { background: var(--caveat-bg); color: inherit; outline: 1px solid var(--caveat-border); border-radius: 2px; }
 .empty-raw { padding: 8px 12px; color: var(--muted); font-family: var(--font-body); font-size: var(--font-sm); }
 
-footer { color: var(--muted); font-size: var(--font-sm); max-width: 68ch; display: grid; gap: 6px; }
-footer p { margin: 0; }
+/* Guide: real text for readers and search engines, below the tool */
+.guide { display: grid; gap: 4px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+.guide h2 { font-size: var(--font-xl); font-weight: 700; letter-spacing: -0.01em; margin: 20px 0 8px; }
+.guide h2:first-child { margin-top: 0; }
+.checks-list { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; color: var(--text-2); max-width: 70ch; }
+.checks-list strong { color: var(--text); font-weight: 600; }
+.how { display: grid; grid-template-columns: minmax(10rem, max-content) 1fr; gap: 8px 18px; margin: 0; max-width: 76ch; }
+.how dt { font-weight: 600; }
+.how dd { margin: 0; color: var(--text-2); }
+@media (max-width: 560px) { .how { grid-template-columns: 1fr; gap: 2px; } .how dd { margin-bottom: 10px; } }
+.faq { display: grid; gap: 0; border-top: 1px solid var(--border); max-width: 76ch; }
+.faq details { border-bottom: 1px solid var(--border); }
+.faq summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; padding: 8px 0; }
+.faq p { margin: 0 0 14px; color: var(--text-2); }
+
+/* Site footer, like dns-audit.com's */
+.site-foot { border-top: 1px solid var(--border); background: var(--raised); color: var(--text-2); font-size: var(--font-sm); }
+.site-foot-in { max-width: var(--max-width); margin: 0 auto; padding-block: 24px calc(32px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; }
+.site-foot p { margin: 0; max-width: 76ch; }
+.site-foot a { color: var(--primary); font-weight: 500; text-underline-offset: 3px; }
+.site-foot .beta { margin-right: 6px; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.site-foot .fine { color: var(--muted); font-size: var(--font-xs); }
 
 /* Sub-headings inside a card */
 .card h3 { font-size: var(--font-sm); font-weight: 600; margin: 18px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
@@ -320,16 +390,27 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
 }
 </style>
 
-<div class="wrap">
+<header class="site-bar">
+  <div class="site-bar-in">
+    <a class="logo" href="https://dns-audit.com/"><span>dns<span class="accent">-audit</span>.com</span></a>
+    <nav aria-label="dns-audit.com">
+      <a href="https://dns-audit.com/">DNS audit</a>
+      <a href="./" aria-current="page">Header Decoder</a>
+      <a href="https://dns-audit.com/articles/">Articles</a>
+      <a href="https://dns-audit.com/about">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
   <header class="top">
-    <span class="eyebrow">Step 3 of 4: the finding and filter headers</span>
-    <h1>Email Header Decoder</h1>
-    <p>Paste headers and read what failed and why.</p>
+    <h1>Email Header Decoder <span class="beta">Beta</span></h1>
+    <p class="lede">Paste the headers of any email and read, in one sentence, why it passed or failed SPF, DKIM, and DMARC, and what to fix.</p>
     <details class="policy">
-      <summary>Nothing you paste leaves your browser. Read how.</summary>
+      <summary><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.1c0 3.4 2.3 6.4 5.5 7.4 3.2-1 5.5-4 5.5-7.4V3.2L8 1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m5.6 8 1.7 1.7 3.2-3.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Nothing you paste leaves your browser. Read how.</summary>
       <div class="panel">
         <p>This page has no server behind it. The headers you paste are read by code running on this page, in your browser, and are never sent, stored, or logged anywhere.</p>
-        <p>It makes no network requests at all: no fonts, no analytics, no DNS lookups. When the page is opened as its own file, its Content Security Policy has no connect-src, so the browser itself blocks any attempt to send data out.</p>
+        <p>It makes no network requests at all: no fonts, no analytics, no DNS lookups. Its Content Security Policy has no connect-src, so the browser itself blocks any attempt to send data out.</p>
       </div>
     </details>
   </header>
@@ -340,43 +421,80 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
     </div>
     <textarea id="headers" spellcheck="false" autocomplete="off" placeholder="Paste here, or drop a .eml file on this box."></textarea>
     <div class="actions">
-      <button class="btn primary" id="go" type="button">Analyze</button>
+      <button class="btn primary" id="go" type="button">Decode</button>
       <button class="btn" id="clear" type="button">Clear</button>
       <span class="spacer"></span>
-      <span class="samples">Load sample:
-        <button class="link-btn" type="button" data-sample="gmail">Gmail</button>
+      <span class="samples">Try a sample:
+        <button class="link-btn" type="button" data-sample="gmail">Gmail pass</button>
+        <button class="link-btn" type="button" data-sample="esp">Platform not aligned</button>
+        <button class="link-btn" type="button" data-sample="forwarded">Broken by a forward</button>
         <button class="link-btn" type="button" data-sample="exchange">Exchange Online</button>
-        <button class="link-btn" type="button" data-sample="forwarded">Forwarded</button>
         <button class="link-btn" type="button" data-sample="arc">ARC chain</button>
         <button class="link-btn" type="button" data-sample="twodkim">Two DKIM</button>
-        <button class="link-btn" type="button" data-sample="relaxed">Subdomain</button>
       </span>
     </div>
-    <p class="hint">Gmail: More, Show original, Copy to clipboard. Outlook: File, Properties, Internet headers. Outlook on the web: More actions, View, View message source. Apple Mail: View, Message, Raw Source.</p>
+    <p class="hint">Gmail: More, Show original, Copy to clipboard. Outlook: More actions, View, View message details. Classic Outlook: open the message, File, Properties, Internet headers. Apple Mail: View, Message, Raw Source.</p>
   </section>
 
   <div id="results" class="wrap" hidden>
     <div class="toolbar">
       <span class="read-as" id="read-as"></span>
-      <span class="voice" role="group" aria-label="Wording">
-        <button type="button" data-voice="technical" aria-pressed="true">Technical</button>
-        <button type="button" data-voice="plain" aria-pressed="false">Plain</button>
+      <span class="tools">
+        <button class="btn small" type="button" id="copy-report">Copy report</button>
+        <span class="voice" role="group" aria-label="Wording">
+          <button type="button" data-voice="plain" aria-pressed="true">Plain</button>
+          <button type="button" data-voice="technical" aria-pressed="false">Technical</button>
+        </span>
       </span>
     </div>
-    <section class="card" id="finding" aria-labelledby="h-finding"></section>
-    <section class="card" id="filters" aria-labelledby="h-filters"></section>
+    <section class="card finding" id="finding" aria-labelledby="h-finding"></section>
     <section class="card" id="message" aria-labelledby="h-message"></section>
     <section class="card" id="alignment" aria-labelledby="h-alignment"></section>
     <section class="card" id="auth" aria-labelledby="h-auth"></section>
     <section class="card" id="path" aria-labelledby="h-path"></section>
+    <section class="card" id="filters" aria-labelledby="h-filters"></section>
     <section class="card" id="raw"></section>
   </div>
   <p class="sr-only" id="live" aria-live="polite"></p>
 
-  <footer>
-    <p>Reads the headers as the receiving servers wrote them. It makes no network requests, queries no DNS and verifies no signatures, and it never sends what you paste anywhere.</p>
-    <p>Received dates follow RFC 5322, including the obsolete zones; a zone it cannot trust is read as UTC and marked. TLS is taken from each hop's with clause (RFC 3848) and the comments around it.</p>
-    <p>Alignment uses the SPF and DKIM results the receiver reported (RFC 8601) and checks each identifier against the From domain itself (RFC 7489). The organizational domain comes from a short built-in suffix list, not DNS, and the page marks it when that is a guess. ARC (RFC 8617) is checked for structure only; seals are not verified.</p>
-  </footer>
-</div>
+  <section class="guide" aria-labelledby="h-guide">
+    <h2 id="h-guide">What it reads</h2>
+    <ul class="checks-list">
+      <li><strong>SPF, DKIM, and DMARC</strong> as the receiving server recorded them, each identifier checked for alignment with the From domain.</li>
+      <li><strong>A second DMARC result worked out on the page</strong> from those identifiers, set beside the receiver's own, with the reason when the two disagree.</li>
+      <li><strong>Forwarded mail.</strong> ARC headers show what passed before a forward, so the page can say when the forward broke a message the sender set up correctly.</li>
+      <li><strong>Every hop</strong> in order, with the delay at each one, TLS where the stamp records it, and the point where the receiver took custody. Hops above that point could have been written by the sender.</li>
+      <li><strong>Spam filter headers</strong> from Microsoft 365, Google, Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd, decoded in plain words with the raw value beside each one.</li>
+      <li><strong>The sending platform</strong>, named only when the evidence is strong, and the unsubscribe headers, including RFC 8058 one-click.</li>
+    </ul>
+
+    <h2 id="h-how">How to copy the headers</h2>
+    <dl class="how">
+      <dt>Gmail</dt><dd>Open the message, select More next to Reply, then Show original. Select Copy to clipboard, or paste the whole page here.</dd>
+      <dt>Outlook and Outlook on the web</dt><dd>Open the message, select More actions, then View, then View message details. Copy everything in the box.</dd>
+      <dt>Classic Outlook for Windows</dt><dd>Double-click the message to open it, then select File, then Properties. The headers are in the Internet headers box.</dd>
+      <dt>Apple Mail</dt><dd>Select the message, then View, Message, Raw Source.</dd>
+      <dt>Any client</dt><dd>Save the message as an .eml file and drop it on the paste box. Only the headers are read; the body is ignored.</dd>
+    </dl>
+    <p class="note-line">Use the copy the recipient received. A copy from the Sent folder never passed through the receiving server, so it carries no authentication results.</p>
+
+    <h2 id="h-faq">Questions</h2>
+    <div class="faq">
+      <details><summary>Why did a forwarded message fail DMARC?</summary><p>A forward sends the message on from the forwarder's server, so SPF checks the forwarder's address instead of the original sender's. If the forwarder also changes the message, for example by adding a footer, the DKIM signature no longer matches. With both gone, DMARC fails even though the sender did nothing wrong. When the forwarder adds ARC headers, this page reads the results recorded before the forward and says so.</p></details>
+      <details><summary>Does anything I paste leave my browser?</summary><p>No. The page has no server behind it and makes no network requests. Its Content Security Policy blocks any attempt to send data, so your headers stay on your machine.</p></details>
+      <details><summary>Why are there two DMARC results?</summary><p>The receiving server writes its DMARC result into the Authentication-Results header. This page also works the result out from the SPF and DKIM results and the domains involved. When the two differ, the page names the reason, such as a local policy override at the receiver.</p></details>
+      <details><summary>Why does it not verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups, so nothing about your message leaves the page.</p></details>
+      <details><summary>What does "aligned" mean?</summary><p>DMARC passes only when SPF or DKIM passes for a domain that matches the domain in the From address. A pass for some other domain, such as a mailing platform's own, is a pass that is not aligned, and it does not count toward DMARC.</p></details>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="site-foot-in">
+    <p class="beta-note"><span class="beta">Beta</span> Found a message it reads wrong? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a> with what it said and what it should have said.</p>
+    <p>Built by <a href="https://dns-audit.com/about">Neil Anuskiewicz</a>. Need help with email deliverability, email security, or DNS? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a> or <a href="https://www.linkedin.com/in/neilanuskiewicz/" rel="noopener">message me on LinkedIn</a>.</p>
+    <p class="foot-links"><a href="https://dns-audit.com/">dns-audit.com</a><a href="https://dns-audit.com/articles/">Articles</a><a href="https://github.com/marmot7775/email-header-decoder" rel="noopener">Source on GitHub</a></p>
+    <p class="fine">Reads the headers as the receiving servers wrote them. Received dates follow RFC 5322, including the obsolete zones; a zone it cannot trust is read as UTC and marked. TLS is taken from each hop's with clause (RFC 3848) and the comments around it. Alignment checks each identifier against the From domain (RFC 7489); the organizational domain comes from a short built-in suffix list, not DNS, and the page marks it when that is a guess. ARC (RFC 8617) is checked for structure only; seals are not verified.</p>
+  </div>
+</footer>
 <!-- SCRIPTS -->

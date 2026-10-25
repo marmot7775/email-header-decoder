@@ -22,8 +22,10 @@
   const FORMATS = { 'gmail-original': 'a Gmail Show original copy', 'outlook-headers': 'Outlook Internet headers', eml: 'a full message (.eml)', bare: 'a header block' };
 
   let R = null;
-  let voice = 'technical';
-  try { if (localStorage.getItem('hv-voice') === 'plain') voice = 'plain'; } catch (e) { /* storage blocked */ }
+  let sample = '';
+  // Plain first: the headline has to make sense to the person who owns the
+  // domain. The technical line sits under it either way. Nothing is stored.
+  let voice = 'plain';
 
   // State chip: symbol and word carry the state, color repeats it.
   function chip(state, label) {
@@ -53,7 +55,7 @@
 
   function says(list) {
     if (!list || !list.length) return '';
-    return '<ul class="says">' + list.map(s => '<li class="say">' + chip(s.state) + '<span class="txt">' + esc(s[voice]) + '</span>' + srcBtn(s.src) + '</li>').join('') + '</ul>';
+    return '<ul class="says">' + list.map(s => '<li class="say">' + chip(s.state) + '<span class="txt">' + esc(s[voice]) + srcBtn(s.src) + '</span></li>').join('') + '</ul>';
   }
 
   function fmtUtc(ms) {
@@ -61,19 +63,101 @@
     return new Date(ms).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
   }
 
-  // The finding: status, the one sentence, why, what the policy did, then
-  // what to do, the supporting details, and what the headers cannot show.
+  const cap = (x) => x ? x.charAt(0).toUpperCase() + x.slice(1) : '';
+  const RANK = { pass: 0, caveat: 1, fail: 2, unknown: 3 };
+
+  // The four checks at a glance. Each tile reads values already in the
+  // result; none of them decides anything the finding does not.
+  function tiles() {
+    const rows = R.alignment.rows;
+    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? 'Pass, aligned' : x.state === 'caveat' ? 'Pass, not aligned' : x.result ? cap(x.result) : 'Not reported';
+    const idState = (x) => !x || x.absent ? 'unknown' : x.state;
+    const spf = rows.find(x => x.kind === 'spf');
+    const dkims = rows.filter(x => x.kind === 'dkim' && !x.absent).sort((a, b) => RANK[a.state] - RANK[b.state]);
+    const dk = dkims[0];
+    const out = [];
+    out.push({ k: 'SPF', q: 'Was the sending server allowed?', state: idState(spf), v: idWord(spf), d: spf && !spf.absent ? spf.domain : '', jump: 'alignment' });
+    out.push({ k: 'DKIM', q: 'Was it signed by the sender?', state: idState(dk), v: dk ? idWord(dk) : 'No signature', d: dk ? 'd=' + dk.domain + (dkims.length > 1 ? ' and ' + (dkims.length - 1) + ' more' : '') : '', jump: 'alignment' });
+    const d = R.auth.dmarc, c = R.auth.computed;
+    if (d.reported) {
+      const pol = d.policy.p ? 'p=' + d.policy.p : d.policy.action ? 'action=' + d.policy.action : '';
+      const mismatch = c.result !== 'none' && c.result !== d.result ? 'computed here: ' + c.result : '';
+      out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: mismatch && d.state === 'pass' ? 'caveat' : d.state, v: cap(d.result), d: [pol, mismatch].filter(Boolean).join(', '), jump: 'auth' });
+    } else if (c.result === 'none') out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: 'unknown', v: 'Not reported', d: '', jump: 'auth' });
+    else out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: c.result === 'pass' ? 'pass' : 'fail', v: cap(c.result), d: 'computed here; the receiver reported none', jump: 'auth' });
+    // A forward the finding already blamed: say what passed before it, from
+    // the first ARC set's results, so the tiles agree with the headline.
+    if (R.finding.status === 'forwarded') {
+      const first = (R.auth.arc.instances || []).find(x => x.i === 1);
+      const before = first ? first.preForward : [];
+      for (const t of out) {
+        const m = t.k.toLowerCase();
+        if (t.state !== 'pass' && before.some(x => x.method === m && x.state === 'pass')) {
+          t.state = 'caveat';
+          t.v = t.v + ' after the forward';
+          t.d = 'passed before it' + (t.d ? '; ' + t.d : '');
+        }
+      }
+    }
+    const ch = R.chain;
+    if (ch.totalSec !== null && ch.totalSec >= 0) {
+      const b = band(ch.totalSec);
+      out.push({ k: 'Delivery', q: 'How long did it take?', state: b === 'fail' ? 'fail' : b === 'warn' ? 'caveat' : 'pass', v: fmtDur(ch.totalSec), d: ch.count + ' hop' + (ch.count === 1 ? '' : 's') + (ch.trust.operator ? ', received by ' + ch.trust.operator : ''), jump: 'path' });
+    } else out.push({ k: 'Delivery', q: 'How long did it take?', state: 'unknown', v: 'Unknown', d: ch.count + ' hop' + (ch.count === 1 ? '' : 's'), jump: 'path' });
+    return out;
+  }
+  function tileHtml(t) {
+    return '<button type="button" class="tile ' + t.state + '" data-jump="' + t.jump + '"><span class="tk">' + t.k + '</span><span class="tq">' + esc(t.q) + '</span>' +
+      '<span class="tv"><span class="sym" aria-hidden="true">' + (STATES[t.state] || STATES.unknown)[0] + '</span>' + esc(t.v) + '</span>' + (t.d ? '<span class="td">' + esc(t.d) + '</span>' : '') + '</button>';
+  }
+
+  // The finding: the one sentence, the four checks, why and what the policy
+  // did, what to do. The evidence and the limits fold away under it.
   function renderFinding() {
     const f = R.finding;
     const para = (s) => s ? '<p class="fpara">' + esc(s[voice]) + srcBtn(s.src) + '</p>' : '';
+    $('finding').className = 'card finding s-' + f.state;
     let h = '<h2 id="h-finding">Finding</h2><div class="fhead">' + chip(f.state, STATUS_WORD[f.status]) +
-      '<p class="headline">' + esc(f.headline[voice]) + '</p>' + srcBtn(f.headline.src) + '</div>';
+      '<p class="headline">' + esc(f.headline[voice]) + srcBtn(f.headline.src) + '</p>' +
+      (voice === 'plain' && f.headline.technical !== f.headline.plain ? '<p class="tech-line">' + esc(f.headline.technical) + '</p>' : '') + '</div>';
+    h += '<div class="tiles">' + tiles().map(tileHtml).join('') + '</div>';
     h += para(f.cause) + para(f.consequence);
+    if (f.fixes.length) h += '<h3>What to do</h3><ol class="steps">' + f.fixes.map(x => '<li><span class="txt">' + esc(x[voice]) + srcBtn(x.src) + '</span></li>').join('') + '</ol>';
     if (f.flags.length) h += '<h3>Also worth knowing</h3>' + says(f.flags);
-    if (f.fixes.length) h += '<h3>What to do</h3>' + says(f.fixes);
-    if (f.details.length) h += '<h3>Details</h3>' + says(f.details);
-    if (f.limits.length) h += '<h3>What these headers cannot show</h3>' + says(f.limits);
+    const n = f.details.length + f.limits.length;
+    if (n) {
+      h += '<details class="more" id="finding-more"><summary>Evidence behind this finding <span class="count">' + n + ' item' + (n === 1 ? '' : 's') + '</span></summary>';
+      if (f.details.length) h += '<h3>Details</h3>' + says(f.details);
+      if (f.limits.length) h += '<h3>What these headers cannot show</h3>' + says(f.limits);
+      h += '</details>';
+    }
     $('finding').innerHTML = h;
+  }
+
+  // A plain text report for a ticket or an email to a client.
+  function reportText() {
+    const f = R.finding, m = R.message, L = ['Email Header Decoder report (beta)'];
+    if (m.subject) L.push('Subject: ' + (m.subject.value || '(empty)'));
+    if (m.from) L.push('From: ' + m.from.address);
+    if (m.date) L.push('Date: ' + m.date.text);
+    L.push('', STATUS_WORD[f.status] + ': ' + f.headline[voice]);
+    if (voice === 'plain' && f.headline.technical !== f.headline.plain) L.push('Technical: ' + f.headline.technical);
+    for (const s of [f.cause, f.consequence]) if (s) L.push(s[voice]);
+    L.push('');
+    for (const t of tiles()) L.push(t.k + ': ' + t.v + (t.d ? ' (' + t.d + ')' : ''));
+    if (f.fixes.length) { L.push('', 'What to do:'); f.fixes.forEach(x => L.push('- ' + x[voice])); }
+    if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
+    L.push('', 'Decoded in the browser at headers.dns-audit.com. The headers were not sent anywhere.');
+    return L.join('\n');
+  }
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok ? Promise.resolve() : Promise.reject(new Error('copy blocked'));
   }
 
   function itemRow(it) {
@@ -352,6 +436,8 @@
   }
 
   document.addEventListener('click', (e) => {
+    const jump = e.target.closest('[data-jump]');
+    if (jump && R) { $(jump.dataset.jump).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); return; }
     const el = e.target.closest('[data-src]');
     if (!el || !R) return;
     if (el.closest('summary')) e.preventDefault(); // a source button inside a group row should not also toggle it
@@ -363,19 +449,19 @@
   function setVoice(v) {
     voice = v;
     document.querySelectorAll('[data-voice]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.voice === v)));
-    try { localStorage.setItem('hv-voice', v); } catch (e) { /* storage blocked */ }
     if (R) renderAll();
   }
 
   function renderAll() {
     const open = $('raw-details') && $('raw-details').open;
+    const moreOpen = $('finding-more') && $('finding-more').open;
     const openGroups = Array.from(document.querySelectorAll('#path details[open]')).map(d => d.dataset.group);
     // One line above the cards: what the paste was read as.
     const c = R.chain;
     const parts = [R.fields.length + ' field' + (R.fields.length === 1 ? '' : 's'), c.count + ' hop' + (c.count === 1 ? '' : 's')];
     if (c.totalSec !== null && c.totalSec >= 0) parts.push('transit ' + fmtDur(c.totalSec));
     if (c.originIp && !c.trust.originPrivate) parts.push('origin ' + c.originIp);
-    $('read-as').textContent = 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + ' line' + (R.input.repairedLines === 1 ? '' : 's') + ' had lost their indentation and were rejoined.' : '');
+    $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + ' line' + (R.input.repairedLines === 1 ? '' : 's') + ' had lost their indentation and were rejoined.' : '');
     renderFinding();
     renderFilters();
     renderMessage();
@@ -385,6 +471,7 @@
     renderRaw();
     if (R.input.notes.length) $('raw').insertAdjacentHTML('beforeend', says(R.input.notes));
     if (open) $('raw-details').open = true;
+    if (moreOpen && $('finding-more')) $('finding-more').open = true;
     openGroups.forEach(g => { const d = document.querySelector('#path details[data-group="' + g + '"]'); if (d) d.open = true; });
     if (lit.length) highlight(lit);
   }
@@ -407,10 +494,24 @@
   }
 
   $('go').addEventListener('click', () => run(true));
-  $('clear').addEventListener('click', () => { $('headers').value = ''; run(false); $('headers').focus(); });
-  document.querySelectorAll('[data-sample]').forEach(b => b.addEventListener('click', () => { $('headers').value = window.SAMPLES[b.dataset.sample]; run(true); }));
+  $('copy-report').addEventListener('click', () => {
+    if (!R || !R.input.blockFound) return;
+    const b = $('copy-report');
+    copyText(reportText()).then(() => { b.textContent = 'Copied'; b.classList.add('done'); $('live').textContent = 'Report copied.'; },
+      () => { b.textContent = 'Copy blocked'; $('live').textContent = 'The browser blocked the copy.'; });
+    setTimeout(() => { b.textContent = 'Copy report'; b.classList.remove('done'); }, 2000);
+  });
+  $('clear').addEventListener('click', () => { $('headers').value = ''; sample = ''; run(false); $('headers').focus(); });
+  const loadSample = (key, scroll) => {
+    const b = document.querySelector('[data-sample="' + key + '"]');
+    $('headers').value = window.SAMPLES[key];
+    sample = b ? b.textContent : key;
+    run(scroll);
+  };
+  document.querySelectorAll('[data-sample]').forEach(b => b.addEventListener('click', () => loadSample(b.dataset.sample, true)));
+  $('headers').addEventListener('input', () => { sample = ''; });
   document.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', () => setVoice(b.dataset.voice)));
-  $('headers').addEventListener('paste', () => setTimeout(() => run(true), 0));
+  $('headers').addEventListener('paste', () => { sample = ''; setTimeout(() => run(true), 0); });
   $('headers').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run(true); });
 
   const panel = $('input-panel');
@@ -421,11 +522,12 @@
     const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     if (!f) return;
     const reader = new FileReader();
-    reader.onload = () => { $('headers').value = String(reader.result || ''); run(true); };
+    reader.onload = () => { $('headers').value = String(reader.result || ''); sample = ''; run(true); };
     reader.readAsText(f);
   });
 
   setVoice(voice);
-  // Open on a sample so the page shows what it does before anyone pastes.
-  if (!$('headers').value.trim()) { $('headers').value = window.SAMPLES.gmail; run(false); }
+  // Open on a sample so the page shows what it does before anyone pastes:
+  // the forward case, the one a plain hop table explains worst.
+  if (!$('headers').value.trim()) loadSample('forwarded', false);
 })();

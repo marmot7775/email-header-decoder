@@ -153,5 +153,23 @@ test('build: one self contained page with a CSP that has no connect-src and no e
   assert.match(html, /^<!doctype html>/);
   assert.ok(html.includes('http-equiv="Content-Security-Policy" content="' + CSP + '"'));
   assert.ok(!/connect-src/.test(CSP));
-  assert.ok(!/<link\b|<script\s+src=|@import|url\(\s*['"]?https?:/i.test(html));
+  // The only links in the head are the canonical URL and a data: icon;
+  // nothing the browser would fetch from another host.
+  for (const l of html.match(/<link\b[^>]*>/g) || []) assert.match(l, /rel="canonical"|rel="icon" href="data:/, l);
+  assert.ok(!/<script\s+src=|@import|url\(\s*['"]?https?:|<img\b[^>]*src="https?:/i.test(html));
+});
+
+test('build: the FAQ structured data matches the FAQ on the page', () => {
+  const { build, faqFrom } = require('../build.js');
+  build();
+  const html = fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.html'), 'utf8');
+  const ld = JSON.parse(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)[1]);
+  const faq = ld['@graph'].find(x => x['@type'] === 'FAQPage');
+  const page = fs.readFileSync(path.join(__dirname, '..', 'ui', 'page.html'), 'utf8');
+  const visible = (page.match(/<div class="faq">[\s\S]*?<\/div>/)[0].match(/<summary>/g) || []).length;
+  assert.ok(visible >= 3);
+  assert.equal(faq.mainEntity.length, visible);
+  assert.deepEqual(faq.mainEntity, faqFrom(page));
+  assert.match(html, /<title>[^<]+<\/title>[\s\S]*<\/head>/);
+  assert.ok(!/<body>[\s\S]*<title>/.test(html), 'title belongs in the head');
 });
