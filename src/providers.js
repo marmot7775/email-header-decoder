@@ -100,7 +100,8 @@
     const xma = first(fields, 'x-microsoft-antispam');
     const scl = first(fields, 'x-ms-exchange-organization-scl');
     const authAs = first(fields, 'x-ms-exchange-organization-authas');
-    if (!ff && !xma && !scl && !authAs && !auth.compauth) return null;
+    const mbd = first(fields, 'x-microsoft-antispam-mailbox-delivery');
+    if (!ff && !xma && !scl && !authAs && !mbd && !auth.compauth) return null;
     const items = [];
     let kv = {};
     if (ff) {
@@ -137,6 +138,7 @@
       const known = { internal: ['Treated as internal, authenticated mail.', 'Microsoft treated this as mail from inside the organization.'], anonymous: ['Treated as external, unauthenticated mail.', 'Microsoft treated this as mail from outside the organization.'] }[v.toLowerCase()];
       items.push(known ? item('AuthAs', v, 'info', known[0], known[1], [authAs.index]) : notListed('AuthAs', v, 'Microsoft', [authAs.index]));
     }
+    if (mbd) items.push(item(mbd.name, mbd.value.trim(), 'info', mbd.name + ' is a mailbox delivery marker Microsoft does not document, so its value is shown as written.', 'Microsoft added a delivery marker it does not explain publicly.', [mbd.index]));
     if (auth.compauth) items.push(compauthItem(auth.compauth));
     const catItem = items.find(i => i.key === 'CAT');
     return group('microsoft', 'Microsoft 365', items, ff ? say('unknown', 'Fields of X-Forefront-Antispam-Report that Microsoft does not document are left out; Microsoft says they are for its own diagnostics.', 'Only the parts Microsoft explains publicly are shown.', [ff.index]) : null, catItem || null);
