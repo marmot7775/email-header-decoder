@@ -41,9 +41,10 @@ is handed out only after that. Status as of 2026-10-25.
    under it, numbered fixes, evidence folded, quieter line chips,
    filter headers after the path, Copy report, samples labelled,
    static guide and FAQ, head with JSON-LD, share card, host files.
-   Still to do: real headers from Neil, the copy pass they drive,
-   public repo, hosting at headers.dns-audit.com, and the
-   dns-audit.com nav link.
+   Published 2026-10-25: public repo marmot7775/email-header-decoder,
+   live at headers.dns-audit.com (Workers static assets from dist/,
+   wrangler.jsonc, workers.dev off). Still to do: real headers from
+   Neil, the copy pass they drive, and the dns-audit.com nav link.
 
 Decisions
 

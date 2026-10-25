@@ -100,6 +100,9 @@ ui/og-card.png    The share card, 1200 by 630.
 test/             node:test suite over analyze() with synthetic
                   fixtures and hostile input. Fixtures are under
                   test/fixtures.
+wrangler.jsonc    Cloudflare static hosting: dist/ on
+                  headers.dns-audit.com, workers.dev off.
+README.md         The public face of the repo, with the Beta note.
 docs/scope.md     What the first release does and what is parked.
 docs/architecture.md  The module plan. Keep it true as the code
                   changes; it is the plan, not a snapshot.
@@ -115,6 +118,9 @@ ships; test/load.js loads the same list.
 
 Tests: node --test test/
 Build: node build.js
+Deploy: node build.js, then wrangler deploy (token and account in
+~/.config/cloudflare/env; wrangler is in
+~/.local/share/wrangler4/node_modules/.bin). Push to GitHub first.
 
 Both must pass before every commit.
 

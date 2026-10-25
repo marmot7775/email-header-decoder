@@ -132,6 +132,8 @@ function build() {
   fs.writeFileSync(path.join(dist, 'index.html'), full);
   fs.writeFileSync(path.join(dist, '_headers'), HEADERS);
   fs.writeFileSync(path.join(dist, 'robots.txt'), ROBOTS);
+  // artifact.html is for the claude.ai preview, not the public site.
+  fs.writeFileSync(path.join(dist, '.assetsignore'), 'artifact.html\n');
   fs.writeFileSync(path.join(dist, 'sitemap.xml'), sitemap(new Date().toISOString().slice(0, 10)));
   const card = path.join(ROOT, 'ui/og-card.png');
   if (fs.existsSync(card)) fs.copyFileSync(card, path.join(dist, 'og-card.png'));
