@@ -17,6 +17,9 @@ Everything runs in the visitor's browser. No server, no network
 calls, no storage, no analytics. Pasted headers never leave the
 machine, and the page says so in one line.
 
+Standalone repo, not a dns-audit.com feature. Hosting comes in
+step 4 as a static site; the droplet never serves it.
+
 No DNS lookups, no signature verification, no guessing. Every
 sentence on the page is built from identifiers in the headers.
 Where the page cannot know something (adkim and aspf, the
@@ -26,11 +29,26 @@ than defaulting silently. Unknown filter codes show raw, with no
 meaning attached. Unnamed beats guessed, for platforms and for
 codes alike.
 
+Every sentence is `{ state, technical, plain, src }`: state is
+pass, caveat, fail or unknown, and src lists the field indexes it
+came from.
+
+No web fonts, no CDN, no external images. Inline SVG for icons.
+No color carries meaning alone. Touch targets are 44px; inline
+source line chips are 24px, the WCAG 2.2 AA minimum. Works at
+375px with no horizontal scroll.
+
+Zero dependencies, Node 18 or later, plain JavaScript.
+
+Samples and fixtures are synthetic. Never commit real mail.
+
 No model name, plan, tier, or model version appears in any file
 in the repo: not in docs, comments, commit messages, or the page.
 Claude Code as the name of the tool is fine.
 
-Do not push. Commit each step locally and wait for the word.
+Do not push. Commit each step locally and wait for the word. Do
+not touch GitHub, the droplet, or dns-audit.com until Neil says
+so.
 
 ## Layout
 
@@ -44,7 +62,8 @@ src/psl.js        Organizational domain from an abbreviated public
                   suffix list, RFC 7489 style.
 src/received.js   Received fields into a chronological hop chain
                   with per hop delay, slowest hop, clock skew, TLS
-                  evidence, and internal relay detection.
+                  evidence, internal relay detection, and the
+                  trust line.
 src/auth.js       Authentication-Results per RFC 8601 (Google form
                   with authserv-id, Exchange Online form without),
                   Received-SPF, DKIM-Signature, the ARC set per RFC
@@ -63,11 +82,13 @@ ui/page.html      Markup and tokens. Finding first, then message,
                   alignment, authentication, path, filter headers,
                   raw headers collapsed.
 ui/app.js         Rendering only. No parsing logic lives here.
-build.js          Builds dist/index.html (opens from disk) and
-                  dist/artifact.html (body only, for the claude.ai
-                  preview). dist is gitignored.
+build.js          Builds dist/index.html (full document with a
+                  CSP, opens from disk) and dist/artifact.html
+                  (body only, for the claude.ai preview). dist is
+                  gitignored.
 test/             node:test suite over analyze() with synthetic
-                  fixtures and hostile input.
+                  fixtures and hostile input. Fixtures are under
+                  test/fixtures.
 docs/scope.md     What the first release does and what is parked.
 docs/architecture.md  The module plan. Keep it true as the code
                   changes; it is the plan, not a snapshot.
@@ -75,7 +96,9 @@ docs/plan.md      The build log: decisions with dates, and each
                   step with its status and commit.
 
 Each module is one file and a pure function layer over the one
-below it, all under the HA namespace.
+below it, all under the HA namespace. Each src file attaches to
+HA and sets module.exports under Node. build.js SRC lists what
+ships; test/load.js loads the same list.
 
 ## Commands
 
@@ -83,6 +106,10 @@ Tests: node --test test/
 Build: node build.js
 
 Both must pass before every commit.
+
+Browser check: Playwright from
+/home/neil/projects/dns-security-auditor/.venv runs Chromium
+headless on this machine; load dist/index.html as file://.
 
 ## Settled decisions
 
@@ -122,21 +149,54 @@ lists both List-Unsubscribe fields in h=.
 Palette uses dns-audit.com's tokens with system fonts. Dark and
 light both work. No horizontal scroll at 375px.
 
+### Settled by the step 2 check
+
+- Primary Authentication-Results: the topmost field whose
+  authserv-id shares an operator with the by host of the last
+  Received hop, or, when X-MS-Exchange-Organization-* fields are
+  present, the topmost one with no authserv-id. Never one a
+  sender could have written.
+- Untrusted: every other Authentication-Results field, whether its
+  host is missing from the chain or sits on the sender's side. It
+  is kept and shown, never used for reported results. RFC 8601
+  section 5 only has a receiver strip fields that carry its own
+  authserv-id. No trusted field means no primary and computed
+  DMARC is none.
+- An id-less field without Exchange Online headers is untrusted.
+- Received-SPF counts only when it sits above the last sender-side
+  Received field, and is the SPF source only when the primary set
+  has no spf= result.
+- Alignment defaults to relaxed, with strict computed beside it.
+  computed.result is pass, fail or none and follows relaxed; adkim
+  and aspf are not in the headers, and alignment.modeNote says so.
+- One From domain or none: two From fields, or one From field
+  naming two domains, leave alignment undefined and nothing is
+  computed.
+- A DKIM result naming neither s= nor b= when two signatures share
+  d= is marked ambiguous, not matched by order.
+- Microsoft action=oreject and pct.* keep value empty in
+  dmarc.disposition: Microsoft Learn pages contradict each other
+  on what those did to the message. raw, policy and sampled are
+  kept.
+
 ## Copy
 
-Plain words, technical wording beside them where a code needs it.
-No em dashes anywhere, in code comments and UI text included. No
-intensifiers. Say a thing once.
+Plain words in complete sentences, technical wording beside them
+where a code needs it. No em dashes anywhere, in code comments and
+UI text included, and no hyphens as punctuation. No exclamation
+marks, no emoji, no intensifiers. Oxford comma. Identifiers
+verbatim in monospace. Say a thing once.
 
 ## Process
 
 One build step per prompt. Finish the step, run tests and build,
-commit, then report. The report covers: files new, changed, and
-deleted; test count before and after; anything reused, dropped,
-or settled without being asked, each with the reason; what is not
-done; the commit SHA. The report ends with the Decisions and Steps
-sections of docs/plan.md copied in full, after updating them for
-the step, so the next prompt can be written from the report alone.
+commit, then report. The report is one fenced block and covers:
+files new, changed, and deleted; test count before and after;
+anything reused, dropped, or settled without being asked, each
+with the reason; what is not done; the commit SHA. The report ends
+with the Decisions and Steps sections of docs/plan.md copied in
+full, after updating them for the step, so the next prompt can be
+written from the report alone.
 
 Update docs/architecture.md and docs/scope.md in the same commit
 whenever a step changes what they describe.
