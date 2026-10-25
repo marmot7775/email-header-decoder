@@ -10,7 +10,7 @@ is handed out only after that. Status as of 2026-10-24.
    (hop chain, delays, slowest hop, clock skew, internal groups, TLS
    evidence, trust line, stated origin), analyze.js, the page with
    Message, Path and Headers cards, build.js with a CSP that has no
-   connect-src. Commits fdc8708 and 20038f4, then a66383d, the
+   connect-src. Commits f54c7bc and 30058f5, then 3535036, the
    step 1 gap fill against Cowork prompt 1.
 
 2  Authentication-Results, ARC, alignment table, computed DMARC. DONE
@@ -18,7 +18,7 @@ is handed out only after that. Status as of 2026-10-24.
    and whether the Received chain backs it; ARC sets per RFC 8617
    with chain checks; alignment per identifier in relaxed and strict
    mode; a DMARC result computed here beside the reported one, and a
-   named reason when they disagree. Commits a8113ed and 49de0d9,
+   named reason when they disagree. Commits 594feac and 8cf9fa1,
    then the Step 2 check commit against the 2026-10-23 spec: primary
    and untrusted Authentication-Results, Received-SPF as SPF source,
    DKIM matching by s= or b=, HELO identity for a null reverse path,
