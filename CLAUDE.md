@@ -140,8 +140,11 @@ and the headline says why it passed.
 
 Blame moves to a forward only when the earliest forwarder's
 ARC-Authentication-Results show an aligned pass, the chain holds
-together, and the receiver did not report arc=fail. An ARC set
-the final receiver sealed itself is not a forward.
+together, and the receiver reported arc=pass (or Microsoft
+compauth reason 130). This page does not verify seals, so a sender
+can write an ARC set; without the receiver's word it is not a
+forward. An ARC set the final receiver sealed itself is not a
+forward.
 
 A filter header below the receiver's first Received stamp is
 marked before custody. Microsoft's own fields count as the
