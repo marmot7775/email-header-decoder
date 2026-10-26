@@ -102,12 +102,11 @@
       if (continuation && current) {
         current.rawLines.push(line);
         current.lastLine = i;
-        current.valueSoFar += line.trim();
         if (!/^[ \t]/.test(line)) { current.looseFold = true; repaired++; }
         continue;
       }
       if (continuation) continue; // garbage before the first field
-      current = { name: m[1], rawLines: [line], firstLine: i, lastLine: i, looseFold: false, valueSoFar: m[2].trim() };
+      current = { name: m[1], rawLines: [line], firstLine: i, lastLine: i, looseFold: false };
       fields.push(current);
     }
     const out = fields.map((f, index) => {

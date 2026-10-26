@@ -2,7 +2,8 @@
 // build.js: inline src and ui into self-contained pages.
 // dist/index.html is a full document that opens from disk with the
 // network off. Its Content-Security-Policy has no connect-src, so the
-// browser blocks any attempt to send pasted headers anywhere.
+// browser blocks requests the page makes, and script-src allows only the
+// hash of the one inline script.
 // dist/artifact.html is the same body without the document shell, for
 // hosts that wrap the page themselves (the claude.ai preview).
 // The rest of dist is what the static host serves beside the page:
@@ -10,6 +11,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const ROOT = __dirname;
 const SITE = 'https://headers.dns-audit.com/';
@@ -17,7 +19,8 @@ const SITE = 'https://headers.dns-audit.com/';
 const SRC = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'providers.js', 'finding.js', 'analyze.js'];
 // Fixtures shown as samples on the page. Synthetic only; never real headers.
 const SAMPLES = { gmail: 'gmail-show-original.txt', esp: 'esp-unaligned.txt', forwarded: 'forwarded.txt', exchange: 'exchange-online-inbound.txt', arc: 'arc-forwarded-i2.txt', twodkim: 'two-dkim.txt' };
-const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'";
+// script-src names the sha256 of the inline script, so no other script runs.
+const cspFor = (script) => "default-src 'none'; script-src 'sha256-" + crypto.createHash('sha256').update(script, 'utf8').digest('base64') + "'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'";
 // Links the page may carry. A link sends nothing until someone follows it;
 // the CSP still blocks every request the page itself could make.
 const LINKS = /https?:\/\/(?!datatracker\.ietf\.org|www\.rfc-editor\.org|dns-audit\.com|www\.linkedin\.com\/in\/neilanuskiewicz|github\.com\/marmot7775)/;
@@ -80,10 +83,10 @@ function jsonLd(page) {
   return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }, null, 2).replace(/</g, '\\u003c');
 }
 
-function head(page) {
+function head(page, csp) {
   return [
     '<meta charset="utf-8">',
-    '<meta http-equiv="Content-Security-Policy" content="' + CSP + '">',
+    '<meta http-equiv="Content-Security-Policy" content="' + csp + '">',
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">',
     '<title>' + attr(TITLE) + '</title>',
     '<meta name="description" content="' + attr(DESCRIPTION) + '">',
@@ -108,7 +111,7 @@ function head(page) {
 // What the static host serves beside the page. The CSP goes out as a real
 // header too, where frame-ancestors works; the meta copy keeps the page
 // safe when it is opened from disk.
-const HEADERS = '/*\n  Content-Security-Policy: ' + CSP + "; frame-ancestors 'none'\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n";
+const headers = (csp) => '/*\n  Content-Security-Policy: ' + csp + "; frame-ancestors 'none'\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n";
 const ROBOTS = 'User-agent: *\nAllow: /\n\nSitemap: ' + SITE + 'sitemap.xml\n';
 const sitemap = (day) => '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>' + SITE + '</loc><lastmod>' + day + '</lastmod></url>\n</urlset>\n';
 
@@ -121,16 +124,18 @@ function build() {
     'window.SAMPLES = ' + JSON.stringify(samples).replace(/</g, '\\u003c') + ';\n' +
     read('ui/app.js');
   if (js.includes('</script')) throw new Error('script text contains </script');
-  const body = page.replace('<!-- SCRIPTS -->', '<script>\n' + js + '\n</script>');
+  const script = '\n' + js + '\n';
+  const csp = cspFor(script);
+  const body = page.replace('<!-- SCRIPTS -->', () => '<script>' + script + '</script>');
   const dist = path.join(ROOT, 'dist');
   fs.mkdirSync(dist, { recursive: true });
   fs.writeFileSync(path.join(dist, 'artifact.html'), body);
   // The full document takes the title and preview meta out of the body
   // and puts a real head in front.
   const inner = body.replace(/^<title>[^<]*<\/title>\n/, '').replace(/^<meta name="claude:[^>]*>\n/m, '');
-  const full = '<!doctype html>\n<html lang="en">\n<head>\n' + head(page) + '\n</head>\n<body>\n' + inner + '\n</body>\n</html>\n';
+  const full = '<!doctype html>\n<html lang="en">\n<head>\n' + head(page, csp) + '\n</head>\n<body>\n' + inner + '\n</body>\n</html>\n';
   fs.writeFileSync(path.join(dist, 'index.html'), full);
-  fs.writeFileSync(path.join(dist, '_headers'), HEADERS);
+  fs.writeFileSync(path.join(dist, '_headers'), headers(csp));
   fs.writeFileSync(path.join(dist, 'robots.txt'), ROBOTS);
   // artifact.html is for the claude.ai preview, not the public site.
   fs.writeFileSync(path.join(dist, '.assetsignore'), 'artifact.html\n');
@@ -139,11 +144,11 @@ function build() {
   if (fs.existsSync(card)) fs.copyFileSync(card, path.join(dist, 'og-card.png'));
   const old = path.join(dist, 'standalone.html');
   if (fs.existsSync(old)) fs.unlinkSync(old);
-  return { bytes: Buffer.byteLength(full) };
+  return { bytes: Buffer.byteLength(full), csp };
 }
 
 if (require.main === module) {
   const r = build();
   console.log('dist/index.html (' + r.bytes + ' bytes, CSP, opens from disk), dist/artifact.html, and the host files written');
 }
-module.exports = { build, SRC, CSP, faqFrom };
+module.exports = { build, SRC, cspFor, faqFrom };

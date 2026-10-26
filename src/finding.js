@@ -154,7 +154,9 @@
   // What the DMARC policy meant for this message, as far as the receiver
   // quoted it. Microsoft's oreject and pct.* are named, not interpreted:
   // auth.js keeps their disposition empty for the reason given there.
-  function consequenceOf(status, dm, from, receiver) {
+  // A subdomain From falls under the organizational domain's sp= when the
+  // receiver quoted one.
+  function consequenceOf(status, dm, from, receiver, org) {
     const pol = dm.policy, disp = dm.disposition;
     const src = dm.src;
     if (status === 'none') return say('caveat', from + ' publishes no DMARC policy, so nothing tells receivers what to do with mail that fails. Each receiver decides on its own.', 'The sender\'s domain gives mail systems no instructions for forged mail, so each one decides for itself.', src);
@@ -175,15 +177,18 @@
       return say(fails ? (a === 'none' || /^pct/.test(a) ? 'caveat' : 'fail') : 'pass', t, plain, src);
     }
     if (!pol.p) return say('unknown', receiver + ' did not quote the DMARC policy of ' + from + ', so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.', 'The headers do not say what the sender\'s domain asks mail systems to do with forged mail.', src);
-    const P_WORD = { none: 'p=none, which asks for no action', quarantine: 'p=quarantine, which asks for failing mail to go to spam', reject: 'p=reject, which asks for failing mail to be refused' };
-    const pw = P_WORD[pol.p] || 'p=' + pol.p;
-    if (status === 'pass') return say('pass', from + ' publishes ' + pw + '. This message passed, so the policy did not come into play.', 'The message passed, so the sender\'s policy did not come into play.', src);
+    const sub = !!pol.sp && !!org && org !== from;
+    const pv = sub ? pol.sp : pol.p, tag = sub ? 'sp=' : 'p=';
+    const P_WORD = { none: 'which asks for no action', quarantine: 'which asks for failing mail to go to spam', reject: 'which asks for failing mail to be refused' };
+    const pw = tag + pv + (sub ? ' for subdomains such as ' + from : '') + (P_WORD[pv] ? ', ' + P_WORD[pv] : '');
+    const pub = (sub ? org : from) + ' publishes ' + pw;
+    if (status === 'pass') return say('pass', pub + '. This message passed, so the policy did not come into play.', 'The message passed, so the sender\'s policy did not come into play.', src);
     if (disp.source === 'dis') {
       const D = { none: 'did not apply it to this message', quarantine: 'sent this message to spam', reject: 'refused this message' };
       const did = D[disp.value] || 'recorded ' + disp.raw;
-      return say(disp.value === 'none' ? 'caveat' : 'fail', from + ' publishes ' + pw + ', and ' + receiver + ' ' + did + ' (' + disp.raw + ').', 'The sender\'s domain asks for ' + (pol.p === 'reject' ? 'forged mail to be refused' : pol.p === 'quarantine' ? 'forged mail to go to spam' : 'no action') + '. The receiving system (' + receiver + ') ' + did + '.', src);
+      return say(disp.value === 'none' ? 'caveat' : 'fail', pub + ', and ' + receiver + ' ' + did + ' (' + disp.raw + ').', 'The sender\'s domain asks for ' + (pv === 'reject' ? 'forged mail to be refused' : pv === 'quarantine' ? 'forged mail to go to spam' : 'no action') + '. The receiving system (' + receiver + ') ' + did + '.', src);
     }
-    return say('unknown', from + ' publishes ' + pw + '. The headers do not record what ' + receiver + ' did with this message.', 'The headers say what the sender\'s domain asks for, but not what was done with this message.', src);
+    return say('unknown', pub + '. The headers do not record what ' + receiver + ' did with this message.', 'The headers say what the sender\'s domain asks for, but not what was done with this message.', src);
   }
 
   function fixesOf(status, ctx) {
@@ -203,6 +208,10 @@
       add('caveat', 'If the forward is not yours, authentication worked as designed. Judge the sender by a copy delivered straight to the mailbox.', 'If you did not set up this forward, there is nothing to change. Ask for a copy sent straight to you to check the sender.', fw.src);
       return f;
     }
+    // A forwarder claims a pass the receiver did not confirm: the failure
+    // could be the forward or a forgery, and SPF here checked the forwarder.
+    const unproven = fw.yes && fw.preResult === 'pass';
+    if (unproven) add('caveat', 'Judge the sender by a copy delivered straight to the mailbox. The forwarder\'s record shows a pass before the forward, but the receiver did not confirm it, so this failure could come from the forward or from a forgery.', 'Ask for a copy sent straight to you, without the forward, and check that one. The forwarding service says the message passed before it forwarded it, but nothing here confirms that.', fw.src);
     if (fw.yes && fw.preResult === 'fail') add('fail', 'Look at the sender, not the forward: the message failed before it was forwarded. If ' + from + ' did not send it, it is forged and DMARC did its job.', 'The problem started before the forward. If ' + from + ' did not send this message, it is forged, and the failed check is working as it should.', fw.aarSrc);
     if (status === 'none') {
       add('caveat', 'Publish a DMARC record at _dmarc.' + from + ' with p=none and a rua= address, read the reports, then move to p=quarantine once every real source passes.', 'Ask whoever manages the DNS for ' + from + ' to add a DMARC record. Start with the setting that only sends reports, and tighten it once the reports show all your real mail passes.', dm.src);
@@ -223,7 +232,7 @@
       if (perm) add('fail', 'Publish or repair the DKIM key at ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + '; ' + receiver + ' could not use it.', 'The key that checks this signature could not be read. Ask whoever manages the DNS for ' + perm.domain + ' to compare the record named ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + ' with what ' + svc.p + ' says it should be.', perm.src);
     }
     const s = auth.spf;
-    if (s.domain && !/helo/i.test(s.identity)) {
+    if (s.domain && !/helo/i.test(s.identity) && !unproven) {
       if (s.result === 'fail' || s.result === 'softfail') add('fail', 'If this is your mail, add ' + svc.t + ' to the SPF record of ' + s.domain + (s.ip ? ' so it covers ' + s.ip : '') + '. If it is not, SPF did its job.', 'If you sent this, ask whoever manages the DNS for ' + s.domain + ' to add ' + svc.p + ' to its SPF record; the service\'s setup page gives the exact entry. If you did not send it, someone else used your domain and this check caught it.', s.src);
       else if (s.result === 'none') add('fail', 'Publish an SPF record for ' + s.domain + ' that lists the servers that send for it.', 'Ask whoever manages the DNS for ' + s.domain + ' to publish an SPF record listing the services that send your mail.', s.src);
       else if (s.result === 'permerror') add('fail', 'Repair the SPF record of ' + s.domain + ': check its syntax and keep it within 10 DNS lookups.', 'The SPF record for ' + s.domain + ' is broken, often because it lists too many services. Ask whoever manages its DNS to check and simplify it.', s.src);
@@ -282,7 +291,7 @@
       out.status = status;
       out.state = status === 'pass' && dm.disagreement ? 'caveat' : STATE_OF[status];
       out.headline = headline; out.cause = cause;
-      out.consequence = consequenceOf(status, dm, fd, receiver);
+      out.consequence = consequenceOf(status, dm, fd, receiver, from.org);
       out.fixes = fixesOf(status, c);
       out.limits = from.defined && auth.primary >= 0 ? limitsOf(c) : [];
       out.flags = flagsOf(Object.assign({ status }, c));
@@ -292,7 +301,8 @@
     // Nothing to judge by.
     if (!from.defined) {
       c.why = from.why;
-      const T = { 'two-from': ['the message carries ' + numWord(message.fromCount) + ' From fields', 'the message names more than one sender'], 'multi-domain': ['the From field names addresses in ' + numWord(message.from.domains.length) + ' domains (' + joinList(message.from.domains) + ')', 'the sender line names addresses at more than one domain'], 'no-from': ['there is no usable From address', 'the sender\'s address is missing'] }[from.why];
+      const fdoms = message.from ? message.from.domains || [] : [];
+      const T = { 'two-from': ['the message carries ' + numWord(message.fromCount) + ' From fields', 'the message names more than one sender'], 'multi-domain': ['the From field names addresses in ' + numWord(fdoms.length) + ' domains (' + joinList(fdoms) + ')', 'the sender line names addresses at more than one domain'], 'no-from': ['there is no usable From address', 'the sender\'s address is missing'] }[from.why];
       return finish('unknown', say(from.why === 'no-from' ? 'unknown' : 'fail', 'DMARC cannot be judged because ' + T[0] + ', so there is no single author domain to align with.', 'This page cannot check who sent the message, because ' + T[1] + '.', from.src),
         say('unknown', 'DMARC checks one author domain. ' + (dm.reported ? receiver + ' still reported dmarc=' + dm.result + (dm.headerFrom ? ' for header.from=' + dm.headerFrom : '') + ', but which address it judged is not in the headers.' : 'Nothing is computed from any of the addresses.'), dm.reported ? 'The receiving system recorded a result, but the headers do not say which sender it checked.' : 'Without one clear sender there is nothing to check.', from.src.concat(dm.src)));
     }
@@ -364,13 +374,17 @@
     }
 
     // Failed. Forwarded mail first: blame the forward when the forwarder's
-    // record shows a pass on arrival and the chain holds together.
+    // record shows a pass on arrival, the chain holds together, and the
+    // receiver vouched for the seals (arc=pass, or Microsoft compauth
+    // reason 130). The page does not verify seals, and a sender can write
+    // an i=1 set of its own.
     const fp = failPieces(auth);
     const fcl = failClause(fp, fd);
     if (fw.yes) {
       const pre = preText(fw);
       const preSay = 'before the forward, ' + fw.writer + ' recorded ' + (pre || 'no results') + (fw.derived ? ', which aligns with ' + fd : '');
-      if (fw.preResult === 'pass' && fw.intact && fw.receiverArc !== 'fail') {
+      const vouched = fw.receiverArc === 'pass' || !!(auth.compauth && auth.compauth.reason === '130');
+      if (fw.preResult === 'pass' && fw.intact && vouched) {
         const after = joinList(fp.map(x => x.t));
         const head = say('caveat', lead + (computedOnly ? 'fails' : 'failed') + ' because the message was forwarded by ' + joinList(fw.by) + ': ' + preSay + ', and after it ' + after + '.', plainLead + 'failed the sender check (DMARC) because it was forwarded by ' + joinList(fw.by) + '. Before the forward it passed; the forward broke it.', uniq(fw.aarSrc.concat(fp.flatMap(x => x.src))));
         const broke = [];
@@ -384,7 +398,7 @@
       if (fw.preResult === 'fail') {
         out.details.push(say('fail', 'The forward is not the cause: ' + preSay + ', so the message was already failing when it arrived there.', 'The message already failed the check before it was forwarded, so the problem is at the sender.', fw.aarSrc));
       } else if (fw.preResult === 'pass') {
-        out.details.push(say('caveat', 'The forwarder\'s record says ' + preSay + ', but ' + (!fw.intact ? 'the ARC chain is broken' : receiver + ' reported arc=fail') + ', so that record is not relied on and the failure is not blamed on the forward.', 'The forwarder claims the message passed before it was forwarded, but its record does not hold up, so this page does not rely on it.', fw.src.concat(auth.arcResult ? auth.arcResult.src : [])));
+        out.details.push(say('caveat', 'The forwarder\'s record says ' + preSay + ', but ' + (!fw.intact ? 'the ARC chain is broken' : fw.receiverArc === 'fail' ? receiver + ' reported arc=fail' : receiver + ' did not report arc=pass, and this page does not verify ARC seals') + ', so that record is not relied on and the failure is not blamed on the forward.', 'The forwarder claims the message passed before it was forwarded, but its record does not hold up, so this page does not rely on it.', fw.src.concat(auth.arcResult ? auth.arcResult.src : [])));
       }
     } else if (listId) {
       out.details.push(say('caveat', 'List-Id ' + listId.raw + ' shows the message came through a mailing list, and lists often change the subject or body. With no ARC record there is no result from before the list to compare with.', 'The message came through a mailing list, which can break these checks. The headers carry no record of how it looked before the list.', listId.src));

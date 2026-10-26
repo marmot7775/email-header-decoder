@@ -239,7 +239,7 @@
     // apart from the observed one because the sender's side can write it.
     const xo = fields.find(f => f.lower === 'x-originating-ip' || f.lower === 'x-sender-ip');
     const statedOriginIp = xo ? { ip: findIp(xo.value) || xo.value.replace(/[\[\]]/g, '').trim(), name: xo.name, src: [xo.index] } : null;
-    const chain = { hops, groups, totalSec, slowestIdx, slowestSec, clockSkew: skew, originIp: trust.originIp, originHost: trust.originHelo, statedOriginIp, trust, count: hops.length, notes: [] };
+    const chain = { hops, groups, totalSec, slowestIdx, slowestSec, clockSkew: skew, originIp: trust.originIp, statedOriginIp, trust, count: hops.length, notes: [] };
     chain.notes = chainNotes(chain);
     return chain;
   }
@@ -344,7 +344,7 @@
     return notes;
   }
 
-  HA.received = { parseReceived, buildChain, findIp, isPrivateIp, isIpLiteral, operatorOf, fmtDur, plainDur };
+  HA.received = { parseReceived, buildChain, findIp, isPrivateIp, isIpLiteral, operatorOf, sameHost, fmtDur, plainDur };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.received;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -44,7 +44,7 @@ src/finding.js   The finding, the one sentence result. Reads
                  and limits. Forwarded mail is
                  recognised from ARC and the pre-forward results are
                  quoted, so the failure is blamed on the forward
-                 when that is what happened.
+                 when the receiver vouched for the ARC seals.
 src/analyze.js   analyze(text) returns one plain result object.
                  The page renders it; the tests assert on it.
 

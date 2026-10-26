@@ -76,3 +76,16 @@ Decisions
             result. When the finding blames a forward, the tiles say
             failed after the forward and passed before it, from the
             first ARC set.
+2026-10-25  Audit fixes. A forward is blamed only when the receiver
+            reported arc=pass or Microsoft compauth reason 130; the
+            page does not verify seals, and a sender can write an i=1
+            set. forwarded.txt (no arc=, reason 000) now reads as a
+            fail with the forward noted but not relied on. Beside the
+            primary, an Authentication-Results field fills methods
+            only above the receiver's first Received stamp, and with
+            no sender side hop Received-SPF must sit above it too.
+            A DKIM result with only header.i is matched by header.b
+            or header.s and takes d= from the signature. A subdomain
+            From quotes sp= and names the organizational domain. The
+            CSP allows the inline script by its sha256 instead of
+            'unsafe-inline'.

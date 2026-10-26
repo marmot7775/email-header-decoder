@@ -480,7 +480,15 @@
     const text = $('headers').value;
     if (!text.trim()) { $('results').hidden = true; R = null; return; }
     lit = [];
-    R = HA.analyze(text);
+    try { R = HA.analyze(text); } catch (e) {
+      // Never leave the previous result on screen for a paste that failed.
+      R = null;
+      $('results').hidden = false;
+      $('read-as').textContent = '';
+      $('finding').innerHTML = '<h2 id="h-finding">Could not read these headers</h2><p>Something in this paste stopped the page from reading it. Nothing was sent anywhere.</p>';
+      ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).innerHTML = ''; $(id).hidden = true; });
+      return;
+    }
     $('results').hidden = false;
     if (!R.input.blockFound) {
       $('read-as').textContent = '';

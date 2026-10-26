@@ -1,0 +1,13 @@
+Return-Path: <x@attacker.example>
+Received: from relay.attacker.example (relay.attacker.example [198.51.100.13])
+        by mx.corp.example (Postfix) with ESMTPS id 1Aa1
+        for <victim@corp.example>; Fri, 23 Oct 2026 18:00:02 +0000 (UTC)
+Authentication-Results: mx.corp.example; spf=fail smtp.mailfrom=x@attacker.example; dkim=none; dmarc=fail (p=REJECT dis=NONE) header.from=bank.example
+ARC-Seal: i=1; a=rsa-sha256; cv=none; d=attacker.example; s=a; t=1; b=AAAA
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=attacker.example; s=a; h=from; bh=x; b=BBBB
+ARC-Authentication-Results: i=1; mx.attacker.example; spf=pass smtp.mailfrom=alerts@bank.example; dkim=pass header.d=bank.example; dmarc=pass header.from=bank.example
+From: Bank <alerts@bank.example>
+To: victim@corp.example
+Subject: Verify your account
+Date: Fri, 23 Oct 2026 18:00:00 +0000
+Message-ID: <a@attacker.example>

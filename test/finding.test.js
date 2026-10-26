@@ -32,8 +32,9 @@ test('status fail: a sending service\'s own domains, in the one sentence the pro
   assert.ok(f.fixes.every(x => !/SendGrid|Mailgun/.test(x.technical)));
 });
 
-test('status forwarded: the failure is blamed on the forward and the pre-forward results are quoted', () => {
-  const r = run('forwarded.txt');
+test('status forwarded: the failure is blamed on the forward when the receiver vouched for the ARC seals', () => {
+  // forwarded.txt carries compauth reason=000 and no arc=; reason 130 is Microsoft's ARC override.
+  const r = HA.analyze(fixture('forwarded.txt').replace('compauth=fail reason=000', 'compauth=fail reason=130'));
   const f = r.finding;
   assert.equal(f.status, 'forwarded');
   assert.equal(f.state, 'caveat');
@@ -47,6 +48,25 @@ test('status forwarded: the failure is blamed on the forward and the pre-forward
   assert.ok(r.flags.includes('forwarded'));
   // The quoted results cite the ARC-Authentication-Results field they came from.
   assert.equal(r.fields[f.forwarded.preForward.src[0]].lower, 'arc-authentication-results');
+});
+
+test('a forward the receiver did not vouch for is not blamed: seals are not verified here', () => {
+  const r = run('forwarded.txt');
+  const f = r.finding;
+  assert.equal(f.status, 'fail');
+  assert.equal(f.forwarded.yes, true);
+  assert.notEqual(f.forwarded.blamed, true);
+  assert.ok(f.details.some(x => /did not report arc=pass, and this page does not verify ARC seals/.test(x.technical)));
+  assert.ok(f.fixes.some(x => /copy delivered straight to the mailbox/.test(x.technical)));
+  // SPF here checked the forwarder's server, so no SPF record fix.
+  assert.ok(f.fixes.every(x => !/SPF record of/.test(x.technical) && !/trusted ARC sealers/.test(x.technical)));
+});
+
+test('a sender written i=1 ARC set does not turn a direct spoof into a forward', () => {
+  const f = run('arc-self-sealed-spoof.txt').finding;
+  assert.equal(f.status, 'fail');
+  assert.notEqual(f.forwarded.blamed, true);
+  assert.ok(sentences(f).every(x => !/trust the forwarding service|trusted ARC sealer/.test(x.technical + x.plain)));
 });
 
 test('status forwarded through two forwarders: the earliest forwarder\'s record is the one quoted', () => {
@@ -204,4 +224,20 @@ test('every finding has a known status, sentences in both voices with valid sour
 test('the result with a finding stays JSON-safe', () => {
   const r = run('arc-forwarded-i2.txt');
   assert.deepEqual(JSON.parse(JSON.stringify(r)), r);
+});
+
+test('no usable From address: status unknown, not a crash', () => {
+  const base = fixture('no-from.txt');
+  for (const text of [base, base.replace('To:', 'From: Alex Rivera\nTo:'), base.replace('To:', 'From:\nTo:')]) {
+    const f = HA.analyze(text).finding;
+    assert.equal(f.status, 'unknown');
+    assert.match(f.headline.technical, /no usable From address/);
+  }
+});
+
+test('a subdomain From quotes the organizational domain\'s sp=, not p=', () => {
+  const c = run('dmarc-subdomain-sp.txt').finding.consequence;
+  assert.match(c.technical, /^shop\.example publishes sp=none for subdomains such as news\.shop\.example, which asks for no action/);
+  assert.ok(!/p=reject/.test(c.technical));
+  assert.match(c.plain, /asks for no action/);
 });

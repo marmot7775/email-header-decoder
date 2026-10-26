@@ -34,7 +34,7 @@ Live at https://headers.dns-audit.com, part of
 Everything runs in your browser. There is no server, no analytics,
 and no storage, and the page makes no network requests. Its
 Content Security Policy has no `connect-src`, so the browser blocks
-any attempt to send data out. You can save the page and use it with
+requests the page makes. You can save the page and use it with
 the network off.
 
 ## Limits
