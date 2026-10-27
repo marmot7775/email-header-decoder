@@ -33,7 +33,9 @@ is handed out only after that. Status as of 2026-10-25.
    a confidence; list and sending headers with RFC 8058), both in
    the build. The product name is Email Header Decoder and the repo
    is email-header-decoder (renamed 24 Oct). wip/step3 and the
-   15 Oct verdict.js are gone.
+   15 Oct verdict.js are gone. Gap check 2026-10-27 against the
+   original step 3 prompt, commit bc8930f: Microsoft PCL, AuthSource,
+   SFS, AuthAs External and Partner, and the Message-ID domain.
 
 4  Copy pass, design, mobile, hosting.                      IN PROGRESS
    Design pass done 2026-10-25: dns-audit.com site bar and footer,
@@ -89,3 +91,17 @@ Decisions
             From quotes sp= and names the organizational domain. The
             CSP allows the inline script by its sha256 instead of
             'unsafe-inline'.
+2026-10-27  The original step 3 prompt came in again after step 3
+            was done. Treated it as a gap check, not a redo: the
+            finding already covered every case it lists.
+2026-10-27  Item levels stay pass, info, warn, fail, not the
+            prompt's ok and bad. The page, the tests, and the
+            sentence states already use them.
+2026-10-27  PCL meanings come from the Exchange Server antispam
+            stamps table (1 to 3 Neutral, 4 to 8 Suspicious), the
+            only one Microsoft publishes. 0 and other values show
+            raw.
+2026-10-27  SFS shows raw and is marked as not in the published
+            table. Microsoft documents no rule IDs.
+2026-10-27  The Message-ID domain is info only, never a warning.
+            Sending platforms routinely use their own domain.
