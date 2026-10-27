@@ -24,8 +24,9 @@ Date: Fri, 23 Oct 2026 15:00:00 +0000
 Message-ID: <deal-606@deals.example>
 Return-Path: bounce@deals.example
 X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Exchange-Organization-AuthSource: SN1PR01MB0606.namprd01.prod.outlook.com
 X-MS-Exchange-Organization-SCL: 3
 X-Forefront-Antispam-Report:
  CIP:203.0.113.30;CTRY:US;LANG:en;SCL:7;SRV:BULK;IPV:CAL;SFV:QQQ;H:mta.deals.example;PTR:mta.deals.example;CAT:BULK;SFTY:9.99;DIR:INB;SFS:(13230040);
-X-Microsoft-Antispam: BCL:8;ARA:13230040;
+X-Microsoft-Antispam: BCL:8;PCL:5;ARA:13230040;
 MIME-Version: 1.0

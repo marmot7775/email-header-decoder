@@ -209,3 +209,24 @@ test('every decoded item has a level, the raw value, both readers, and valid sou
     }
   }
 });
+
+test('Microsoft: PCL, AuthSource, and SFS', () => {
+  const ms = group(run('m365-filter-codes.txt'), 'microsoft');
+  const pcl = get(ms, 'PCL');
+  assert.equal(pcl.raw, '5');
+  assert.equal(pcl.level, 'warn');
+  assert.match(pcl.technical, /Suspicious/);
+  assert.equal(get(ms, 'AuthSource').raw, 'SN1PR01MB0606.namprd01.prod.outlook.com');
+  const sfs = get(ms, 'SFS');
+  assert.equal(sfs.raw, '(13230040)');
+  assert.match(sfs.technical, /is not in Microsoft's published table, so it is shown as written/);
+});
+
+test('list headers: Message-ID domain, same and different organization', () => {
+  const same = run('m365-filter-codes.txt').decoded.list.find(i => i.key === 'Message-ID');
+  assert.equal(same.raw, 'deals.example');
+  assert.match(same.technical, /the same organization as deals\.example/);
+  const other = run('esp-unaligned.txt').decoded.list.find(i => i.key === 'Message-ID');
+  assert.equal(other.raw, 'mailer.example');
+  assert.match(other.technical, /a different organization from shop\.example/);
+});

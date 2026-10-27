@@ -64,6 +64,14 @@
     return item('BCL', raw, lvl, 'Bulk complaint level ' + n + ': ' + t + '. The tenant\'s threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers.', p, src);
   }
 
+  // PCL: Exchange publishes 1 to 3 as Neutral and 4 to 8 as Suspicious.
+  function pclItem(raw, src) {
+    const n = /^\d+$/.test(raw) ? +raw : NaN;
+    if (n >= 1 && n <= 3) return item('PCL', raw, 'pass', 'Phishing confidence level ' + n + ': Neutral, the content is not likely phishing.', 'The content did not look like phishing.', src);
+    if (n >= 4 && n <= 8) return item('PCL', raw, 'warn', 'Phishing confidence level ' + n + ': Suspicious, the content is likely phishing.', 'The content looked like phishing.', src);
+    return notListed('PCL', raw, 'Microsoft', src);
+  }
+
   // Composite authentication reason codes. A code missing from the table
   // gets the meaning Microsoft gives its hundreds class, and says so.
   const COMPAUTH = {
@@ -100,7 +108,9 @@
     const xma = first(fields, 'x-microsoft-antispam');
     const scl = first(fields, 'x-ms-exchange-organization-scl');
     const authAs = first(fields, 'x-ms-exchange-organization-authas');
-    if (!ff && !xma && !scl && !authAs && !auth.compauth) return null;
+    const authSrc = first(fields, 'x-ms-exchange-organization-authsource');
+    const pclF = first(fields, 'x-ms-exchange-organization-pcl');
+    if (!ff && !xma && !scl && !authAs && !authSrc && !pclF && !auth.compauth) return null;
     const items = [];
     let kv = {};
     if (ff) {
@@ -128,15 +138,21 @@
       if (kv.CTRY) items.push(item('CTRY', kv.CTRY, 'info', 'Country or region of the connecting IP, which may differ from where the message started.', 'Where the server that handed it over is.', s));
       if (kv.H) items.push(item('H', kv.H, 'info', 'HELO or EHLO name the connecting server gave.', 'The name the sending server gave itself.', s));
       if (kv.PTR) items.push(item('PTR', kv.PTR, 'info', 'Reverse DNS of the connecting IP, as Microsoft looked it up.', 'The name registered for the sending server\'s address.', s));
+      // SFS lists internal spam rule IDs; Microsoft publishes no meanings for them.
+      if (kv.SFS) items.push(notListed('SFS', kv.SFS, 'Microsoft', s));
     }
     const bcl = kv.BCL !== undefined ? { raw: kv.BCL, src: [ff.index] } : xma && /BCL:(\d+)/i.test(xma.value) ? { raw: /BCL:(\d+)/i.exec(xma.value)[1], src: [xma.index] } : null;
     if (bcl) items.push(bclItem(bcl.raw, bcl.src));
     if (scl && !(kv.SCL && scl.value.trim() === kv.SCL)) items.push(sclItem(scl.value, [scl.index], 'X-MS-Exchange-Organization-SCL'));
+    const pcl = pclF ? { raw: pclF.value.trim(), src: [pclF.index] } : xma && /PCL:(-?\d+)/i.test(xma.value) ? { raw: /PCL:(-?\d+)/i.exec(xma.value)[1], src: [xma.index] } : null;
+    if (pcl) items.push(pclItem(pcl.raw, pcl.src));
     if (authAs) {
       const v = authAs.value.trim();
-      const known = { internal: ['Treated as internal, authenticated mail.', 'Microsoft treated this as mail from inside the organization.'], anonymous: ['Treated as external, unauthenticated mail.', 'Microsoft treated this as mail from outside the organization.'] }[v.toLowerCase()];
+      const known = { internal: ['Treated as internal, authenticated mail.', 'Microsoft treated this as mail from inside the organization.'], anonymous: ['Treated as external, unauthenticated mail.', 'Microsoft treated this as mail from outside the organization.'],
+        external: ['Authentication source External.', 'Microsoft recorded this as authenticated mail from outside the organization.'], partner: ['Authentication source Partner.', 'Microsoft recorded this as mail from a partner organization.'] }[v.toLowerCase()];
       items.push(known ? item('AuthAs', v, 'info', known[0], known[1], [authAs.index]) : notListed('AuthAs', v, 'Microsoft', [authAs.index]));
     }
+    if (authSrc && authSrc.value.trim()) items.push(item('AuthSource', authSrc.value.trim(), 'info', 'The server that evaluated authentication for the organization.', 'The Microsoft server that checked who sent this.', [authSrc.index]));
     if (auth.compauth) items.push(compauthItem(auth.compauth));
     const catItem = items.find(i => i.key === 'CAT');
     return group('microsoft', 'Microsoft 365', items, ff ? say('unknown', 'Fields of X-Forefront-Antispam-Report that Microsoft does not document are left out; Microsoft says they are for its own diagnostics.', 'Only the parts Microsoft explains publicly are shown.', [ff.index]) : null, catItem || null);
@@ -352,7 +368,7 @@
   }
 
   // List and sending headers: unsubscribe (RFC 2369, RFC 8058), list
-  // identity, Reply-To and Sender at another organization, Precedence,
+  // identity, Reply-To and Sender at another organization, Message-ID domain, Precedence,
   // Auto-Submitted, and Feedback-ID.
   function listItems(fields, message, auth) {
     const items = [];
@@ -391,6 +407,12 @@
     if (snd && from) {
       const a = P.parseAddresses(snd.value)[0];
       if (a && a.domain && org(a.domain) !== org(from)) items.push(item('Sender', a.address, 'info', 'Sent on behalf of the From address by ' + a.domain + '. DMARC still checks the From domain.', 'Another company sent this on the sender\'s behalf.', [snd.index]));
+    }
+    const mid = message.messageId && /@([^@\s>]+)$/.exec(message.messageId.value);
+    if (mid && from) {
+      const d = mid[1].toLowerCase();
+      items.push(org(d) === org(from) ? item('Message-ID', d, 'info', 'Message-ID domain ' + d + ', the same organization as ' + from + '.', 'The message ID was made by the sender\'s own domain.', message.messageId.src)
+        : item('Message-ID', d, 'info', 'Message-ID domain ' + d + ', a different organization from ' + from + '. Usually the sending platform or mail server that created the message.', 'The message ID was made by ' + d + ', usually the service or server that created the message.', message.messageId.src));
     }
     const prec = first(fields, 'precedence');
     if (prec) items.push(item('Precedence', prec.value.trim(), 'info', /bulk|list|junk/i.test(prec.value) ? 'Declares bulk or list mail; auto-responders should not answer it.' : 'Precedence ' + prec.value.trim() + ', shown as written.', /bulk|list|junk/i.test(prec.value) ? 'The sender marked this as bulk mail.' : 'The sender set a priority label.', [prec.index]));
