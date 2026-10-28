@@ -129,6 +129,24 @@ test('the same header block pasted twice reads as one message', () => {
   assert.ok(r.input.notes.some(n => /pasted twice/.test(n.plain)));
 });
 
+test('a paste repeated with text between, three times, or cut short still reads as one message', () => {
+  const t = fixture('mailing-list-original-ar.txt');
+  // Outlook's reading pane text above the headers, once without a blank
+  // line (it folds into the field before it) and once with one (the
+  // second copy then reads as a body and is ignored).
+  const pre = '[club] Re: Meeting notes\nPat Author <pat@author.example>\nSee you Tuesday.\nhttps://lists.example/club\n';
+  const preBlank = '[club] Re: Meeting notes\n\nSee you Tuesday.\n';
+  const one = HA.analyze(t);
+  const cut = t.split('\n').slice(0, 20).join('\n');
+  for (const [name, text, copies] of [['text between', pre + t + pre + t, 'twice'], ['text with a blank line between', preBlank + t + preBlank + t, ''], ['three times', t + t + t, '3 times'], ['cut short', t + cut, 'twice']]) {
+    const r = HA.analyze(text);
+    assert.equal(r.message.fromCount, 1, name);
+    assert.equal(r.fields.length, one.fields.length, name);
+    assert.equal(r.finding.headline.technical, one.finding.headline.technical, name);
+    if (copies) assert.ok(r.input.notes.some(n => n.plain.includes('pasted ' + copies)), name);
+  }
+});
+
 test('status none: no DMARC record, with what the message would do under one', () => {
   const f = run('dmarc-none.txt').finding;
   assert.equal(f.status, 'none');
@@ -267,4 +285,12 @@ test('a subdomain From quotes the organizational domain\'s sp=, not p=', () => {
   assert.match(c.technical, /^shop\.example publishes sp=none for subdomains such as news\.shop\.example, which asks for no action/);
   assert.ok(!/p=reject/.test(c.technical));
   assert.match(c.plain, /asks for no action/);
+});
+
+test('every fixture pasted twice gives the same finding as one paste', () => {
+  for (const name of FIXTURES) {
+    const t = fixture(name);
+    const one = HA.analyze(t).finding, two = HA.analyze(t.trimEnd() + '\n' + t).finding;
+    assert.equal(two && two.headline.technical, one && one.headline.technical, name);
+  }
 });

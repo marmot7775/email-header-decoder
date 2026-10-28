@@ -32,7 +32,8 @@
 
   function isFieldStart(line) {
     const m = FIELD_START.exec(line);
-    return m && PLAUSIBLE_NAME.test(m[1]) ? m : null;
+    // A URL (https://...) is text, not a field named https.
+    return m && PLAUSIBLE_NAME.test(m[1]) && !line.slice(m[1].length + 1).startsWith('//') ? m : null;
   }
 
   // Find the header block inside whatever was pasted: a bare header
@@ -109,14 +110,29 @@
       current = { name: m[1], rawLines: [line], firstLine: i, lastLine: i, looseFold: false };
       fields.push(current);
     }
-    // The same block pasted twice, one copy after the other: read the first.
-    const key = (f) => f.rawLines.map(l => l.trim()).join(' ');
-    const half = fields.length / 2;
-    let twice = false;
-    if (half >= 2 && Number.isInteger(half) && fields.slice(0, half).every((f, i) => key(f) === key(fields[half + i]))) {
-      twice = true;
-      repaired = fields.slice(0, half).reduce((n, f) => n + f.rawLines.slice(1).filter(l => !/^[ \t]/.test(l)).length, 0);
-      fields.length = half;
+    // The same block pasted more than once (Outlook text and all, three
+    // times, or a second copy cut short): read one copy. Fields match by
+    // name and first line, so text pasted between copies, which the loop
+    // above folds into the field before it, does not hide a repeat. At
+    // each position the copy with the fewest lines is kept, which drops
+    // that folded-in text.
+    const key = (f) => f.name.toLowerCase() + ':' + f.rawLines[0].slice(f.name.length + 1).trim();
+    let copies = 1;
+    for (let k = 2; k <= fields.length - 2; k++) {
+      if (key(fields[k]) !== key(fields[0])) continue;
+      let j = k;
+      while (j < fields.length && key(fields[j]) === key(fields[j % k])) j++;
+      if (j < fields.length) continue;
+      copies = Math.ceil(fields.length / k);
+      const keep = [];
+      for (let i = 0; i < k; i++) {
+        let best = fields[i];
+        for (let m = i + k; m < fields.length; m += k) if (fields[m].rawLines.length < best.rawLines.length) best = fields[m];
+        keep.push(best);
+      }
+      fields.length = 0; fields.push(...keep);
+      repaired = keep.reduce((n, f) => n + (f.looseFold ? f.rawLines.slice(1).filter(l => !/^[ \t]/.test(l)).length : 0), 0);
+      break;
     }
     const out = fields.map((f, index) => {
       const first = f.rawLines[0].slice(f.name.length + 1);
@@ -126,7 +142,7 @@
       if (f.looseFold) notes.push(sentence('caveat', 'Lines under ' + f.name + ' had lost their leading whitespace and were rejoined as one field.', 'Some lines lost their indentation when they were copied, so they were joined back to the header they belong to.', [index]));
       return { index, name: f.name, lower: f.name.toLowerCase(), value, decoded: NO_DECODE.has(f.name.toLowerCase()) ? value : decodeWords(value), raw: f.rawLines.join('\n'), lines: [f.firstLine, f.lastLine], looseFold: f.looseFold };
     });
-    if (twice) notes.unshift(sentence('caveat', 'The header block appears twice in the paste, one copy straight after the other. Only the first copy was read.', 'The headers were pasted twice. Only the first copy was read.', []));
+    if (copies > 1) notes.unshift(sentence('caveat', 'The header block appears ' + (copies === 2 ? 'twice' : copies + ' times') + ' in the paste. One copy was read.', 'The headers were pasted ' + (copies === 2 ? 'twice' : copies + ' times') + '. Only one copy was read.', []));
     const bodyPresent = block.end < lines.length && lines.slice(block.end + 1).some(l => l.trim() !== '');
     return { fields: out, notes, block: [block.start, block.end - 1], format: detectFormat(lines, block, bodyPresent), bodyPresent, blockFound: out.length > 0, repairedLines: repaired };
   }
