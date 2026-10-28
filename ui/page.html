@@ -294,7 +294,6 @@ details.raw > summary .count { font-weight: 400; color: var(--text-2); font-size
 .site-foot a { color: var(--primary); font-weight: 500; text-underline-offset: 3px; }
 .site-foot .beta { margin-right: 6px; }
 .foot-links { display: flex; flex-wrap: wrap; gap: 4px 18px; }
-.site-foot .fine { color: var(--muted); font-size: var(--font-xs); }
 
 /* Sub-headings inside a card */
 .card h3 { font-size: var(--font-sm); font-weight: 600; margin: 18px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
@@ -496,6 +495,7 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
     <h2 id="h-faq">Questions</h2>
     <div class="faq">
       <details><summary>Why did a forwarded message fail DMARC?</summary><p>A forward sends the message on from the forwarder's server, so SPF checks the forwarder's address instead of the original sender's. If the forwarder also changes the message, for example by adding a footer, the DKIM signature no longer matches. With both gone, DMARC fails even though the sender did nothing wrong. When the forwarder adds ARC headers, this page reads the results recorded before the forward and says so.</p></details>
+      <details><summary>How does it read the headers?</summary><p>It reads them as the receiving servers wrote them. Dates follow RFC 5322, and a time zone it can't trust is read as UTC and marked. Encryption is taken from what each server recorded. DMARC finds a domain's parent with a DNS lookup (RFC 9989), which this page can't make, so it uses a short built-in list and marks any guess. ARC records are checked for structure, but their seals aren't verified.</p></details>
       <details><summary>Does anything I paste leave my browser?</summary><p>No. The page has no server behind it and makes no network requests. Its Content Security Policy blocks requests the page makes, so your headers stay on your machine.</p></details>
       <details><summary>Why are there two DMARC results?</summary><p>The receiving server writes its DMARC result into the Authentication-Results header. This page also works the result out from the SPF and DKIM results and the domains involved. When the two differ, the page names the reason, such as a local policy override at the receiver.</p></details>
       <details><summary>Why does it not verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups, so nothing about your message leaves the page.</p></details>
@@ -506,10 +506,9 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
 
 <footer class="site-foot">
   <div class="site-foot-in">
-    <p class="beta-note"><span class="beta">Beta</span> Found a message it reads wrong? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a> with what it said and what it should have said.</p>
-    <p>Built by <a href="https://dns-audit.com/about">Neil Anuskiewicz</a>. Need help with email deliverability, email security, or DNS? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a> or <a href="https://www.linkedin.com/in/neilanuskiewicz/" rel="noopener">message me on LinkedIn</a>.</p>
-    <p class="foot-links"><a href="https://dns-audit.com/">dns-audit.com</a><a href="https://dns-audit.com/articles/">Articles</a><a href="https://github.com/marmot7775/email-header-decoder" rel="noopener">Source on GitHub</a></p>
-    <p class="fine">Reads the headers as the receiving servers wrote them. Received dates follow RFC 5322, including the obsolete zones; a zone it cannot trust is read as UTC and marked. TLS is taken from each hop's with clause (RFC 3848) and the comments around it. Alignment checks each identifier against the From domain (RFC 7489); the organizational domain comes from a short built-in suffix list, not DNS, and the page marks it when that is a guess. ARC (RFC 8617) is checked for structure only; seals are not verified.</p>
+    <p class="beta-note"><span class="beta">Beta</span> Did it read a message wrong? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a>.</p>
+    <p>Built by <a href="https://dns-audit.com/about">Neil Anuskiewicz</a>, an email deliverability and DNS consultant.</p>
+    <p class="foot-links"><a href="https://dns-audit.com/">dns-audit.com</a><a href="https://dns-audit.com/articles/">Articles</a><a href="https://www.linkedin.com/in/neilanuskiewicz/" rel="noopener">LinkedIn</a><a href="https://github.com/marmot7775/email-header-decoder" rel="noopener">Source on GitHub</a></p>
   </div>
 </footer>
 <!-- SCRIPTS -->
