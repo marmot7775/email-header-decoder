@@ -95,7 +95,7 @@ is handed out only after that. Status as of 2026-10-25.
    return path; DKIM temperror gets its own fix; forwarded and
    mailing list wording cut down; the CAT versus SCL and BCL
    threshold sentences moved off every item into one note on the
-   Microsoft card. Commit SHA_HERE.
+   Microsoft card. Commit efca984.
    Still to do: more real headers from Neil and the copy pass they
    drive.
 
