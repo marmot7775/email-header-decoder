@@ -204,3 +204,9 @@ Decisions
             quotation marks around aligned. The Full analysis panels
             keep their technical labels in both views, with
             contractions where they read as prose.
+2026-10-28  Technical leads with the practitioner's word and puts the
+            RFC identifier in brackets: Return-Path domain
+            (RFC5321.MailFrom), From domain (RFC5322.From). Simple
+            may use a listed term in brackets after its plain
+            explanation, such as (Return-Path) and (SPF), so the
+            reader learns the word their email service uses.

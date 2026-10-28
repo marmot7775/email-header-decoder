@@ -21,10 +21,10 @@ test('sentences: every case runs, and no sentence breaks the copy rules', () => 
     for (const [label, s] of S.lines(f)) {
       check(name + ', ' + label, s);
       if (/plain/i.test(label)) assert.ok(!/;/.test(s), name + ', ' + label + ' has a semicolon: ' + s);
-      if (/plain/i.test(label)) assert.ok(!SIMPLE_BANNED.test(s.replace(/Trusted ARC sealers/g, '')), name + ', ' + label + ' uses a word Simple avoids: ' + s);
+      if (/plain/i.test(label)) assert.ok(!SIMPLE_BANNED.test(s.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')), name + ', ' + label + ' uses a word Simple avoids: ' + s);
     }
   }
-  for (const [code, t, p] of S.meanings()) { check(code, t); check(code, p); assert.ok(!SIMPLE_BANNED.test(p.replace(/Trusted ARC sealers/g, '')), code + ' Simple uses a word Simple avoids: ' + p); }
+  for (const [code, t, p] of S.meanings()) { check(code, t); check(code, p); assert.ok(!SIMPLE_BANNED.test(p.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')), code + ' Simple uses a word Simple avoids: ' + p); }
 });
 
 test('sentences: no two cases share a cause', () => {

@@ -4,7 +4,7 @@
 
 Plain headline: This message passed the sender check (DMARC): it was signed by shop.example. That matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed, and it aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
 
@@ -30,7 +30,7 @@ Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to a
 
 Plain headline: This message passed the sender check (DMARC): it came from a server that shop.example allows. That matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example passed because SPF passed for the RFC5321.MailFrom domain shop.example, and it aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example passed because SPF passed for the Return-Path domain shop.example (RFC5321.MailFrom), and it aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
 
@@ -52,7 +52,7 @@ Fix 1, technical: DMARC rests on SPF alone, and forwarding breaks SPF. Turn on D
 
 Plain headline: This message passed the sender check (DMARC): it was signed by shop.example and it came from a server that shop.example allows. Both match shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed and SPF passed for the RFC5321.MailFrom domain shop.example, and both align with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed and SPF passed for the Return-Path domain shop.example (RFC5321.MailFrom), and both align with the From domain shop.example (RFC5322.From).
 
 Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
 
@@ -78,7 +78,7 @@ Fix 1, technical: shop.example publishes p=none, so forged mail is not stopped. 
 
 Plain headline: This message was let through on trust: its own checks don't match shop.example, but the receiving system accepted it under its own rules.
 
-Technical headline: DMARC passed at mx.receiver.example only because of a local policy or a result it did not write into these headers; in these headers there was no DKIM signature and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, and nothing aligned with the From domain shop.example.
+Technical headline: DMARC passed at mx.receiver.example only because of a local policy or a result it did not write into these headers; in these headers there was no DKIM signature and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing aligned with the From domain shop.example.
 
 Cause, plain: The checks don't line up, but the receiving system passed the message anyway, probably because of its own rules.
 
@@ -104,7 +104,7 @@ Fix 1, technical: DMARC rests on SPF alone, and forwarding breaks SPF. Turn on D
 
 Plain headline: The receiving system didn't record the sender check, but working it out from what it did record, this message passed the sender check (DMARC): it was signed by shop.example. That matches shop.example, the domain in the From address.
 
-Technical headline: mx.receiver.example recorded no DMARC result; worked out from the identifiers, DMARC passes because DKIM d=shop.example s=s1 passed, and it aligns with the RFC5322.From domain shop.example.
+Technical headline: mx.receiver.example recorded no DMARC result; worked out from the identifiers, DMARC passes because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
 
@@ -130,9 +130,9 @@ Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to a
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server check for shop.example came out neutral, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF was neutral for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF was neutral for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The sender's list of approved servers couldn't be read, and nothing else proves the mail came from shop.example.
+Cause, plain: The sender's list of approved servers (SPF) couldn't be read, and nothing else proves the mail came from shop.example.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The SPF record of shop.example makes no statement about the server that handed the message over (neutral), so SPF did not pass.
 
@@ -152,7 +152,7 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 
 Plain headline: This message failed the sender check (DMARC) because it was signed by mailer.example and it came from a server that bounce.mailer.example allows, but neither of those is shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example failed because DKIM d=mailer.example s=m1 passed and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, but neither aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=mailer.example s=m1 passed and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), but neither aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The service sending this mail is using its own domain instead of shop.example, so the checks pass for the service but not for the sender.
 
@@ -182,7 +182,7 @@ Fix 2, technical: Second, after DKIM: set a custom Return-Path (bounce) domain u
 
 Plain headline: This message failed the sender check (DMARC) because the signature from shop.example didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The message was changed after it was signed, or the signature doesn't match the sender's published key.
 
@@ -208,7 +208,7 @@ Fix 1, technical: The signature from d=shop.example broke between signing and mx
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The service sending this mail is using its own domain instead of shop.example, so the checks pass for the service but not for the sender.
 
@@ -234,9 +234,9 @@ Fix 2, technical: Second, after DKIM: set a custom Return-Path (bounce) domain u
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server called itself o1.mailer.example. Nothing that checked out matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF passed for the HELO identity o1.mailer.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF passed for the HELO identity o1.mailer.example, and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
-Cause, plain: The message had no hidden return address, so the only check that passed was on the sending server's own name, which doesn't belong to shop.example.
+Cause, plain: The message had no hidden return address (Return-Path), so the only check that passed was on the sending server's own name, which doesn't belong to shop.example.
 
 Cause, technical: SPF passed only for the server name o1.mailer.example, which is not shop.example. The bounce address was empty, so SPF checked the name the sending server gave itself (HELO) instead of a sender domain, and nothing else passed for shop.example.
 
@@ -256,9 +256,9 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF).
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as mx.receiver.example reported.
 
@@ -282,9 +282,9 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF soft failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF soft failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF).
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The SPF record of shop.example does not authorize the server that handed the message over and asks receivers to treat it as suspicious rather than fail it outright (softfail), as mx.receiver.example reported.
 
@@ -308,7 +308,7 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and shop.example publishes no list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF found no record for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF found no record for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
 Cause, plain: The sender's domain publishes no list of approved servers, and nothing else proves the mail came from shop.example.
 
@@ -334,9 +334,9 @@ Fix 2, technical: Publish an SPF record for shop.example that lists the servers 
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server check for shop.example came out permerror, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF hit a permanent error in the record for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF hit a permanent error in the record for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The sender's list of approved servers couldn't be read, and nothing else proves the mail came from shop.example.
+Cause, plain: The sender's list of approved servers (SPF) couldn't be read, and nothing else proves the mail came from shop.example.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The SPF record of shop.example could not be evaluated (permerror): it has a syntax error or needs more than 10 DNS lookups.
 
@@ -360,9 +360,9 @@ Fix 2, technical: Repair the SPF record of shop.example: check its syntax and ke
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server check for shop.example came out temperror, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF hit a temporary DNS error for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF hit a temporary DNS error for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The sender's list of approved servers couldn't be read, and nothing else proves the mail came from shop.example.
+Cause, plain: The sender's list of approved servers (SPF) couldn't be read, and nothing else proves the mail came from shop.example.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. A temporary DNS error kept mx.receiver.example from evaluating the SPF record of shop.example (temperror).
 
@@ -382,7 +382,7 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 
 Plain headline: This message failed the sender check (DMARC) because the signature from shop.example couldn't be checked and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example failed because DKIM for shop.example returned permerror and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because DKIM for shop.example returned permerror and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The signature on the message couldn't be checked, and nothing else proves it came from shop.example.
 
@@ -408,7 +408,7 @@ Fix 1, technical: Publish or repair the DKIM key at s1._domainkey.shop.example; 
 
 Plain headline: This message failed the sender check (DMARC) because the signature from shop.example couldn't be checked and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example failed because DKIM for shop.example returned temperror and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because DKIM for shop.example returned temperror and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The signature on the message couldn't be checked, and nothing else proves it came from shop.example.
 
@@ -434,7 +434,7 @@ Fix 1, technical: Nothing in these headers points at a single change. Compare wi
 
 Plain headline: The receiving system didn't record the sender check, but working it out from what it did record, this message fails the sender check (DMARC) because it was signed by mailer.example and shop.example publishes no list of approved servers. Nothing that checked out matches shop.example, the domain in the From address.
 
-Technical headline: mx.receiver.example recorded no DMARC result; worked out from the identifiers, DMARC fails because DKIM d=mailer.example s=m1 passed and SPF found no record for the RFC5321.MailFrom domain shop.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Technical headline: mx.receiver.example recorded no DMARC result; worked out from the identifiers, DMARC fails because DKIM d=mailer.example s=m1 passed and SPF found no record for the Return-Path domain shop.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The sender's domain publishes no list of approved servers, and nothing else proves the mail came from shop.example.
 
@@ -464,7 +464,7 @@ Fix 2, technical: Publish an SPF record for shop.example that lists the servers 
 
 Plain headline: This message failed the sender check (DMARC) because it came through the mailing list club.list.example. The list changed the message, which broke the sender's signature, and sent it on under its own domain, list.example, not shop.example.
 
-Technical headline: DMARC failed because the message came through the mailing list club.list.example, which changed it, breaking the DKIM signature from shop.example, and sent it on as list.example, which does not align with the RFC5322.From domain shop.example.
+Technical headline: DMARC failed because the message came through the mailing list club.list.example, which changed it, breaking the DKIM signature from shop.example, and sent it on as list.example, which does not align with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The headers carry no record of how the message looked before the list, so this page can't confirm the sender's own setup. Lists break these checks by changing the message, for example by adding a footer.
 
@@ -494,7 +494,7 @@ Fix 2, technical: If you run club.list.example: have the list rewrite the From a
 
 Plain headline: This message failed the sender check (DMARC) because it came through the mailing list club.list.example. The list changed the message, which broke the sender's signature, and sent it on under its own domain, list.example, not shop.example.
 
-Technical headline: DMARC failed because the message came through the mailing list club.list.example, which changed it, breaking the DKIM signature from shop.example, and sent it on as list.example, which does not align with the RFC5322.From domain shop.example.
+Technical headline: DMARC failed because the message came through the mailing list club.list.example, which changed it, breaking the DKIM signature from shop.example, and sent it on as list.example, which does not align with the From domain shop.example (RFC5322.From).
 
 Cause, plain: Before the list, the list's own server recorded that the message passed. The sender's setup looks fine. The list broke the checks by changing the message, for example by adding a footer.
 
@@ -588,7 +588,7 @@ Technical headline: DMARC did not apply because mx.receiver.example found no DMA
 
 Cause, plain: Without a DMARC setting, nothing stops others from sending mail that claims to be from shop.example. This message is set up to pass once there's one.
 
-Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would pass, because DKIM d=shop.example s=s1 passed, and it aligns with the RFC5322.From domain shop.example.
+Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would pass, because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
 
 Policy, plain: shop.example has no DMARC setting, so it gives mail providers no instructions for fake mail. Each provider decides for itself.
 
@@ -618,7 +618,7 @@ Technical headline: DMARC did not apply because mx.receiver.example found no DMA
 
 Cause, plain: Without a DMARC setting, nothing stops others from sending mail that claims to be from shop.example. This message wouldn't pass if one were added.
 
-Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would fail, because there was no DKIM signature and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would fail, because there was no DKIM signature and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
 Policy, plain: shop.example has no DMARC setting, so it gives mail providers no instructions for fake mail. Each provider decides for itself.
 
@@ -648,7 +648,7 @@ Technical headline: DMARC did not apply: mx.receiver.example reported dmarc=best
 
 Cause, plain: Without a DMARC setting, nothing stops others from sending mail that claims to be from shop.example. This message is set up to pass once there's one.
 
-Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would pass, because SPF passed for the RFC5321.MailFrom domain shop.example, and it aligns with the RFC5322.From domain shop.example.
+Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would pass, because SPF passed for the Return-Path domain shop.example (RFC5321.MailFrom), and it aligns with the From domain shop.example (RFC5322.From).
 
 Policy, plain: shop.example has no DMARC setting, so it gives mail providers no instructions for fake mail. Each provider decides for itself.
 
@@ -742,7 +742,7 @@ Fix 1, technical: Get the same message from a Gmail or Microsoft 365 mailbox; bo
 
 Plain headline: This message failed the sender check (DMARC) because it was forwarded by forward.example. It passed before the forward, and the forward broke it.
 
-Technical headline: DMARC at mx.receiver.example failed because the message was forwarded by forward.example: before the forward, mx.forward.example recorded spf=pass (orders@shop.example), dkim=pass (shop.example), and dmarc=pass (shop.example), and after it DKIM d=shop.example s=s1 failed verification and SPF soft failed for the RFC5321.MailFrom domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because the message was forwarded by forward.example: before the forward, mx.forward.example recorded spf=pass (orders@shop.example), dkim=pass (shop.example), and dmarc=pass (shop.example), and after it DKIM d=shop.example s=s1 failed verification and SPF soft failed for the Return-Path domain shop.example (RFC5321.MailFrom).
 
 Cause, plain: The sender set things up correctly. Forwarding changed the message on the way, which is a known side effect of forwarding.
 
@@ -772,7 +772,7 @@ Fix 2, technical: If the forward is not yours, authentication worked as designed
 
 Plain headline: This message failed the sender check (DMARC) because the signature from shop.example didn't check out and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF soft failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF soft failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
 Cause, plain: The message was changed after it was signed, or the signature doesn't match the sender's published key.
 
@@ -802,7 +802,7 @@ Fix 1, technical: Judge the sender by a copy delivered straight to the mailbox. 
 
 Plain headline: This message failed the sender check (DMARC) because the signature from shop.example wasn't checked and it came from a server that forward.example allows. Nothing that checked out matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example failed because the DKIM signature from shop.example has no recorded result and SPF passed for the RFC5321.MailFrom domain forward.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because the DKIM signature from shop.example has no recorded result and SPF passed for the Return-Path domain forward.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The message failed the check before it was ever forwarded, so the problem is with the sender, not the forward.
 
@@ -868,9 +868,9 @@ Fix 1, technical: Get the same message from a Gmail or Microsoft 365 mailbox; bo
 
 Plain headline: This message failed the sender check (DMARC) because it was signed by mailer.example and the sending server isn't on shop.example's list of approved servers. Nothing that checked out matches shop.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example failed because DKIM d=mailer.example s=m1 passed and SPF failed for the RFC5321.MailFrom domain shop.example, and nothing that passed aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=mailer.example s=m1 passed and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF).
 
 Cause, technical: DKIM passed only for mailer.example, which is not shop.example. The server that handed the message over is not authorized by the SPF record of shop.example, as mx.receiver.example reported.
 
@@ -970,7 +970,7 @@ Fix 1, technical: Paste the complete header block; there is no usable From addre
 
 Plain headline: This message passed the sender check (DMARC): it was signed by notify.example and it came from a server that notify.example allows. Both match notify.example, the domain in the From address.
 
-Technical headline: DMARC at mx.receiver.example passed because DKIM d=notify.example s=n1 passed and SPF passed for the RFC5321.MailFrom domain notify.example, and both align with the RFC5322.From domain notify.example.
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=notify.example s=n1 passed and SPF passed for the Return-Path domain notify.example (RFC5321.MailFrom), and both align with the From domain notify.example (RFC5322.From).
 
 Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
 
@@ -996,9 +996,9 @@ Flag 1, technical: The display name shows an address at bank.example, while the 
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers. Microsoft's own sender check failed it too.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF). Microsoft's own sender check failed it too.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as Microsoft 365 reported. Microsoft recorded compauth=fail reason=000, meaning explicit authentication failed: DMARC failed and the policy is quarantine or reject.
 
@@ -1022,7 +1022,7 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because the signature from shop.example didn't check out and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because DKIM d=shop.example failed verification and SPF soft failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because DKIM d=shop.example failed verification and SPF soft failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
 Cause, plain: The message was changed after it was signed, or the signature doesn't match the sender's published key. Microsoft's own sender check failed it too.
 
@@ -1052,7 +1052,7 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it was signed by mailer.example and it came from a server that bounce.mailer.example allows, but neither of those is shop.example, the domain in the From address.
 
-Technical headline: DMARC at Microsoft 365 failed because DKIM d=mailer.example passed and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, but neither aligns with the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because DKIM d=mailer.example passed and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), but neither aligns with the From domain shop.example (RFC5322.From).
 
 Cause, plain: The service sending this mail is using its own domain instead of shop.example, so the checks pass for the service but not for the sender. Microsoft's own sender check failed it too.
 
@@ -1082,9 +1082,9 @@ Fix 2, technical: Second, after DKIM: set a custom Return-Path (bounce) domain u
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers. Microsoft's own sender check failed it too.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF). Microsoft's own sender check failed it too.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as Microsoft 365 reported. Microsoft recorded compauth=fail reason=002, meaning the organization prohibits this sender and domain pair from sending spoofed mail.
 
@@ -1108,7 +1108,7 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message passed the sender check (DMARC): it was signed by shop.example and it came from a server that shop.example allows. Both match shop.example, the domain in the From address.
 
-Technical headline: DMARC at Microsoft 365 passed because DKIM d=shop.example passed and SPF passed for the RFC5321.MailFrom domain shop.example, and both align with the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 passed because DKIM d=shop.example passed and SPF passed for the Return-Path domain shop.example (RFC5321.MailFrom), and both align with the From domain shop.example (RFC5322.From).
 
 Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was. Microsoft's own sender check still passed it.
 
@@ -1134,7 +1134,7 @@ Technical headline: DMARC did not apply because Microsoft 365 found no DMARC rec
 
 Cause, plain: Without a DMARC setting, nothing stops others from sending mail that claims to be from shop.example. This message wouldn't pass if one were added. Microsoft's own sender check gave it a soft pass.
 
-Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would fail, because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example. Microsoft recorded compauth=softpass reason=201, meaning the PTR of the From domain aligns with the subnet of the connecting IP's PTR.
+Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would fail, because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From). Microsoft recorded compauth=softpass reason=201, meaning the PTR of the From domain aligns with the subnet of the connecting IP's PTR.
 
 Policy, plain: shop.example has no DMARC setting, so it gives mail providers no instructions for fake mail. Each provider decides for itself.
 
@@ -1164,7 +1164,7 @@ Technical headline: DMARC did not apply because Microsoft 365 found no DMARC rec
 
 Cause, plain: Without a DMARC setting, nothing stops others from sending mail that claims to be from shop.example. This message wouldn't pass if one were added.
 
-Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would fail, because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example. Microsoft recorded compauth=none reason=300, meaning not checked for composite authentication (code 300 has no entry of its own).
+Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put shop.example in a From address without failing a policy. With a record this message would fail, because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From). Microsoft recorded compauth=none reason=300, meaning not checked for composite authentication (code 300 has no entry of its own).
 
 Policy, plain: shop.example has no DMARC setting, so it gives mail providers no instructions for fake mail. Each provider decides for itself.
 
@@ -1190,9 +1190,9 @@ Fix 3, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF).
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as Microsoft 365 reported. Microsoft recorded compauth=none reason=451, meaning bypassed composite authentication (code 451 has no entry of its own).
 
@@ -1216,9 +1216,9 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers. Microsoft's own sender check still passed it.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF). Microsoft's own sender check still passed it.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as Microsoft 365 reported. Microsoft recorded compauth=pass reason=501, meaning DMARC not enforced: a valid bounce where sender and recipient had prior contact.
 
@@ -1242,9 +1242,9 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers. Microsoft's own sender check failed it too.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF). Microsoft's own sender check failed it too.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as Microsoft 365 reported. Microsoft recorded compauth=fail reason=601, meaning the From domain is one of the organization's accepted domains (self-to-self or intra-org spoofing).
 
@@ -1268,9 +1268,9 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers. Microsoft's own sender check still passed it.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF). Microsoft's own sender check still passed it.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as Microsoft 365 reported. Microsoft recorded compauth=pass reason=701, meaning DMARC not enforced because the organization has a history of legitimate mail from this infrastructure.
 
@@ -1294,9 +1294,9 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers. Microsoft's own sender check failed it too.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF). Microsoft's own sender check failed it too.
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as Microsoft 365 reported. Microsoft recorded compauth=fail reason=801, a code not in its published table.
 
@@ -1320,9 +1320,9 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 Plain headline: This message failed the sender check (DMARC) because it carried no signature and the sending server isn't on shop.example's list of approved servers, so nothing proved the mail came from shop.example.
 
-Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the RFC5321.MailFrom domain shop.example, so no identifier passed for the RFC5322.From domain shop.example.
+Technical headline: DMARC at Microsoft 365 failed because there was no DKIM signature and SPF failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers.
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF).
 
 Cause, technical: There is no DKIM signature, so DMARC rests on SPF alone. The server that handed the message over is not authorized by the SPF record of shop.example, as Microsoft 365 reported. Microsoft recorded compauth=none reason=905, meaning DMARC not enforced because of complex routing, such as mail through on-premises Exchange or another service first.
 

@@ -73,7 +73,7 @@
     const d = spf.domain;
     if (!spf.result) return { t: 'no SPF result was recorded', p: 'no check of the sending server was recorded', src: spf.src };
     if (!d) return { t: 'SPF returned ' + spf.result + ' with no domain named', p: 'the sending server check named no domain', src: spf.src };
-    const name = helo ? 'the HELO identity ' + d : 'the RFC5321.MailFrom domain ' + d;
+    const name = helo ? 'the HELO identity ' + d : 'the Return-Path domain ' + d + ' (RFC5321.MailFrom)';
     if (spf.result === 'pass' && !spf.relaxed) return { t: 'SPF passed for ' + name, p: helo ? 'the sending server called itself ' + d : 'it came from a server that ' + d + ' allows', unaligned: true, src: spf.src };
     if (spf.result === 'pass') return null;
     const plain = { fail: 'the sending server is not on ' + d + '\'s list of approved servers', softfail: 'the sending server is not on ' + d + '\'s list of approved servers', none: d + ' publishes no list of approved servers' }[spf.result] || 'the sending server check for ' + d + ' came out ' + spf.result;
@@ -91,21 +91,21 @@
     const un = pieces.filter(x => x.unaligned).length;
     const t = joinList(pieces.map(x => x.t));
     const p = joinList(pieces.map(x => x.p));
-    if (un && un === pieces.length) return { t: t + ', but ' + (un === 1 ? 'it does not align' : 'neither aligns') + ' with the RFC5322.From domain ' + from + '.', p: p + ', but ' + (un === 1 ? 'that is not ' : 'neither of those is ') + from + ', the domain in the From address.' };
-    if (un) return { t: t + ', and nothing that passed aligns with the RFC5322.From domain ' + from + '.', p: p + '. Nothing that checked out matches ' + from + ', the domain in the From address.' };
-    return { t: t + ', so no identifier passed for the RFC5322.From domain ' + from + '.', p: p + ', so nothing proved the mail came from ' + from + '.' };
+    if (un && un === pieces.length) return { t: t + ', but ' + (un === 1 ? 'it does not align' : 'neither aligns') + ' with the From domain ' + from + ' (RFC5322.From).', p: p + ', but ' + (un === 1 ? 'that is not ' : 'neither of those is ') + from + ', the domain in the From address.' };
+    if (un) return { t: t + ', and nothing that passed aligns with the From domain ' + from + ' (RFC5322.From).', p: p + '. Nothing that checked out matches ' + from + ', the domain in the From address.' };
+    return { t: t + ', so no identifier passed for the From domain ' + from + ' (RFC5322.From).', p: p + ', so nothing proved the mail came from ' + from + '.' };
   }
   function passPieces(auth) {
     const out = [];
     for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: 'DKIM d=' + k.domain + (k.selector ? ' s=' + k.selector : '') + ' passed', p: 'it was signed by ' + k.domain, relaxedOnly: k.relaxedOnly, src: k.src });
     const s = auth.spf;
-    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF passed for the RFC5321.MailFrom domain ' + s.domain, p: 'it came from a server that ' + s.domain + ' allows', relaxedOnly: s.relaxedOnly, src: s.src });
+    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF passed for the Return-Path domain ' + s.domain + ' (RFC5321.MailFrom)', p: 'it came from a server that ' + s.domain + ' allows', relaxedOnly: s.relaxedOnly, src: s.src });
     return out;
   }
   function passClause(pieces, from) {
-    const relaxed = pieces.some(x => x.relaxedOnly) ? ' (relaxed alignment, through the organizational domain)' : '';
+    const relaxed = pieces.some(x => x.relaxedOnly) ? ' under relaxed alignment, through the organizational domain' : '';
     return {
-      t: joinList(pieces.map(x => x.t)) + ', and ' + (pieces.length === 1 ? 'it aligns' : 'both align') + ' with the RFC5322.From domain ' + from + relaxed + '.',
+      t: joinList(pieces.map(x => x.t)) + ', and ' + (pieces.length === 1 ? 'it aligns' : 'both align') + ' with the From domain ' + from + ' (RFC5322.From)' + relaxed + '.',
       p: joinList(pieces.map(x => x.p)) + '. ' + (pieces.length === 1 ? 'That' : 'Both') + (relaxed ? ' belong' + (pieces.length === 1 ? 's' : '') + ' to ' + from + ', the domain in the From address, or to its parent domain.' : ' match' + (pieces.length === 1 ? 'es ' : ' ') + from + ', the domain in the From address.'),
     };
   }
@@ -448,7 +448,7 @@
       }
     } else if (list.take) {
       const bd = Array.from(new Set(list.broken.map(k => k.domain)));
-      const head = say('caveat', 'DMARC failed because the message came through the mailing list ' + list.id + ', which ' + (bd.length ? 'changed it, breaking the DKIM signature' + (bd.length > 1 ? 's' : '') + ' from ' + joinList(bd) + ', and ' : '') + 'sent it on as ' + list.org + ', which does not align with the RFC5322.From domain ' + fd + '.',
+      const head = say('caveat', 'DMARC failed because the message came through the mailing list ' + list.id + ', which ' + (bd.length ? 'changed it, breaking the DKIM signature' + (bd.length > 1 ? 's' : '') + ' from ' + joinList(bd) + ', and ' : '') + 'sent it on as ' + list.org + ', which does not align with the From domain ' + fd + ' (RFC5322.From).',
         'This message failed the sender check (DMARC) because it came through the mailing list ' + list.id + '. The list ' + (bd.length ? 'changed the message, which broke the sender\'s signature, and ' : '') + 'sent it on under its own domain, ' + list.org + ', not ' + fd + '.', uniq(list.src.concat(list.broken.flatMap(k => k.src), auth.spf.src)));
       const how = list.tag ? ' The subject carries the list tag ' + list.tag + ', one such change; a footer added to the body is another.' : ' Lists break signatures by tagging the subject or adding a footer.';
       const howPlain = list.tag ? ', for example by adding ' + list.tag + ' to the subject.' : ', for example by adding a footer.';
@@ -497,7 +497,7 @@
     const spfFailed = ['fail', 'softfail'].includes(spf.result);
     const spfErr = ['none', 'neutral', 'permerror', 'temperror'].includes(spf.result) && spf.domain;
     const heloOnly = spf.result === 'pass' && !spf.relaxed && /helo/i.test(spf.identity) && !auth.dkim.some(k => k.result === 'pass');
-    if (heloOnly && !failedSig && !dkimErr) return say('fail', 'SPF passed only for the server name ' + spf.domain + ', which is not ' + fd + '. The bounce address was empty, so SPF checked the name the sending server gave itself (HELO) instead of a sender domain, and nothing else passed for ' + fd + '.', 'The message had no hidden return address, so the only check that passed was on the sending server\'s own name, which does not belong to ' + fd + '.', src);
+    if (heloOnly && !failedSig && !dkimErr) return say('fail', 'SPF passed only for the server name ' + spf.domain + ', which is not ' + fd + '. The bounce address was empty, so SPF checked the name the sending server gave itself (HELO) instead of a sender domain, and nothing else passed for ' + fd + '.', 'The message had no hidden return address (Return-Path), so the only check that passed was on the sending server\'s own name, which does not belong to ' + fd + '.', src);
     if (passedElsewhere.length && !failedSig && !dkimErr && !spfFailed && !spfErr) {
       const own = svc.t === 'the sending service' ? 'the sending service\'s own' : svc.t + '\'s own';
       return say('fail', 'The checks passed, but for ' + joinList(Array.from(new Set(passedElsewhere))) + ', ' + (passedElsewhere.length === 1 ? 'a domain' : 'domains') + ' that ' + (passedElsewhere.length === 1 ? 'is' : 'are') + ' not ' + fd + '. That is what happens when ' + own + ' domain signs and bounces the mail. DMARC counts a pass only on the From domain or, in relaxed mode, its organizational domain.', 'The service sending this mail is using its own domain instead of ' + fd + ', so the checks pass for the service but not for the sender.', src);
@@ -516,9 +516,9 @@
     if (!parts.length) parts.push('Neither SPF nor DKIM produced a pass on a domain that aligns with ' + fd + '.');
     const plain = failedSig ? 'The message was changed after it was signed, or the signature does not match the sender\'s published key.'
       : dkimErr ? 'The signature on the message could not be checked, and nothing else proves it came from ' + fd + '.'
-        : spfFailed ? 'The server that sent this is not on the sender\'s list of approved servers.'
+        : spfFailed ? 'The server that sent this is not on the sender\'s list of approved servers (SPF).'
           : spf.result === 'none' && spfErr ? 'The sender\'s domain publishes no list of approved servers, and nothing else proves the mail came from ' + fd + '.'
-            : spfErr ? 'The sender\'s list of approved servers could not be read, and nothing else proves the mail came from ' + fd + '.'
+            : spfErr ? 'The sender\'s list of approved servers (SPF) could not be read, and nothing else proves the mail came from ' + fd + '.'
               : 'Nothing in the message proves it came from ' + fd + '.';
     return say('fail', parts.join(' '), plain, src);
   }

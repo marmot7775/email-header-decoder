@@ -234,9 +234,15 @@ hop, TLS, RFC, policy. A test enforces the list, and no
 semicolons, over every fixture and every case in
 docs/sentences.md. Contractions in Simple are applied in one place,
 P.contract in parse.js, so write Simple strings either way.
+A listed word may appear in Simple in brackets right after the
+plain words that explain it, as in the sender check (DMARC) or the
+hidden return address (Return-Path), so a reader learns the term
+their email service uses. The test ignores bracketed text.
 
-Technical is for a deliverability practitioner. Use the protocol's
-own terms exactly: RFC5322.From, RFC5321.MailFrom, the HELO
+Technical is for a deliverability practitioner. Lead with the word
+practitioners say, then the RFC identifier in brackets: the
+Return-Path domain (RFC5321.MailFrom), the From domain
+(RFC5322.From). Use the protocol's own terms exactly: RFC5322.From, RFC5321.MailFrom, the HELO
 identity, DKIM d=, s= and i=, relaxed and strict alignment (adkim,
 aspf), the organizational domain, p=, sp=, pct=, Gmail's dis=,
 Microsoft's action= and compauth reason, ARC i= and cv=, the

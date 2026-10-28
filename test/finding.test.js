@@ -16,14 +16,14 @@ test('status pass: the headline names the aligned identifiers and the From domai
   const f = run('gmail-show-original.txt').finding;
   assert.equal(f.status, 'pass');
   assert.equal(f.state, 'pass');
-  assert.equal(f.headline.technical, 'DMARC at mx.google.com passed because DKIM d=sender.example s=mail2026 passed and SPF passed for the RFC5321.MailFrom domain sender.example, and both align with the RFC5322.From domain sender.example.');
+  assert.equal(f.headline.technical, 'DMARC at mx.google.com passed because DKIM d=sender.example s=mail2026 passed and SPF passed for the Return-Path domain sender.example (RFC5321.MailFrom), and both align with the From domain sender.example (RFC5322.From).');
   assert.match(f.consequence.technical, /p=quarantine.*did not come into play/);
 });
 
 test('status fail: a sending service\'s own domains, in the one sentence the prompt describes', () => {
   const f = run('esp-unaligned.txt').finding;
   assert.equal(f.status, 'fail');
-  assert.equal(f.headline.technical, 'DMARC at mx.google.com failed because DKIM d=mailer.example s=m1 passed and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, but neither aligns with the RFC5322.From domain shop.example.');
+  assert.equal(f.headline.technical, 'DMARC at mx.google.com failed because DKIM d=mailer.example s=m1 passed and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), but neither aligns with the From domain shop.example (RFC5322.From).');
   assert.match(f.headline.plain, /signed by mailer\.example and it came from a server that bounce\.mailer\.example allows, but neither of those is shop\.example/);
   assert.match(f.cause.technical, /not shop\.example/);
   assert.match(f.consequence.technical, /p=quarantine.*sent this message to spam \(dis=QUARANTINE\)/);
@@ -308,7 +308,7 @@ test('Simple wording uses none of the technical words', () => {
     const f = r.finding;
     const all = [].concat(f ? [f.headline, f.cause, f.consequence].concat(f.details, f.fixes, f.flags, f.limits) : [], r.input.notes, r.message.notes || [], r.decoded.notes || [], (r.decoded.filters || []).flatMap(g => g.items || []), r.decoded.list || [], r.decoded.platform && r.decoded.platform.statement ? [r.decoded.platform.statement] : [], r.chain.notes || [], r.auth.notes || []).filter(Boolean);
     // Microsoft's own setting name is quoted so an admin can find it.
-    for (const x of all) if (x.plain && (SIMPLE_BANNED.test(x.plain.replace(/Trusted ARC sealers/g, '')) || x.plain.includes(';'))) bad.push(name + ': ' + x.plain);
+    for (const x of all) if (x.plain && (SIMPLE_BANNED.test(x.plain.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')) || x.plain.includes(';'))) bad.push(name + ': ' + x.plain);
   }
   assert.deepEqual(Array.from(new Set(bad)).slice(0, 40), []);
 });
