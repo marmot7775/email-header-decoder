@@ -81,9 +81,9 @@
     '010': 'DMARC failed with quarantine or reject, and the From domain is one of the organization\'s own accepted domains',
     '100': 'SPF or DKIM passed and aligns with the From domain', '101': 'DKIM signed by the From domain', '102': 'SPF passed and the MAIL FROM aligns with the From domain',
     '103': 'the From domain aligns with the PTR record of the source IP', '104': 'the PTR record of the source IP aligns with the From domain',
-    '108': 'DKIM failed because an earlier legitimate hop modified the body', '109': 'no DMARC record, but the message would pass', '111': 'DMARC hit an error, but SPF or DKIM aligns with the From domain',
+    '108': 'an earlier legitimate hop modified the body, so the DKIM signature did not verify', '109': 'no DMARC record, but the message would pass', '111': 'DMARC hit an error, but SPF or DKIM aligns with the From domain',
     '112': 'a DNS timeout prevented the DMARC record lookup', '115': 'sent from a Microsoft 365 organization where the From domain is an accepted domain', '116': 'the MX record of the From domain aligns with the PTR record of the connecting IP',
-    '130': 'an ARC result from a trusted ARC sealer overrode the DMARC failure', '201': 'the PTR of the From domain aligns with the subnet of the connecting IP\'s PTR', '202': 'the From domain aligns with the domain of the connecting IP\'s PTR record',
+    '130': 'an ARC result from a trusted ARC sealer overrode the DMARC result', '201': 'the PTR of the From domain aligns with the subnet of the connecting IP\'s PTR', '202': 'the From domain aligns with the domain of the connecting IP\'s PTR record',
     '501': 'DMARC not enforced: a valid bounce where sender and recipient had prior contact', '502': 'DMARC not enforced: a valid bounce for a message this organization sent',
     '601': 'the From domain is one of the organization\'s accepted domains (self-to-self or intra-org spoofing)', '905': 'DMARC not enforced because of complex routing, such as mail through on-premises Exchange or another service first',
   };
@@ -99,8 +99,10 @@
     const lvl = { pass: 'pass', fail: 'fail', softpass: 'warn' }[c.result] || 'info';
     const meaning = compauthMeaning(c.reason);
     const raw = c.result + (c.reason ? ' reason=' + c.reason : '');
-    if (c.reason && !meaning) return item('compauth', raw, lvl, 'Composite authentication ' + c.result + '. Reason code ' + c.reason + ' is not in Microsoft\'s published table, so it is shown as written.', 'Microsoft\'s own sender check ' + ({ pass: 'passed', fail: 'failed', softpass: 'gave it a soft pass', none: 'came out neutral' }[c.result] || 'came out ' + c.result) + '. Its reason code isn\'t one Microsoft explains publicly.', c.src);
-    return item('compauth', raw, lvl, 'Composite authentication ' + c.result + (meaning ? ': ' + meaning + '.' : '.'), 'Microsoft\'s own sender check ' + ({ pass: 'passed', fail: 'failed', softpass: 'gave it a soft pass', none: 'came out neutral' }[c.result] || 'came out ' + c.result) + '. The Technical view gives its reason.', c.src);
+    // none is a skip for 3xx and a bypass for 4xx and 9xx.
+    const did = { pass: 'passed', fail: 'failed', softpass: 'gave a soft pass' }[c.result] || (c.result === 'none' ? (/^[49]/.test(c.reason || '') ? 'was bypassed' : 'was skipped') : 'came out ' + c.result);
+    if (c.reason && !meaning) return item('compauth', raw, lvl, 'Reason code ' + c.reason + ' is not in Microsoft\'s published table, so it is shown as written.', 'Microsoft\'s own sender check ' + did + '. Its reason code isn\'t one Microsoft explains publicly.', c.src);
+    return item('compauth', raw, lvl, meaning ? meaning.charAt(0).toUpperCase() + meaning.slice(1) + '.' : 'Microsoft wrote no reason code.', 'Microsoft\'s own sender check ' + did + '.' + (meaning ? ' The technical line gives the reason.' : ''), c.src);
   }
 
   function decodeMicrosoft(fields, auth) {

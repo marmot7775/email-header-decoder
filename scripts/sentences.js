@@ -158,7 +158,9 @@ function meanings() {
   for (const k of ['Internal', 'Anonymous', 'External', 'Partner']) emit('Microsoft', decode(['X-MS-Exchange-Organization-AuthAs: ' + k]));
   emit('Microsoft', decode(['X-MS-Exchange-Organization-AuthSource: BN3PEPF0000B077.namprd04.prod.outlook.com']));
   const codes = Object.keys(T.COMPAUTH).concat(['701', '702', '703', '704', '299', '399', '499', '699', '799', '999', '801']);
-  for (const k of codes) emit('Microsoft', decode([], ['fail', k]));
+  // The result Microsoft writes with each hundreds class; 8xx is not in its table.
+  const CA = { 0: 'fail', 1: 'pass', 2: 'softpass', 3: 'none', 4: 'none', 5: 'pass', 6: 'fail', 7: 'pass', 8: 'fail', 9: 'none' };
+  for (const k of codes) emit('Microsoft', decode([], [CA[k[0]], k]));
   emit('Proofpoint', decode(['X-Proofpoint-Spam-Details: rule=notspam policy=default score=0 spamscore=0 phishscore=0 bulkscore=0 malwarescore=0 suspectscore=0 impostorscore=0 adultscore=0 mlxscore=0 clxscore=0']));
   emit('Proofpoint', decode(['X-Proofpoint-Spam-Details: rule=spam']));
   emit('Proofpoint', decode(['X-Proofpoint-Spam-Details: rule=custom_rule']));

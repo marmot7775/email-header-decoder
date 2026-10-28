@@ -138,7 +138,7 @@
       ? say('pass', 'SPF passed for ' + id + ip + ', which aligns with ' + from + (r.relaxedOnly ? ' in relaxed mode only.' : '.'), 'The sending server is approved by ' + r.domain + ', which belongs to the sender.', r.src)
       : say('caveat', 'SPF passed for ' + id + ip + ', which does not align with ' + from + '. A pass on another domain does not count for DMARC.', 'The sending server is approved, but by ' + r.domain + ', not by the sender\'s own domain.', r.src);
     if (!r.result) return say('unknown', 'SPF domain ' + id + ' (from ' + r.identity + ') carries no result from the receiver.', 'The receiver did not record a check of the sending server.', r.src);
-    return say(r.state, 'SPF ' + (SPF_WORD[r.result] || 'returned ' + r.result) + ' for ' + id + ip + note + '.' + (forwarded && /fail/.test(r.result) ? ' A forward sends from the forwarder\'s own server, which the sender\'s SPF record does not list.' : ''), 'The check of the sending server against ' + r.domain + ' came out ' + r.result + '.', r.src);
+    return say(r.state, 'SPF ' + (SPF_WORD[r.result] || 'returned ' + r.result) + ' for ' + id + ip + note + '.' + (forwarded && /fail/.test(r.result) ? ' A forward sends from the forwarder\'s own server, which the sender\'s SPF record does not list.' : ''), ({ fail: r.domain + '\'s list of approved servers does not include the server that sent this.', softfail: r.domain + '\'s list of approved servers does not include the server that sent this, and asks receivers to treat that as suspicious rather than refuse it.', neutral: r.domain + '\'s list of approved servers makes no statement about the server that sent this.', none: r.domain + ' publishes no list of approved servers.', permerror: r.domain + '\'s list of approved servers is set up wrong, so it couldn\'t be read.', temperror: r.domain + '\'s list of approved servers couldn\'t be read this time.' }[r.result] || 'The check of the sending server against ' + r.domain + ' gave a result this page doesn\'t know (' + r.result + ').'), r.src);
   }
 
   // Forwarding, from the ARC chain. An ARC set the final receiver sealed
@@ -236,7 +236,7 @@
     const f = [];
     const add = (state, t, p, src) => f.push(say(state, t, p, src || []));
     if (status === 'unknown') {
-      if (ctx.why === 'no-received') add('unknown', 'Paste the headers of the copy the recipient received. This copy never passed through a receiving server, so nothing was checked.', 'These headers come from a sent or draft copy. Open the message in the recipient\'s mailbox and copy its headers from there.');
+      if (ctx.why === 'no-received') add('unknown', 'Paste the headers of the copy the recipient received. This copy did not pass through a receiving server, so nothing was checked.', 'These headers come from a sent or draft copy. Open the message in the recipient\'s mailbox and copy its headers from there.');
       else if (ctx.why === 'two-from' || ctx.why === 'multi-domain') add('fail', 'Treat the message as suspicious: with no single From domain, DMARC cannot protect the recipient.', 'Do not trust this message. It names more than one sender, which is a common trick in forged mail.');
       else if (ctx.why === 'no-from') add('unknown', 'Paste the complete header block; there is no usable From address to check against.', 'The sender\'s address is missing, so copy the full headers again and make sure the From line is included.');
       else add('unknown', 'Get the same message from a Gmail or Microsoft 365 mailbox; both record SPF, DKIM and DMARC results.', 'Send the same message to a Gmail or Outlook mailbox and copy the headers from there. Those services write down the results this page needs.');
@@ -257,7 +257,7 @@
     // could be the forward or a forgery, and SPF here checked the forwarder.
     const unproven = fw.yes && fw.preResult === 'pass';
     if (unproven) add('caveat', 'Judge the sender by a copy delivered straight to the mailbox. The forwarder\'s record shows a pass before the forward, but the receiver did not confirm it, so this failure could come from the forward or from a forgery.', 'Ask for a copy sent straight to you, without the forward, and check that one. The forwarding service says the message passed before it forwarded it, but nothing here confirms that.', fw.src);
-    if (fw.yes && fw.preResult === 'fail') add('fail', 'Look at the sender, not the forward: the message failed before it was forwarded. If ' + from + ' did not send it, it is forged and DMARC did its job.', 'The problem started before the forward. If ' + from + ' did not send this message, it is forged, and the failed check is working as it should.', fw.aarSrc);
+    if (fw.yes && fw.preResult === 'fail') add('fail', 'Look at the sender, not the forward: the message failed before it was forwarded. If ' + from + ' did not send it, it is forged and the DMARC failure is correct.', 'The problem started before the forward. If ' + from + ' did not send this message, it is forged, and the failed check is working as it should.', fw.aarSrc);
     if (status === 'none') {
       add('caveat', 'Publish a DMARC record at _dmarc.' + from + ' with p=none and a rua= address, read the reports, then move to p=quarantine once every real source passes.', 'Ask whoever manages the DNS for ' + from + ' to add a DMARC record. Start with the setting that only sends reports, and tighten it once the reports show all your real mail passes.', dm.src);
     }
@@ -271,14 +271,14 @@
     const failed = auth.dkim.find(k => k.result === 'fail');
     const perm = auth.dkim.find(k => k.result === 'permerror');
     if (!dkimAligned) {
-      if (!auth.dkim.length) add(status === 'pass' ? 'caveat' : 'fail', (status === 'pass' ? 'DMARC rests on SPF alone, and forwarding breaks SPF. ' : '') + 'Turn on DKIM signing for ' + from + ' at ' + svc.t + '. Aligned DKIM is what lets DMARC pass and keep passing when mail is forwarded.', 'Turn on email signing (DKIM) for ' + from + ' in the settings of ' + svc.p + '. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.', auth.spf.src);
+      if (!auth.dkim.length) add(status === 'pass' ? 'caveat' : 'fail', (status === 'pass' ? 'DMARC depends on SPF alone, and a forward breaks SPF. ' : '') + 'Turn on DKIM signing for ' + from + ' at ' + svc.t + '. Aligned DKIM lets DMARC pass, including after a forward.', 'Turn on email signing (DKIM) for ' + from + ' in the settings of ' + svc.p + '. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.', auth.spf.src);
       else if (unaligned) add(status === 'pass' ? 'caveat' : 'fail', 'At ' + svc.t + ', set up domain authentication for ' + from + ' so the DKIM signature carries d=' + from + ' or a subdomain of it, instead of d=' + unaligned.domain + '.', 'In the settings of ' + svc.p + ', turn on domain authentication for ' + from + '. The service gives you a few DNS records to add, and after that your mail is signed with your own domain instead of ' + unaligned.domain + '.', unaligned.src);
-      if (failed && !fw.yes) add('fail', 'The signature from d=' + failed.domain + ' broke between signing and ' + receiver + '. Look for anything that edits mail after ' + svc.t + ' signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at ' + (failed.selector || '<selector>') + '._domainkey.' + failed.domain + ' is the one it signs with.', 'The signature on this message was damaged on the way. Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave ' + svc.p + '. That is the usual cause.', failed.src);
+      if (failed && !fw.yes) add('fail', 'The signature from d=' + failed.domain + ' broke between signing and ' + receiver + '. Look for anything that edits mail after ' + svc.t + ' signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at ' + (failed.selector || '<selector>') + '._domainkey.' + failed.domain + ' is the one it signs with.', 'Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave ' + svc.p + '. That is the usual cause of a broken signature.', failed.src);
       if (perm) add('fail', 'Publish or repair the DKIM key at ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + '; ' + receiver + ' could not use it.', 'The key that checks this signature could not be read. Ask whoever manages the DNS for ' + perm.domain + ' to compare the record named ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + ' with what ' + svc.p + ' says it should be.', perm.src);
     }
     const s = auth.spf;
     if (s.domain && !/helo/i.test(s.identity) && !unproven) {
-      if (s.result === 'fail' || s.result === 'softfail') add('fail', 'If this is your mail, add ' + svc.t + ' to the SPF record of ' + s.domain + (s.ip ? ' so it covers ' + s.ip : '') + '. If it is not, SPF did its job.', 'If you sent this, ask whoever manages the DNS for ' + s.domain + ' to add ' + svc.p + ' to its list of allowed servers (the SPF record). The service\'s setup page gives the exact entry. If you didn\'t send it, someone else used your domain and this check caught it.', s.src);
+      if (s.result === 'fail' || s.result === 'softfail') add('fail', 'If this is your mail, add ' + svc.t + ' to the SPF record of ' + s.domain + (s.ip ? ' so it covers ' + s.ip : '') + '. If it is not, the SPF failure is correct.', 'If you sent this, ask whoever manages the DNS for ' + s.domain + ' to add ' + svc.p + ' to its list of allowed servers (the SPF record). The service\'s setup page gives the exact entry. If you didn\'t send it, someone else used your domain and the check correctly failed it.', s.src);
       else if (s.result === 'none') add('fail', 'Publish an SPF record for ' + s.domain + ' that lists the servers that send for it.', 'Ask whoever manages the DNS for ' + s.domain + ' to publish an SPF record listing the services that send your mail.', s.src);
       else if (s.result === 'permerror') add('fail', 'Repair the SPF record of ' + s.domain + ': check its syntax and keep it within 10 DNS lookups.', 'The SPF record for ' + s.domain + ' is broken, often because it lists too many services. Ask whoever manages its DNS to check and simplify it.', s.src);
       else if (s.result === 'pass' && !s.relaxed && !fw.yes && (dkimAligned || unaligned || !auth.dkim.length) && status !== 'pass') add('caveat', 'Second, after DKIM: set a custom Return-Path (bounce) domain under ' + from + ' at ' + svc.t + ' so SPF aligns too.', 'Once the signature is fixed, you can also give ' + svc.p + ' a custom return address on ' + from + '. Services call it a custom return path or sending domain. It\'s optional.', s.src);
@@ -314,7 +314,7 @@
     if (fa && fa.display && /@/.test(fa.display)) {
       const m = fa.display.match(/[^\s<>"'()]+@[^\s<>"'()]+/);
       const dd = m ? P.domainOf(m[0]) : '';
-      if (dd && fa.domain && HA.psl.orgDomain(dd) !== HA.psl.orgDomain(fa.domain)) fl.push(say('fail', 'The display name shows an address at ' + dd + ', while the real From domain is ' + fa.domain + '. That is a common impersonation layout.', 'The name shown for the sender contains an address at ' + dd + ', but the message really comes from ' + fa.domain + '. Forged mail often does this.', fa.src));
+      if (dd && fa.domain && HA.psl.orgDomain(dd) !== HA.psl.orgDomain(fa.domain)) fl.push(say('fail', 'The display name shows an address at ' + dd + ', while the real From domain is ' + fa.domain + '. That is a common impersonation layout.', 'The name shown for the sender contains an address at ' + dd + ', but the message comes from ' + fa.domain + '. Forged mail often does this.', fa.src));
     }
     const untrustedPass = auth.all.filter(r => r.untrusted && r.entries.some(e => e.method === 'dmarc' && e.result === 'pass'));
     if (untrustedPass.length && status !== 'pass') fl.push(say('caveat', 'An Authentication-Results field the receiver did not write claims dmarc=pass. It is ignored here: the sender or a hop before the receiver could have written it.', 'One set of results in the headers claims the message passed, but the receiving system did not write it, so it is ignored.', untrustedPass.flatMap(r => r.src)));
@@ -330,6 +330,7 @@
     const svc = serviceOf(decoded.platform);
     const dm = auth.dmarc;
     const fw = forwardOf(auth, chain, from);
+    let preFail = null; // dropped when the cause says the same thing
     const list = listOf(ctx);
     // The list is blamed only when it re-sent the mail under its own domain
     // and its server did not record a failure before the list.
@@ -340,6 +341,7 @@
       out.status = status;
       out.state = status === 'pass' && dm.disagreement ? 'caveat' : STATE_OF[status];
       out.headline = headline; out.cause = withCompauth(cause, auth.compauth);
+      out.details = out.details.filter(s => s.technical !== cause.technical);
       out.consequence = consequenceOf(status, dm, fd, receiver, from.org);
       out.fixes = fixesOf(status, c);
       out.limits = from.defined && auth.primary >= 0 ? limitsOf(c) : [];
@@ -360,7 +362,7 @@
       const sigs = auth.signatures.map(s => 'd=' + s.d + (HA.auth.alignRow('dkim', s.d, 'pass', from).relaxed ? ' (would align)' : ' (would not align)'));
       out.details = sigs.length ? [say('unknown', 'DKIM signatures present, not checked by any receiver here: ' + joinList(sigs) + '.', 'The message carries a signature, but no receiver\'s check of it is recorded.', auth.signatures.flatMap(s => s.src))] : [];
       if (!chain.count) return finish('unknown', say('unknown', 'Nothing was checked because these headers have no Received fields: this is a sent or draft copy, and SPF, DKIM and DMARC are checked only by a receiving server.', 'This is the sender\'s own copy, so no mail system has checked it yet.', []),
-        say('unknown', 'A receiver writes Authentication-Results when it accepts the message. A copy that was never received has none.', 'The checks happen when a message arrives, and this copy never arrived anywhere.', []));
+        say('unknown', 'A receiver writes Authentication-Results when it accepts the message. This copy was not received, so it has none.', 'The checks happen when a message arrives, and this copy hasn\'t arrived anywhere.', []));
       const rcv = chain.trust.operator || 'the receiving server';
       return finish('unknown', say('unknown', auth.all.length ? 'Nothing can be judged because no Authentication-Results field here was written by ' + rcv + '; ' + (auth.all.length === 1 ? 'the one present was' : 'the ' + numWord(auth.all.length) + ' present were') + ' written before it took custody or cannot be tied to it.' : 'Nothing can be judged because there is no Authentication-Results field: ' + rcv + ' recorded no SPF, DKIM or DMARC result here.', 'The receiving mail system did not record its checks in these headers.', auth.all.flatMap(r => r.src)),
         say('unknown', 'Some servers skip Authentication-Results, and some mail programs strip it when exporting. Results written by anyone else could be forged, so they are not used.', 'Without the receiver\'s own record there is nothing trustworthy to read.', auth.all.flatMap(r => r.src)));
@@ -393,15 +395,15 @@
         const cl = passClause(pp, fd);
         const head = say(computedOnly ? 'caveat' : 'pass', lead + (computedOnly ? 'passes' : 'passed') + ' because ' + cl.t, plainLead + 'passed the sender check (DMARC). ' + upFirst(cl.p), uniq(pp.flatMap(x => x.src).concat(from.src)));
         const dkimCarries = auth.dkim.some(k => k.result === 'pass' && k.relaxed), spfCarries = auth.spf.result === 'pass' && auth.spf.relaxed;
-        const lasts = dkimCarries && spfCarries ? 'For ' + fd + ', both SPF and DKIM carry the pass, so it survives a forward that breaks SPF.' : dkimCarries ? 'For ' + fd + ', aligned DKIM carries the pass, and it survives forwarding as long as nothing alters the signed headers or body.' : 'For ' + fd + ', only SPF carries the pass. A forward or a mailing list breaks it, because SPF checks whichever server hands the message over; aligned DKIM would keep it.';
+        const lasts = dkimCarries && spfCarries ? 'For ' + fd + ', both SPF and DKIM pass and align, so the message still passes after a forward that breaks SPF.' : dkimCarries ? 'For ' + fd + ', the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.' : 'For ' + fd + ', only SPF passes and aligns. A forward or a mailing list breaks it, because SPF checks whichever server hands the message over; aligned DKIM would still pass.';
         const cause = say('pass', lasts + (computedOnly ? ' Worked out here; the receiver recorded no DMARC result.' : '') + (fw.yes ? ' The message was forwarded by ' + joinList(fw.by) + ' and still passed.' : ''), 'A message passes when it is signed by, or sent for, the domain in its From address, and this one was.', allSrc);
         return finish('pass', head, cause);
       }
       // Reported pass with nothing aligned: say why the receiver passed it.
       const d = dm.disagreement;
-      const why = d && d.reason === 'arc-override' ? 'it trusted the ARC record from ' + joinList(fw.by.length ? fw.by : auth.arc.sealers.filter(Boolean)) + ', whose results before the forward show a pass' : 'of a local policy or a result it did not write into these headers';
+      const why = d && d.reason === 'arc-override' ? 'because it trusted the ARC record from ' + joinList(fw.by.length ? fw.by : auth.arc.sealers.filter(Boolean)) + ', whose results before the forward show a pass' : 'for a reason these headers do not show';
       const fp = failPieces(auth);
-      return finish('pass', say('caveat', 'DMARC passed at ' + receiver + ' only because ' + why + '; in these headers ' + joinList(fp.map(x => x.t)) + ', and nothing aligned with the From domain ' + fd + '.', 'This message was let through on trust: its own checks do not match ' + fd + ', but the receiving system accepted ' + (d && d.reason === 'arc-override' ? 'the forwarder\'s word that they passed earlier.' : 'it under its own rules.'), uniq(fp.flatMap(x => x.src).concat(dm.src))),
+      return finish('pass', say('caveat', 'DMARC passed at ' + receiver + ' ' + why + '; in these headers ' + joinList(fp.map(x => x.t)) + ', and nothing aligned with the From domain ' + fd + '.', 'This message passed the sender check (DMARC), but its own checks do not match ' + fd + '. ' + (d && d.reason === 'arc-override' ? 'The receiving system accepted the forwarder\'s word that they passed earlier.' : 'The receiving system passed it for a reason the headers don\'t show.'), uniq(fp.flatMap(x => x.src).concat(dm.src))),
         say('caveat', d ? d.technical : 'The receiver reported dmarc=pass with no aligned pass in these headers.', d ? d.plain : 'The receiving system passed the message for reasons the headers do not show.', allSrc));
     }
 
@@ -448,7 +450,7 @@
         return finish('forwarded', head, cause);
       }
       if (fw.preResult === 'fail') {
-        out.details.push(say('fail', 'The forward is not the cause: ' + preSay + ', so the message was already failing when it arrived there.', 'The message already failed the check before it was forwarded, so the problem is at the sender.', fw.aarSrc));
+        out.details.push(preFail = say('fail', 'The forward is not the cause: ' + preSay + ', so the message was already failing when it arrived there.', 'The message already failed the check before it was forwarded, so the problem is at the sender.', fw.aarSrc));
       } else if (fw.preResult === 'pass') {
         out.details.push(say('caveat', 'The forwarder\'s record says ' + preSay + ', but ' + (!fw.intact ? 'the ARC chain is broken' : fw.receiverArc === 'fail' ? receiver + ' reported arc=fail' : receiver + ' did not report arc=pass, and this page does not verify ARC seals') + ', so that record is not relied on and the failure is not blamed on the forward.', 'The forwarder claims the message passed before it was forwarded, but its record does not hold up, so this page does not rely on it.', fw.src.concat(auth.arcResult ? auth.arcResult.src : [])));
       }
@@ -479,6 +481,7 @@
         say('caveat', d.technical, d.plain, d.src));
     }
     const head = say('fail', lead + (computedOnly ? 'fails' : 'failed') + ' because ' + fcl.t, plainLead + (computedOnly ? 'fails' : 'failed') + ' the sender check (DMARC). ' + upFirst(fcl.p), uniq(fp.flatMap(x => x.src).concat(from.src, dm.src)));
+    out.details = out.details.filter(s => s !== preFail);
     return finish('fail', head, fw.yes && fw.preResult === 'fail'
       ? say('fail', 'The message was already failing before the forward: ' + fw.writer + ' recorded ' + (preText(fw) || 'no passing result') + '. ' + (auth.spf.result === 'pass' && !auth.spf.relaxed && auth.spf.domain ? 'SPF now passes only for the forwarder\'s domain ' + auth.spf.domain + ', which does not count for ' + fd + '.' : 'Nothing after the forward aligns with ' + fd + ' either.'), 'The message failed the check before it was ever forwarded, so the problem is with the sender, not the forward.', uniq(fw.aarSrc.concat(auth.spf.src)))
       : causeOfFail(auth, fd, receiver, svc));
@@ -510,7 +513,7 @@
     }
     const parts = [];
     const ip = spf.ip ? ', ' + spf.ip + ',' : '';
-    if (!auth.dkim.length) parts.push('There is no DKIM signature, so DMARC rests on SPF alone.');
+    if (!auth.dkim.length) parts.push('There is no DKIM signature, so DMARC depends on SPF alone.');
     const elsewhere = auth.dkim.filter(k => k.result === 'pass' && !k.relaxed).map(k => k.domain);
     if (elsewhere.length) parts.push('DKIM passed only for ' + joinList(elsewhere) + ', which is not ' + fd + '.');
     if (failedSig) parts.push('The DKIM signature from ' + failedSig.domain + ' did not verify at ' + receiver + (failedSig.comments && failedSig.comments[0] ? ' (' + failedSig.comments[0] + ')' : '') + ': something changed the signed part of the message after signing, or the key in DNS does not match.');

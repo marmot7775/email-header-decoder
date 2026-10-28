@@ -84,7 +84,8 @@ test('forwarded mail that already failed before the forward stays a sender failu
   assert.equal(f.forwarded.yes, true);
   assert.equal(f.forwarded.preForward.result, 'fail');
   assert.match(f.cause.technical, /^The message was already failing before the forward: mx\.forward\.example recorded spf=fail/);
-  assert.ok(f.details.some(x => /^The forward is not the cause/.test(x.technical) && x.state === 'fail'));
+  // The cause says it, so no detail repeats it.
+  assert.ok(f.details.every(x => !/^The forward is not the cause/.test(x.technical)));
   assert.ok(f.fixes.some(x => /Look at the sender, not the forward/.test(x.technical)));
   // The forwarder's own bounce domain is no reason to suggest a custom Return-Path.
   assert.ok(f.fixes.every(x => !/Return-Path/.test(x.technical)));
@@ -184,7 +185,7 @@ test('reported pass with nothing aligned explains the pass instead of repeating 
   const f = run('dmarc-pass-unaligned.txt').finding;
   assert.equal(f.status, 'pass');
   assert.equal(f.state, 'caveat');
-  assert.match(f.headline.technical, /^DMARC passed at mx\.receiver\.example only because/);
+  assert.match(f.headline.technical, /^DMARC passed at mx\.receiver\.example for a reason these headers do not show/);
 });
 
 test('relaxed-only alignment reported as fail points at strict mode and says the record is not in the headers', () => {

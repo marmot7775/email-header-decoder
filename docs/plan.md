@@ -81,6 +81,13 @@ is handed out only after that. Status as of 2026-10-25.
    analyze() takes 500 ms on any of the five pastes or the three
    runs. Neil's original paste was not available, so the cause is
    the likeliest match, not a confirmed one.
+   Copy pass 2026-10-28 over docs/sentences.md: compauth meanings
+   now carry the result Microsoft writes with each code (the table
+   had paired every code with fail), with a plain line per result
+   and the meaning alone on the technical line; a test fails if a
+   pass code renders the word fail. A detail that restates the
+   cause is dropped. SPF details get one sentence per result. No
+   never, no Technical view, fewer metaphors.
    Still to do: more real headers from Neil and the copy pass they
    drive.
 
@@ -253,3 +260,7 @@ Decisions
             opened, 200 fields at a time, and clips a field over
             2,000 characters until expanded. analyze() stays under
             500 ms in Node on the speed test inputs.
+2026-10-28  A detail that repeats the cause word for word is dropped,
+            and so is the forwarded already failing detail when the
+            cause says it. compauth none reads as skipped for 3xx and
+            bypassed for 4xx and 9xx. 8xx keeps fail in the inventory.

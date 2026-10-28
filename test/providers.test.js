@@ -31,7 +31,7 @@ test('Microsoft: SCL, BCL, CAT, SFV, IPV, CIP and DIR decoded from X-Forefront-A
   assert.equal(ms.items.filter(i => /SCL/.test(i.key)).length, 1);
   const ca = get(ms, 'compauth');
   assert.equal(ca.raw, 'fail reason=000');
-  assert.match(ca.technical, /explicit authentication failed/);
+  assert.match(ca.technical, /^Explicit authentication failed/);
   assert.equal(ms.outcome.key, 'CAT');
 });
 
@@ -55,7 +55,7 @@ test('Microsoft: codes outside the published tables are shown raw with no guess'
   assert.equal(org.raw, '3');
   assert.equal(org.level, 'info');
   assert.match(org.technical, /no published meaning/);
-  assert.match(get(ms, 'compauth').technical, /passed explicit or implicit authentication \(code 123 has no entry of its own\)/);
+  assert.match(get(ms, 'compauth').technical, /^Passed explicit or implicit authentication \(code 123 has no entry of its own\)/);
   assert.equal(HA.providers.compauthMeaning('xyz'), '');
 });
 
@@ -229,4 +229,13 @@ test('list headers: Message-ID domain, same and different organization', () => {
   const other = run('esp-unaligned.txt').decoded.list.find(i => i.key === 'Message-ID');
   assert.equal(other.raw, 'mailer.example');
   assert.match(other.technical, /a different organization from shop\.example/);
+});
+
+test('Microsoft: a compauth pass code never renders with the word fail', () => {
+  const codes = Object.keys(HA.providers.TABLES.COMPAUTH).concat(['123', '599', '701', '799']).filter(k => /^[157]/.test(k));
+  for (const k of codes) {
+    const ms = HA.providers.decodeMicrosoft([], { compauth: { result: 'pass', reason: k, src: [] } });
+    const it = ms.items.find(i => i.key === 'compauth');
+    assert.ok(!/\bfail/i.test(it.technical + ' ' + it.plain), k + ': ' + it.technical + ' ' + it.plain);
+  }
 });
