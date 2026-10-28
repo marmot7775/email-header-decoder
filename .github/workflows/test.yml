@@ -1,0 +1,39 @@
+# Tests and the build on every push to main and every pull request. Coverage
+# comes from Node's own test runner, so the repo stays at zero dependencies.
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Codecov upload authenticates with GitHub OIDC, so no token secret.
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests with coverage
+        run: >
+          node --test --experimental-test-coverage
+          --test-reporter=spec --test-reporter-destination=stdout
+          --test-reporter=lcov --test-reporter-destination=lcov.info
+          test/
+      - name: Build
+        run: node build.js
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true
+          files: lcov.info
+          # A Codecov outage, or the repo not yet switched on there, should not block a merge.
+          fail_ci_if_error: false
