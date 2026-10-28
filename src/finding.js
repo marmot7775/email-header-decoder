@@ -40,6 +40,14 @@
     return chain.trust.operator || 'the receiver';
   }
 
+  // The receiver as Simple wording names it: the mailbox provider people
+  // know, never an authserv-id.
+  function plainReceiver(r) {
+    if (r === 'Microsoft 365') return 'Microsoft';
+    const o = HA.psl.orgDomain(r) || r;
+    return { 'google.com': 'Gmail', 'outlook.com': 'Microsoft', 'microsoft.com': 'Microsoft', 'office365.com': 'Microsoft', 'yahoo.com': 'Yahoo', 'yahoodns.net': 'Yahoo', 'aol.com': 'AOL', 'icloud.com': 'iCloud Mail', 'me.com': 'iCloud Mail', 'apple.com': 'iCloud Mail' }[o] || 'the recipient\'s email provider';
+  }
+
   // How a fix names the sending service: by name only at high confidence,
   // with the name as a pointer at medium, unnamed otherwise.
   function serviceOf(platform) {
@@ -65,7 +73,7 @@
     if (!spf.result) return { t: 'no SPF result was recorded', p: 'no check of the sending server was recorded', src: spf.src };
     if (!d) return { t: 'SPF returned ' + spf.result + ' with no domain named', p: 'the sending server check named no domain', src: spf.src };
     const name = helo ? 'the server name ' + d : d;
-    if (spf.result === 'pass' && !spf.relaxed) return { t: 'SPF checked ' + name, p: helo ? 'the sending server called itself ' + d : 'its bounce address was at ' + d, unaligned: true, src: spf.src };
+    if (spf.result === 'pass' && !spf.relaxed) return { t: 'SPF checked ' + name, p: helo ? 'the sending server called itself ' + d : 'it came from a server that ' + d + ' allows', unaligned: true, src: spf.src };
     if (spf.result === 'pass') return null;
     const plain = { fail: 'the sending server is not on ' + d + '\'s list of approved servers', softfail: 'the sending server is not on ' + d + '\'s list of approved servers', none: d + ' publishes no list of approved servers' }[spf.result] || 'the sending server check for ' + d + ' came out ' + spf.result;
     return { t: 'SPF ' + (SPF_WORD[spf.result] || 'returned ' + spf.result) + ' for ' + name, p: plain, src: spf.src };
@@ -82,22 +90,22 @@
     const un = pieces.filter(x => x.unaligned).length;
     const t = joinList(pieces.map(x => x.t));
     const p = joinList(pieces.map(x => x.p));
-    if (un && un === pieces.length) return { t: t + ', so ' + (un === 1 ? 'it did not align' : 'neither aligned') + ' with the From domain ' + from + '.', p: p + ', and ' + (un === 1 ? 'that does not belong' : 'neither belongs') + ' to ' + from + ', the domain in the From address.' };
-    if (un) return { t: t + ', and nothing that passed aligned with the From domain ' + from + '.', p: p + '. Nothing that checked out belongs to ' + from + ', the domain in the From address.' };
+    if (un && un === pieces.length) return { t: t + ', so ' + (un === 1 ? 'it did not align' : 'neither aligned') + ' with the From domain ' + from + '.', p: p + ', but ' + (un === 1 ? 'that is not ' : 'neither of those is ') + from + ', the domain in the From address.' };
+    if (un) return { t: t + ', and nothing that passed aligned with the From domain ' + from + '.', p: p + '. Nothing that checked out matches ' + from + ', the domain in the From address.' };
     return { t: t + ', so no check passed for the From domain ' + from + '.', p: p + ', so nothing proved the mail came from ' + from + '.' };
   }
   function passPieces(auth) {
     const out = [];
     for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: 'DKIM signed as ' + k.domain, p: 'it was signed by ' + k.domain, relaxedOnly: k.relaxedOnly, src: k.src });
     const s = auth.spf;
-    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF checked ' + s.domain, p: 'its bounce address was at ' + s.domain, relaxedOnly: s.relaxedOnly, src: s.src });
+    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF checked ' + s.domain, p: 'it came from a server that ' + s.domain + ' allows', relaxedOnly: s.relaxedOnly, src: s.src });
     return out;
   }
   function passClause(pieces, from) {
     const relaxed = pieces.some(x => x.relaxedOnly) ? ' (relaxed alignment, through the organizational domain)' : '';
     return {
       t: joinList(pieces.map(x => x.t)) + ', ' + (pieces.length === 1 ? 'which aligns' : 'both aligned') + ' with the From domain ' + from + relaxed + '.',
-      p: joinList(pieces.map(x => x.p)) + ', and ' + (pieces.length === 1 ? 'that belongs' : 'both belong') + ' to ' + (relaxed ? 'the same organization as ' + from : from) + ', the domain in the From address.',
+      p: joinList(pieces.map(x => x.p)) + '. ' + (pieces.length === 1 ? 'That' : 'Both') + (relaxed ? ' belong' + (pieces.length === 1 ? 's' : '') + ' to ' + from + ', the domain in the From address, or to its parent domain.' : ' match' + (pieces.length === 1 ? 'es ' : ' ') + from + ', the domain in the From address.'),
     };
   }
 
@@ -183,7 +191,7 @@
   function consequenceOf(status, dm, from, receiver, org) {
     const pol = dm.policy, disp = dm.disposition;
     const src = dm.src;
-    if (status === 'none') return say('caveat', from + ' publishes no DMARC policy, so nothing tells receivers what to do with mail that fails. Each receiver decides on its own.', 'The sender\'s domain gives mail systems no instructions for forged mail, so each one decides for itself.', src);
+    if (status === 'none') return say('caveat', from + ' publishes no DMARC policy, so nothing tells receivers what to do with mail that fails. Each receiver decides on its own.', from + ' has no DMARC setting, so it gives mail providers no instructions for fake mail. Each provider decides for itself.', src);
     if (status === 'unknown' || status === 'error') return null;
     if (pol.action) {
       const a = pol.action;
@@ -197,22 +205,22 @@
         'pct.reject': 'Microsoft recorded action=pct.reject: the policy is reject with pct below 100, and this message was picked to be delivered anyway.',
       };
       const t = M[a] || 'Microsoft recorded action=' + a + ', which is not in its published list, so it is shown as written.';
-      const plain = { quarantine: 'Microsoft put the message in junk or quarantine because of the sender\'s policy.', oreject: 'The sender\'s policy says to refuse forged mail. Microsoft kept the message but treated it as suspicious instead.', 'pct.quarantine': 'The sender\'s policy only applies to part of its mail, and this message happened to be let through.', 'pct.reject': 'The sender\'s policy only applies to part of its mail, and this message happened to be let through.' }[a] || (fails ? 'Microsoft took no action over the failure, so it did not send the message to junk for this reason.' : 'The message passed, so the sender\'s policy did not come into play.');
+      const plain = { quarantine: 'Microsoft put the message in junk or quarantine because of the sender\'s DMARC setting.', reject: 'Microsoft refused the message because of the sender\'s DMARC setting.', oreject: 'The sender\'s DMARC setting says to refuse fake mail. Microsoft kept the message but treated it as suspicious instead.', 'pct.quarantine': 'The sender\'s DMARC setting covers only part of its mail, and this message happened to be let through.', 'pct.reject': 'The sender\'s DMARC setting covers only part of its mail, and this message happened to be let through.' }[a] || (fails ? 'Microsoft took no action over the failure, so it didn\'t send the message to junk for this reason.' : 'The message passed, so the sender\'s DMARC setting didn\'t come into play.');
       return say(fails ? (a === 'none' || /^pct/.test(a) ? 'caveat' : 'fail') : 'pass', t, plain, src);
     }
-    if (!pol.p) return say('unknown', receiver + ' did not quote the DMARC policy of ' + from + ', so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.', 'The headers do not say what the sender\'s domain asks mail systems to do with forged mail.', src);
+    if (!pol.p) return say('unknown', receiver + ' did not quote the DMARC policy of ' + from + ', so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.', 'The headers don\'t say what ' + from + ' asks mail providers to do with fake mail.', src);
     const sub = !!pol.sp && !!org && org !== from;
     const pv = sub ? pol.sp : pol.p, tag = sub ? 'sp=' : 'p=';
     const P_WORD = { none: 'which asks for no action', quarantine: 'which asks for failing mail to go to spam', reject: 'which asks for failing mail to be refused' };
     const pw = tag + pv + (sub ? ' for subdomains such as ' + from : '') + (P_WORD[pv] ? ', ' + P_WORD[pv] : '');
     const pub = (sub ? org : from) + ' publishes ' + pw;
-    if (status === 'pass') return say('pass', pub + '. This message passed, so the policy did not come into play.', 'The message passed, so the sender\'s policy did not come into play.', src);
+    if (status === 'pass') return say('pass', pub + '. This message passed, so the policy did not come into play.', 'The message passed, so the sender\'s DMARC setting didn\'t come into play.', src);
     if (disp.source === 'dis') {
       const D = { none: 'did not apply it to this message', quarantine: 'sent this message to spam', reject: 'refused this message' };
       const did = D[disp.value] || 'recorded ' + disp.raw;
-      return say(disp.value === 'none' ? 'caveat' : 'fail', pub + ', and ' + receiver + ' ' + did + ' (' + disp.raw + ').', 'The sender\'s domain asks for ' + (pv === 'reject' ? 'forged mail to be refused' : pv === 'quarantine' ? 'forged mail to go to spam' : 'no action') + '. The receiving system (' + receiver + ') ' + did + '.', src);
+      return say(disp.value === 'none' ? 'caveat' : 'fail', pub + ', and ' + receiver + ' ' + did + ' (' + disp.raw + ').', (sub ? org : from) + '\'s DMARC setting ' + (pv === 'reject' ? 'asks providers to refuse fake mail' : pv === 'quarantine' ? 'asks providers to send fake mail to spam' : 'only watches and asks for no action') + '. ' + plainReceiver(receiver) + ' ' + did + '.', src);
     }
-    return say('unknown', pub + '. The headers do not record what ' + receiver + ' did with this message.', 'The headers say what the sender\'s domain asks for, but not what was done with this message.', src);
+    return say('unknown', pub + '. The headers do not record what ' + receiver + ' did with this message.', 'The headers show ' + (sub ? org : from) + '\'s DMARC setting, but not what ' + plainReceiver(receiver) + ' did with this message.', src);
   }
 
   function fixesOf(status, ctx) {
@@ -228,7 +236,7 @@
       return f;
     }
     if (status === 'forwarded') {
-      add('caveat', 'Nothing at the sender fixes a forward. If the forward is yours, have the final mailbox trust the forwarder\'s ARC seal: Gmail weighs ARC on its own; Microsoft 365 honors it only for sealers an admin adds as trusted ARC sealers in the Defender portal.', 'The sender did nothing wrong. If you set up this forward, ask whoever runs the receiving mailbox to trust the forwarding service (' + fw.by[fw.by.length - 1] + '). In Microsoft 365 an administrator adds it as a trusted ARC sealer.', fw.src);
+      add('caveat', 'Nothing at the sender fixes a forward. If the forward is yours, have the final mailbox trust the forwarder\'s ARC seal: Gmail weighs ARC on its own; Microsoft 365 honors it only for sealers an admin adds as trusted ARC sealers in the Defender portal.', 'The sender did nothing wrong. If you set up this forward, ask whoever runs the receiving mailbox to trust the forwarding service (' + fw.by[fw.by.length - 1] + '). In Microsoft 365, an administrator adds it under Trusted ARC sealers in the Defender portal.', fw.src);
       add('caveat', 'If the forward is not yours, authentication worked as designed. Judge the sender by a copy delivered straight to the mailbox.', 'If you did not set up this forward, there is nothing to change. Ask for a copy sent straight to you to check the sender.', fw.src);
       return f;
     }
@@ -256,22 +264,22 @@
     const failed = auth.dkim.find(k => k.result === 'fail');
     const perm = auth.dkim.find(k => k.result === 'permerror');
     if (!dkimAligned) {
-      if (!auth.dkim.length) add(status === 'pass' ? 'caveat' : 'fail', (status === 'pass' ? 'DMARC rests on SPF alone, and forwarding breaks SPF. ' : '') + 'Turn on DKIM signing for ' + from + ' at ' + svc.t + '. Aligned DKIM is what lets DMARC pass and keep passing when mail is forwarded.', 'Turn on DKIM for ' + from + ' in the settings of ' + svc.p + '. It adds a signature with your domain to every message, and that signature still works when mail is forwarded.', auth.spf.src);
+      if (!auth.dkim.length) add(status === 'pass' ? 'caveat' : 'fail', (status === 'pass' ? 'DMARC rests on SPF alone, and forwarding breaks SPF. ' : '') + 'Turn on DKIM signing for ' + from + ' at ' + svc.t + '. Aligned DKIM is what lets DMARC pass and keep passing when mail is forwarded.', 'Turn on email signing (DKIM) for ' + from + ' in the settings of ' + svc.p + '. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.', auth.spf.src);
       else if (unaligned) add(status === 'pass' ? 'caveat' : 'fail', 'At ' + svc.t + ', set up domain authentication for ' + from + ' so the DKIM signature carries d=' + from + ' or a subdomain of it, instead of d=' + unaligned.domain + '.', 'In the settings of ' + svc.p + ', turn on domain authentication for ' + from + '. The service gives you a few DNS records to add, and after that your mail is signed with your own domain instead of ' + unaligned.domain + '.', unaligned.src);
       if (failed && !fw.yes) add('fail', 'The signature from d=' + failed.domain + ' broke between signing and ' + receiver + '. Look for anything that edits mail after ' + svc.t + ' signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at ' + (failed.selector || '<selector>') + '._domainkey.' + failed.domain + ' is the one it signs with.', 'The signature on this message was damaged on the way. Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave ' + svc.p + '. That is the usual cause.', failed.src);
       if (perm) add('fail', 'Publish or repair the DKIM key at ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + '; ' + receiver + ' could not use it.', 'The key that checks this signature could not be read. Ask whoever manages the DNS for ' + perm.domain + ' to compare the record named ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + ' with what ' + svc.p + ' says it should be.', perm.src);
     }
     const s = auth.spf;
     if (s.domain && !/helo/i.test(s.identity) && !unproven) {
-      if (s.result === 'fail' || s.result === 'softfail') add('fail', 'If this is your mail, add ' + svc.t + ' to the SPF record of ' + s.domain + (s.ip ? ' so it covers ' + s.ip : '') + '. If it is not, SPF did its job.', 'If you sent this, ask whoever manages the DNS for ' + s.domain + ' to add ' + svc.p + ' to its SPF record; the service\'s setup page gives the exact entry. If you did not send it, someone else used your domain and this check caught it.', s.src);
+      if (s.result === 'fail' || s.result === 'softfail') add('fail', 'If this is your mail, add ' + svc.t + ' to the SPF record of ' + s.domain + (s.ip ? ' so it covers ' + s.ip : '') + '. If it is not, SPF did its job.', 'If you sent this, ask whoever manages the DNS for ' + s.domain + ' to add ' + svc.p + ' to its list of allowed servers (the SPF record). The service\'s setup page gives the exact entry. If you didn\'t send it, someone else used your domain and this check caught it.', s.src);
       else if (s.result === 'none') add('fail', 'Publish an SPF record for ' + s.domain + ' that lists the servers that send for it.', 'Ask whoever manages the DNS for ' + s.domain + ' to publish an SPF record listing the services that send your mail.', s.src);
       else if (s.result === 'permerror') add('fail', 'Repair the SPF record of ' + s.domain + ': check its syntax and keep it within 10 DNS lookups.', 'The SPF record for ' + s.domain + ' is broken, often because it lists too many services. Ask whoever manages its DNS to check and simplify it.', s.src);
-      else if (s.result === 'pass' && !s.relaxed && !fw.yes && (dkimAligned || unaligned || !auth.dkim.length) && status !== 'pass') add('caveat', 'Second, after DKIM: set a custom Return-Path (bounce) domain under ' + from + ' at ' + svc.t + ' so SPF aligns too.', 'Optional, once the signature is fixed: in the settings of ' + svc.p + ', set up a custom bounce domain that ends in ' + from + '. Then the second check lines up as well.', s.src);
+      else if (s.result === 'pass' && !s.relaxed && !fw.yes && (dkimAligned || unaligned || !auth.dkim.length) && status !== 'pass') add('caveat', 'Second, after DKIM: set a custom Return-Path (bounce) domain under ' + from + ' at ' + svc.t + ' so SPF aligns too.', 'Once the signature is fixed, you can also give ' + svc.p + ' a custom return address on ' + from + '. Services call it a custom return path or sending domain. It\'s optional.', s.src);
     }
     if (status === 'pass') {
-      if (!spfAligned && s.result === 'pass' && dkimAligned) add('pass', 'Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under ' + from + ' at ' + svc.t + '.', 'Nothing needs fixing. If you want the second check to line up as well, set up a custom bounce domain ending in ' + from + ' in the settings of ' + svc.p + '.', s.src);
+      if (!spfAligned && s.result === 'pass' && dkimAligned) add('pass', 'Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under ' + from + ' at ' + svc.t + '.', 'Nothing needs fixing. If you want both checks to match, give ' + svc.p + ' a custom return address on ' + from + ' (often called a custom return path).', s.src);
       // A mailbox provider's own domain is not the reader's to change.
-      if (dm.policy.p === 'none' && !MAILBOX_OPERATORS.includes(HA.received.operatorOf(from))) add('caveat', from + ' publishes p=none, so forged mail is not stopped. Once aggregate reports show every real source passing, move to p=quarantine.', 'Your domain\'s policy only watches; it does not stop forged mail. Once the reports show all your real mail passes, ask whoever manages the DNS for ' + from + ' to change the policy to quarantine.', dm.src);
+      if (dm.policy.p === 'none' && !MAILBOX_OPERATORS.includes(HA.received.operatorOf(from))) add('caveat', from + ' publishes p=none, so forged mail is not stopped. Once aggregate reports show every real source passing, move to p=quarantine.', 'Your DMARC setting only watches. It doesn\'t stop fake mail that uses your domain. Once the DMARC reports show all your real mail passing, ask whoever manages the DNS for ' + from + ' to change it to quarantine.', dm.src);
     }
     if (!f.length && status !== 'pass') add('unknown', 'Nothing in these headers points at a single change. Compare with a copy of the same message delivered to a different mailbox provider.', 'These headers do not show one clear fix. Send the same message to another mailbox, such as Gmail or Outlook, and compare.');
     return f;
@@ -288,7 +296,7 @@
       l.push(say('unknown', 'The organizational domain' + (from.org ? ' ' + from.org : '') + ' comes from a short built in suffix list, not from DNS or the full Public Suffix List that receivers use' + (approx.length ? '; for ' + Array.from(new Set(approx.map(x => x.domain))).join(', ') + ' it is an approximation' : '') + '. Relaxed alignment here rests on it.', 'This page works out where the sender\'s organization begins from its own short list, so the looser domain match is its best reading, not a certainty.', from.src.concat(relaxedRows.flatMap(r => r.src))));
     }
     if (chain.trust.operator === 'Google') l.push(say('unknown', 'Gmail writes no spam, Promotions or inbox placement decision into headers, so these headers cannot show where the message landed.', 'Gmail does not record in the headers whether it put the message in spam. Only the mailbox shows that.', []));
-    if (fw.yes) l.push(say('unknown', 'ARC seals are not verified here, so the results before the forward are the forwarder\'s own record' + (fw.receiverArc === 'pass' ? '; ' + ctx.receiver + ' reported arc=pass, which means it did verify them.' : '.'), 'This page cannot check the forwarder\'s seal, so what the forwarder saw is taken from its own record.', fw.src));
+    if (fw.yes) l.push(say('unknown', 'ARC seals are not verified here, so the results before the forward are the forwarder\'s own record' + (fw.receiverArc === 'pass' ? '; ' + ctx.receiver + ' reported arc=pass, which means it did verify them.' : '.'), 'This page can\'t confirm the forwarding service\'s own record, so what it saw before the forward is taken on its word.', fw.src));
     return l;
   }
 
@@ -392,9 +400,9 @@
       const comp = auth.computed;
       const would = comp.result === 'pass' ? 'pass, because ' + passClause(passPieces(auth), fd).t : 'fail, because ' + failClause(failPieces(auth), fd).t;
       const head = result === 'bestguesspass'
-        ? say('caveat', 'DMARC did not apply: ' + receiver + ' reported dmarc=bestguesspass, meaning ' + fd + ' has no DMARC record but the message would pass if it had one.', fd + ' has no DMARC policy, so the sender check did not apply; the message would pass it if the domain had one.', dm.src)
-        : say('caveat', 'DMARC did not apply because ' + receiver + ' found no DMARC record for ' + fd + '; with one, this message would ' + comp.result + '.', fd + ' has no DMARC policy, so the sender check did not apply. With one, this message would ' + (comp.result === 'pass' ? 'pass.' : 'fail.'), allSrc);
-      return finish('none', head, say('caveat', 'Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put ' + fd + ' in a From address without failing a policy. With a record this message would ' + would, 'Without a policy, nothing stops others from sending mail that claims to be from ' + fd + '. ' + (comp.result === 'pass' ? 'This message itself is set up to pass once there is one.' : 'This message itself would not pass if one were added.'), allSrc));
+        ? say('caveat', 'DMARC did not apply: ' + receiver + ' reported dmarc=bestguesspass, meaning ' + fd + ' has no DMARC record but the message would pass if it had one.', fd + ' has no DMARC setting, so the sender check didn\'t apply. The message would pass if the domain had one.', dm.src)
+        : say('caveat', 'DMARC did not apply because ' + receiver + ' found no DMARC record for ' + fd + '; with one, this message would ' + comp.result + '.', fd + ' has no DMARC setting, so the sender check didn\'t apply. With one, this message would ' + (comp.result === 'pass' ? 'pass.' : 'fail.'), allSrc);
+      return finish('none', head, say('caveat', 'Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put ' + fd + ' in a From address without failing a policy. With a record this message would ' + would, 'Without a DMARC setting, nothing stops others from sending mail that claims to be from ' + fd + '. ' + (comp.result === 'pass' ? 'This message is set up to pass once there is one.' : 'This message wouldn\'t pass if one were added.'), allSrc));
     }
 
     if (result === 'permerror' || result === 'temperror') {

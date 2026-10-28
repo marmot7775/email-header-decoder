@@ -83,7 +83,7 @@
     if (d.reported) {
       const pol = d.policy.p ? (plain ? 'policy: ' : 'p=') + d.policy.p : d.policy.action ? (plain ? 'Microsoft action: ' : 'action=') + d.policy.action : '';
       const mismatch = c.result !== 'none' && c.result !== d.result ? 'computed here: ' + c.result : '';
-      out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: mismatch && d.state === 'pass' ? 'caveat' : d.state, v: cap(d.result), d: [pol, mismatch].filter(Boolean).join(', '), jump: 'auth' });
+      out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: mismatch && d.state === 'pass' ? 'caveat' : d.state, v: plain ? ({ pass: 'Passed', fail: 'Failed', none: 'No DMARC setting' }[d.result] || cap(d.result)) : cap(d.result), d: [pol, mismatch].filter(Boolean).join(', '), jump: 'auth' });
     } else if (c.result === 'none') out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: 'unknown', v: 'Not reported', d: '', jump: 'auth' });
     else out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: c.result === 'pass' ? 'pass' : 'fail', v: cap(c.result), d: 'computed here; the receiver reported none', jump: 'auth' });
     // A forward the finding already blamed: say what passed before it, from

@@ -172,3 +172,10 @@ Decisions
             is unchanged. Copy report still carries both headlines.
             Reverses the 2026-10-25 rule that the technical headline
             shows either way: on a real message it read as an echo.
+2026-10-28  The wording switch reads Simple and Technical. Simple is
+            written for a small business owner, with a fixed word
+            list in CLAUDE.md (no aligned, bounce, policy, ARC, and
+            the like) that a test enforces over every fixture.
+            Technical keeps the protocol's own terms. Both follow
+            Neil's house style. Line tags never show in Simple, and
+            in Technical only in the evidence fold and Full analysis.

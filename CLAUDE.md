@@ -205,8 +205,49 @@ light both work. No horizontal scroll at 375px.
 
 ## Copy
 
-Plain words in complete sentences, technical wording beside them
-where a code needs it. No em dashes anywhere, in code comments and
+Every sentence has two voices. The switch on the page reads Simple
+and Technical; in code they stay `plain` and `technical`.
+
+Simple is for the owner of a small business: someone who sells
+coffee, knows what their website address is, and may have heard
+the word DMARC from their email service. Each Simple sentence says
+what happened, whether it matters, and what to do or whom to ask.
+Short sentences, no semicolons, nothing they would have to look
+up. Name the receiver (Gmail, Microsoft) and the sending service
+when known. Fixed words, used the same way everywhere:
+
+- DMARC: the sender check (DMARC), then DMARC.
+- DKIM: the digital signature, signed by.
+- SPF: the list of servers allowed to send for a domain.
+- Return-Path, MAIL FROM: the hidden return address.
+- p=: the domain's DMARC setting; none is watch only,
+  quarantine is send failures to spam, reject is refuse failures.
+- DNS record: a DNS setting for the domain, at the company that
+  hosts its DNS (often where the domain was bought).
+- TLS: encrypted. A Received hop: a handoff between servers.
+
+Never in Simple: aligned, alignment, bounce, Return-Path,
+envelope, HELO, EHLO, selector, d=, s=, header, field, authserv,
+ARC, seal, compauth, SCL, BCL, PCL, organizational domain, relay,
+hop, TLS, RFC, policy. A test enforces the list.
+
+Technical is for a deliverability practitioner. Use the protocol's
+own terms exactly: RFC5322.From, RFC5321.MailFrom, the HELO
+identity, DKIM d=, s= and i=, relaxed and strict alignment (adkim,
+aspf), the organizational domain, p=, sp=, pct=, Gmail's dis=,
+Microsoft's action= and compauth reason, ARC i= and cv=, the
+authserv-id. Quote result tokens verbatim. Cite the RFC section
+when it settles a point (RFC 7208, 6376, 8617, 8058; DMARC is RFC
+9989 for the protocol, which obsoletes RFC 7489). Say what the
+headers cannot show. Technical carries more detail than Simple,
+never less.
+
+Both voices follow Neil's house style (the neil-voice skill):
+complete sentences under 25 words with varied length, contractions,
+the reader addressed as you where the advice is theirs, AP numbers
+(one to nine in words), Oxford comma, no dashes or quotation marks
+as punctuation, no filler words (very, really, just, quite,
+actually, basically), and none of the banned buzzwords. No em dashes anywhere, in code comments and
 UI text included, and no hyphens as punctuation. No exclamation
 marks, no emoji, no intensifiers. Oxford comma. Identifiers
 verbatim in monospace. Say a thing once.

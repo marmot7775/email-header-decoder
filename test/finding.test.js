@@ -24,7 +24,7 @@ test('status fail: a sending service\'s own domains, in the one sentence the pro
   const f = run('esp-unaligned.txt').finding;
   assert.equal(f.status, 'fail');
   assert.equal(f.headline.technical, 'DMARC failed because DKIM signed as mailer.example and SPF checked bounce.mailer.example, so neither aligned with the From domain shop.example.');
-  assert.match(f.headline.plain, /signed by mailer\.example.*bounce address was at bounce\.mailer\.example.*neither belongs to shop\.example/);
+  assert.match(f.headline.plain, /signed by mailer\.example and it came from a server that bounce\.mailer\.example allows, but neither of those is shop\.example/);
   assert.match(f.cause.technical, /not shop\.example/);
   assert.match(f.consequence.technical, /p=quarantine.*sent this message to spam \(dis=QUARANTINE\)/);
   // No platform is known, so the fix does not name one.
@@ -296,4 +296,19 @@ test('every fixture pasted twice gives the same finding as one paste', () => {
     const one = HA.analyze(t).finding, two = HA.analyze(t.trimEnd() + '\n' + t).finding;
     assert.equal(two && two.headline.technical, one && one.headline.technical, name);
   }
+});
+
+// The Simple voice word list in CLAUDE.md, over every sentence the
+// page can show for every fixture.
+const SIMPLE_BANNED = /(?<![\w.-])(aligned|alignment|unaligned|bounce|bounces|Return-Path|envelope|HELO|EHLO|selector|authserv|ARC|seal|seals|sealer|compauth|SCL|BCL|PCL|organizational domain|relay|relays|hop|hops|TLS|RFC|policy|policies)(?![\w.-])|\b[a-z]=/i;
+test('Simple wording uses none of the technical words', () => {
+  const bad = [];
+  for (const name of FIXTURES) {
+    const r = HA.analyze(fixture(name));
+    const f = r.finding;
+    const all = [].concat(f ? [f.headline, f.cause, f.consequence].concat(f.details, f.fixes, f.flags, f.limits) : [], r.input.notes, r.message.notes || [], r.decoded.notes || [], (r.decoded.filters || []).flatMap(g => g.items || []), r.decoded.list || [], r.decoded.platform && r.decoded.platform.statement ? [r.decoded.platform.statement] : [], r.chain.notes || [], r.auth.notes || []).filter(Boolean);
+    // Microsoft's own setting name is quoted so an admin can find it.
+    for (const x of all) if (x.plain && SIMPLE_BANNED.test(x.plain.replace(/Trusted ARC sealers/g, ''))) bad.push(name + ': ' + x.plain);
+  }
+  assert.deepEqual(Array.from(new Set(bad)).slice(0, 40), []);
 });

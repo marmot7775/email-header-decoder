@@ -451,7 +451,7 @@
     }
     // Always beside the result: the page cannot see the alignment mode.
     const modeNote = computed.result === 'none' ? null : say('unknown', 'Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.',
-      'This page assumes the usual, looser domain match. The sender\'s policy can demand an exact match, and that setting is not in the headers.', computed.src);
+      'This page assumes the usual, looser domain match. A domain\'s DMARC setting can demand an exact match, and the headers don\'t show that setting.', computed.src);
     return { from, rows, notes, modeNote };
   }
 

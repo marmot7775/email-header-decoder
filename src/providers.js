@@ -99,8 +99,8 @@
     const lvl = { pass: 'pass', fail: 'fail', softpass: 'warn' }[c.result] || 'info';
     const meaning = compauthMeaning(c.reason);
     const raw = c.result + (c.reason ? ' reason=' + c.reason : '');
-    if (c.reason && !meaning) return item('compauth', raw, lvl, 'Composite authentication ' + c.result + '. Reason code ' + c.reason + ' is not in Microsoft\'s published table, so it is shown as written.', 'Microsoft\'s combined sender check came out ' + c.result + ', for a reason this page does not know.', c.src);
-    return item('compauth', raw, lvl, 'Composite authentication ' + c.result + (meaning ? ': ' + meaning + '.' : '.'), 'Microsoft\'s combined sender check came out ' + c.result + (meaning ? ': ' + meaning + '.' : '.'), c.src);
+    if (c.reason && !meaning) return item('compauth', raw, lvl, 'Composite authentication ' + c.result + '. Reason code ' + c.reason + ' is not in Microsoft\'s published table, so it is shown as written.', 'Microsoft\'s own sender check ' + ({ pass: 'passed', fail: 'failed', softpass: 'gave it a soft pass', none: 'came out neutral' }[c.result] || 'came out ' + c.result) + '. Its reason code isn\'t one Microsoft explains publicly.', c.src);
+    return item('compauth', raw, lvl, 'Composite authentication ' + c.result + (meaning ? ': ' + meaning + '.' : '.'), 'Microsoft\'s own sender check ' + ({ pass: 'passed', fail: 'failed', softpass: 'gave it a soft pass', none: 'came out neutral' }[c.result] || 'came out ' + c.result) + '. The Technical view gives its reason.', c.src);
   }
 
   function decodeMicrosoft(fields, auth) {
@@ -195,7 +195,7 @@
           : r === 'spam' ? item('rule', kv.rule, 'fail', 'Classification rule spam: spam.', 'Proofpoint decided this is spam.', s)
             : item('rule', kv.rule, 'info', 'Classification rule ' + kv.rule + '. The customer names its own rules, so it is shown as written.', 'Proofpoint applied a rule named ' + kv.rule + '.', s));
       }
-      if (kv.policy) items.push(item('policy', kv.policy, 'info', 'Policy route applied.', 'The Proofpoint policy that handled it.', s));
+      if (kv.policy) items.push(item('policy', kv.policy, 'info', 'Policy route applied.', 'The Proofpoint rule set that handled the message.', s));
       for (const k of ['score', 'spamscore', 'phishscore', 'bulkscore', 'malwarescore', 'suspectscore', 'impostorscore', 'adultscore', 'mlxscore', 'clxscore']) {
         if (kv[k] !== undefined) items.push(item(k, kv[k], 'info', k + ' ' + kv[k] + '. The customer sets the thresholds, which are not in the headers, so the score is shown as written.', 'A Proofpoint score of ' + kv[k] + '. What it leads to is set by the receiving organization.', s));
       }

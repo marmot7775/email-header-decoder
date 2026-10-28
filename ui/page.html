@@ -174,7 +174,7 @@ button { font: inherit; cursor: pointer; }
 .tile.fail { border-left-color: var(--fail); }
 .tile .tk { font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .tile .tq { font-size: var(--font-xs); color: var(--muted); }
-.tile .tv { display: flex; align-items: baseline; gap: 6px; font-weight: 700; font-size: var(--font-md); }
+.tile .tv { display: flex; align-items: baseline; gap: 6px; font-weight: 700; font-size: var(--font-base); }
 .tile .tv .sym { font-family: var(--font-mono); }
 .tile.pass .tv { color: var(--pass); }
 .tile.caveat .tv { color: var(--caveat); }
@@ -201,7 +201,9 @@ button { font: inherit; cursor: pointer; }
 .headline { margin: 0; font-size: var(--font-lg); font-weight: 600; line-height: 1.45; max-width: 68ch; overflow-wrap: anywhere; }
 .fpara { margin: 0; font-size: var(--font-base); line-height: 1.6; color: var(--text-2); max-width: 68ch; overflow-wrap: anywhere; }
 .fpara .src { margin-left: 6px; }
-body[data-voice="plain"] #finding .src:not(.more .src) { display: none; }
+/* Line tags point into the raw headers: Simple never shows them, and
+   Technical shows them only in the evidence fold and Full analysis. */
+body[data-voice="plain"] .src, #finding .src:not(.more .src) { display: none; }
 
 /* Filter headers: one row per decoded value, the raw value beside it */
 .fgroup { margin-top: 14px; }
@@ -450,7 +452,7 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <span class="tools">
         <button class="btn small" type="button" id="copy-report">Copy report</button>
         <span class="voice" role="group" aria-label="Wording">
-          <button type="button" data-voice="plain" aria-pressed="true">Plain</button>
+          <button type="button" data-voice="plain" aria-pressed="true">Simple</button>
           <button type="button" data-voice="technical" aria-pressed="false">Technical</button>
         </span>
       </span>
