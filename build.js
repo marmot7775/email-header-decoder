@@ -57,7 +57,7 @@ function jsonLd(page) {
       description: DESCRIPTION,
       applicationCategory: 'SecurityApplication',
       operatingSystem: 'Web',
-      browserRequirements: 'Requires JavaScript. Runs entirely in the browser.',
+      browserRequirements: 'Requires JavaScript.',
       isAccessibleForFree: true,
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
       featureList: [

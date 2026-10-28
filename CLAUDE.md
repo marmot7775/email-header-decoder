@@ -14,8 +14,9 @@ two tests check for it on purpose.
 ## Hard rules
 
 Everything runs in the visitor's browser. No storage, no analytics
-scripts. Pasted headers never leave the machine, and the page says
-so in one line. The one network call is the usage note (Neil,
+scripts. Pasted headers are never sent anywhere, but the page no
+longer advertises that (Neil, 2026-10-28: not a selling point; he
+wants usage logs). The one network call is the usage note (Neil,
 2026-10-28: he wants to see the tool is used): after each new read,
 ui/app.js posts the finding status only to
 https://dns-audit.com/api/usage, the CSP's only connect-src. Never

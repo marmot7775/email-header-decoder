@@ -34,12 +34,10 @@ Live at https://headers.dns-audit.com, part of
 
 ## Privacy
 
-The headers you paste are read in your browser and never sent,
-stored, or logged. After each read the page sends dns-audit.com one
-usage note with the overall result (pass, fail, and so on), so its
-maker can see it is used: no header text, addresses, or domains. The
-Content Security Policy allows that one connection and nothing else.
-Saved to disk, the page still works with the network off.
+After each read the page sends dns-audit.com one usage note with the
+overall result (pass, fail, and so on), so its maker can see the tool
+is used. The [privacy page](https://dns-audit.com/privacy) lists what
+the note holds.
 
 ## Limits
 

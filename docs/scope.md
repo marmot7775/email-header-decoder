@@ -50,7 +50,8 @@ First release
    every sentence; Copy report carries both headlines.
 10. Copy report: the finding, the tiles, and the fixes as plain
     text for a ticket or a client email.
-11. One line on the page: nothing you paste leaves your browser.
+11. (Dropped 2026-10-28.) A line on the page saying nothing you
+    paste leaves your browser; Neil does not want it advertised.
 12. Static text below the tool for readers and search engines:
     what it reads, how to copy headers in Gmail, Outlook, classic
     Outlook, and Apple Mail, and an FAQ. The JSON-LD FAQ is built
