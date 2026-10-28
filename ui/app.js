@@ -467,8 +467,12 @@
     if (jump && R) { if ($('analysis').contains($(jump.dataset.jump))) $('analysis').open = true; $(jump.dataset.jump).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); return; }
     const more = e.target.closest('[data-more], [data-expand]');
     if (more && R) {
+      const from = rawLimit;
       if (more.dataset.expand) rawFull.add(+more.dataset.expand); else rawLimit += RAW_CHUNK;
       drawRaw($('raw-filter').value);
+      // The button is gone after the redraw; keyboard focus moves to the field it revealed.
+      const to = more.dataset.expand ? document.querySelector('#rawbox .f[data-field="' + more.dataset.expand + '"]') : document.querySelectorAll('#rawbox .f')[from];
+      if (to) { to.tabIndex = -1; to.focus({ preventScroll: true }); }
       return;
     }
     const el = e.target.closest('[data-src]');
