@@ -475,12 +475,12 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
   <section class="guide" aria-labelledby="h-guide">
     <h2 id="h-guide">What it reads</h2>
     <ul class="checks-list">
-      <li><strong>SPF, DKIM, and DMARC</strong> as the receiving server recorded them, each identifier checked for alignment with the From domain.</li>
-      <li><strong>A second DMARC result worked out on the page</strong> from those identifiers, set beside the receiver's own, with the reason when the two disagree.</li>
-      <li><strong>Forwarded mail.</strong> ARC headers show what passed before a forward, so the page can say when the forward broke a message the sender set up correctly.</li>
-      <li><strong>Every hop</strong> in order, with the delay at each one, TLS where the stamp records it, and the point where the receiver took custody. Hops above that point could have been written by the sender.</li>
-      <li><strong>Spam filter headers</strong> from Microsoft 365, Google, Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd, decoded in plain words with the raw value beside each one.</li>
-      <li><strong>The sending platform</strong>, named only when the evidence is strong, and the unsubscribe headers, including RFC 8058 one-click.</li>
+      <li><strong>SPF, DKIM, and DMARC</strong> are read as the receiving server recorded them. Each passing domain is checked against the domain in the From address.</li>
+      <li><strong>A second DMARC result</strong> is worked out on the page from those domains and set beside the receiver's own. When the two disagree, the page says why.</li>
+      <li><strong>Forwarded mail</strong> often carries ARC headers that show what passed before the forward. The page uses them to say when a forward broke a message the sender set up correctly.</li>
+      <li><strong>Every hop</strong> is listed in order, with its delay and whether it was encrypted. The page marks where the receiver took custody, since anything above that point could have been written by the sender.</li>
+      <li><strong>Spam filter headers</strong> from Microsoft 365, Google, Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd are decoded in plain words, with the raw value beside each one.</li>
+      <li><strong>The sending platform</strong> is named only when the evidence is strong. The unsubscribe headers are checked too, including RFC 8058 one-click.</li>
     </ul>
 
     <h2 id="h-how">How to copy the headers</h2>
@@ -489,7 +489,7 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <dt>Outlook and Outlook on the web</dt><dd>Open the message, select More actions, then View, then View message details. Copy everything in the box.</dd>
       <dt>Classic Outlook for Windows</dt><dd>Double-click the message to open it, then select File, then Properties. The headers are in the Internet headers box.</dd>
       <dt>Apple Mail</dt><dd>Select the message, then View, Message, Raw Source.</dd>
-      <dt>Any client</dt><dd>Save the message as an .eml file and drop it on the paste box. Only the headers are read; the body is ignored.</dd>
+      <dt>Any client</dt><dd>Save the message as an .eml file and drop it on the paste box. The page reads only the headers and ignores the body.</dd>
     </dl>
     <p class="note-line">Use the copy the recipient received. A copy from the Sent folder never passed through the receiving server, so it carries no authentication results.</p>
 
@@ -498,9 +498,9 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <details><summary>Why did a forwarded message fail DMARC?</summary><p>A forward sends the message on from the forwarder's server, so SPF checks the forwarder's address instead of the original sender's. If the forwarder also changes the message, for example by adding a footer, the DKIM signature no longer matches. With both gone, DMARC fails even though the sender did nothing wrong. When the forwarder adds ARC headers, this page reads the results recorded before the forward and says so.</p></details>
       <details><summary>How does it read the headers?</summary><p>It reads them as the receiving servers wrote them. Dates follow RFC 5322, and a time zone it can't trust is read as UTC and marked. Encryption is taken from what each server recorded. DMARC finds a domain's parent with a DNS lookup (RFC 9989), which this page can't make, so it uses a short built-in list and marks any guess. ARC records are checked for structure, but their seals aren't verified.</p></details>
       <details><summary>Does anything I paste leave my browser?</summary><p>No. The page has no server behind it and makes no network requests. Its Content Security Policy blocks requests the page makes, so your headers stay on your machine.</p></details>
-      <details><summary>Why are there two DMARC results?</summary><p>The receiving server writes its DMARC result into the Authentication-Results header. This page also works the result out from the SPF and DKIM results and the domains involved. When the two differ, the page names the reason, such as a local policy override at the receiver.</p></details>
-      <details><summary>Why does it not verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups, so nothing about your message leaves the page.</p></details>
-      <details><summary>What does "aligned" mean?</summary><p>DMARC passes only when SPF or DKIM passes for a domain that matches the domain in the From address. A pass for some other domain, such as a mailing platform's own, is a pass that is not aligned, and it does not count toward DMARC.</p></details>
+      <details><summary>Why are there two DMARC results?</summary><p>The receiving server writes its DMARC result into the Authentication-Results header. This page also works the result out from the SPF and DKIM results and the domains involved. When the two differ, the page names the reason, such as a rule of the receiver's own that overrode the result.</p></details>
+      <details><summary>Why doesn't it verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups, so nothing about your message leaves the page.</p></details>
+      <details><summary>What does aligned mean?</summary><p>DMARC passes only when SPF or DKIM passes for a domain that matches the domain in the From address. A pass for some other domain, such as a mailing platform's own, isn't aligned, and it doesn't count toward DMARC.</p></details>
     </div>
   </section>
 </main>

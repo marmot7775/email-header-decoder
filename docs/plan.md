@@ -199,3 +199,8 @@ Decisions
             out, and the test now enforces both. Simple also
             contracts it is, that is, there is, and here is when a
             word follows.
+2026-10-28  The guide and FAQ follow house style: the What it reads
+            list is full sentences, no semicolons, contractions, no
+            quotation marks around aligned. The Full analysis panels
+            keep their technical labels in both views, with
+            contractions where they read as prose.

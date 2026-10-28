@@ -153,7 +153,7 @@
     if (f.cause) L.push('', 'Why: ' + f.cause[voice]);
     if (f.consequence) L.push('', 'What the DMARC setting did: ' + f.consequence[voice]);
     if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
-    L.push('', 'Decoded in the browser at headers.dns-audit.com. The headers were not sent anywhere.');
+    L.push('', 'Decoded in the browser at headers.dns-audit.com. The headers weren\'t sent anywhere.');
     return L.join('\n');
   }
   function copyText(text) {
@@ -268,7 +268,7 @@
       '<span class="who mono">' + esc(rec.writer || '(no host named)') + '</span>' +
       (rec.primary ? '<span class="badge">Primary</span>' : '') + chip(t[0], t[1]) +
       '<span class="how">' + esc(rec.matchedBy ? MATCHED[rec.matchedBy] + (rec.hopIdx >= 0 ? ', hop ' + (rec.hopIdx + 1) : '') : 'no Received by host matches') + '</span>' + srcBtn(rec.src) + '</div>';
-    if (!rec.entries.length) h += '<p class="absent">' + (rec.none ? 'Reports none: no methods were checked.' : 'No method results could be read.') + '</p>';
+    if (!rec.entries.length) h += '<p class="absent">' + (rec.none ? 'It reported none, so no methods were checked.' : 'No method results were readable.') + '</p>';
     else h += '<div class="ents">' + rec.entries.map(e => '<div class="ent"><span class="m">' + esc(e.method) + '</span>' + chip(e.state, e.result) +
       '<span class="id mono">' + esc(idText(e) || 'no identifiers') + '</span>' + (e.reason ? '<span class="why">reason ' + esc(e.reason) + '</span>' : '') + '</div>').join('') + '</div>';
     return h + '</div>';
@@ -310,8 +310,8 @@
       rep += chip(d.state, 'dmarc=' + d.result) + (d.headerFrom ? '<span class="sub mono">header.from=' + esc(d.headerFrom) + '</span>' : '') + (pol ? '<span class="sub mono">' + esc(pol) + '</span>' : '') + srcBtn(d.src);
     } else rep += chip('unknown', 'Not reported') + '<span class="sub">No dmarc= result in the receiver\'s Authentication-Results.</span>';
     let cmp = '<span class="k">Computed here</span>';
-    const NONE_WHY = { 'no-from': 'There is no From domain to align with.', 'two-from': 'There is more than one From field, so there is no single domain to align with.', 'multi-domain': 'The From field names addresses in more than one domain, so there is no single domain to align with.', 'no-trusted-results': 'No Authentication-Results field here was written by the receiver.' };
-    if (c.result === 'none') cmp += chip('unknown', 'Cannot compute') + '<span class="sub">' + (NONE_WHY[c.why] || 'The receiver reported no SPF or DKIM results to combine.') + '</span>';
+    const NONE_WHY = { 'no-from': 'There\'s no From domain to align with.', 'two-from': 'There\'s more than one From field, so there\'s no single domain to align with.', 'multi-domain': 'The From field names addresses in more than one domain, so there\'s no single domain to align with.', 'no-trusted-results': 'No Authentication-Results field here was written by the receiver.' };
+    if (c.result === 'none') cmp += chip('unknown', 'Can\'t compute') + '<span class="sub">' + (NONE_WHY[c.why] || 'The receiver reported no SPF or DKIM results to combine.') + '</span>';
     else if (c.differ) cmp += '<span class="modes">' + chip('pass', 'relaxed: pass') + chip('fail', 'strict: fail') + '</span><span class="sub">The DMARC record decides: ' + esc(c.tags.join(' and ')) + ' (relaxed when absent).</span>' + srcBtn(c.src);
     else cmp += chip(c.result, 'dmarc=' + c.result) + '<span class="sub">' + (c.result === 'pass' ? 'Aligned pass from ' + esc((c.by.strict.length ? c.by.strict : c.by.relaxed).join(', ')) + '.' : 'No method that passed aligns with the From domain.') + '</span>' + srcBtn(c.src);
     h += '<div class="dmt">' + rep + '</div><div class="dmt">' + cmp + '</div></div>';
