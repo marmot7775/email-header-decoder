@@ -59,7 +59,7 @@ is handed out only after that. Status as of 2026-10-25.
    Outlook, pasted twice): the page called it a two From forgery.
    Fixed: a doubled paste reads once, mailing list mail gets its own
    finding, the full analysis starts closed, the box opens empty.
-   Large paste stall 2026-10-28, commit SHA_PENDING. Five synthetic
+   Large paste stall 2026-10-28, commit 6a577af. Five synthetic
    pastes (2 MB with 400 Received, a 500 KB value with no spaces,
    a DKIM b= of 100 KB, Outlook rich text with no break spaces and
    soft hyphens, 5000 fields) stayed under 400 ms to the finding,
