@@ -81,7 +81,7 @@
     return text.replace(/\b(is|are|was|were|do|does|did|could|would|should|has|have|will) not\b|\bcannot\b/gi, (m) => {
       const c = CONTRACT[m.toLowerCase()];
       return m[0] === m[0].toUpperCase() ? c[0].toUpperCase() + c.slice(1) : c;
-    });
+    }).replace(/\b(it|that|there|here) is (?=[a-z])/gi, "$1's ");
   }
 
   function sentence(state, technical, plain, src) {
@@ -150,7 +150,7 @@
       const rest = f.rawLines.slice(1);
       // Unfold: join folded lines with a single space, collapse runs of WSP.
       const value = [first].concat(rest).map(s => s.replace(/^[ \t]+/, '')).join(' ').replace(/[ \t]+/g, ' ').trim();
-      if (f.looseFold) notes.push(sentence('caveat', 'Lines under ' + f.name + ' had lost their leading whitespace and were rejoined as one field.', 'Some lines lost their indentation when they were copied, so they were joined back to the header they belong to.', [index]));
+      if (f.looseFold) notes.push(sentence('caveat', 'Lines under ' + f.name + ' had lost their leading whitespace and were rejoined as one field.', 'Some lines lost their indentation when they were copied, so they were joined back to the line they belong to.', [index]));
       return { index, name: f.name, lower: f.name.toLowerCase(), value, decoded: NO_DECODE.has(f.name.toLowerCase()) ? value : decodeWords(value), raw: f.rawLines.join('\n'), lines: [f.firstLine, f.lastLine], looseFold: f.looseFold };
     });
     if (copies > 1) notes.unshift(sentence('caveat', 'The header block appears ' + (copies === 2 ? 'twice' : copies + ' times') + ' in the paste. One copy was read.', 'The headers were pasted ' + (copies === 2 ? 'twice' : copies + ' times') + '. Only one copy was read.', []));

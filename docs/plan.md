@@ -194,3 +194,8 @@ Decisions
             Precedence names bulk, list, and junk as the values
             software acts on. Hops without a time zone share one
             note. Counts under 10 are words.
+2026-10-28  Simple may say the headers, meaning the text the reader
+            pasted. A single named header and the word field stay
+            out, and the test now enforces both. Simple also
+            contracts it is, that is, there is, and here is when a
+            word follows.

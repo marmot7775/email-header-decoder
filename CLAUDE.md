@@ -227,7 +227,8 @@ when known. Fixed words, used the same way everywhere:
 - TLS: encrypted. A Received hop: a handoff between servers.
 
 Never in Simple: aligned, alignment, bounce, Return-Path,
-envelope, HELO, EHLO, selector, d=, s=, header, field, authserv,
+envelope, HELO, EHLO, selector, d=, s=, header (one named
+header; the headers, meaning the pasted text, is fine), field, authserv,
 ARC, seal, compauth, SCL, BCL, PCL, organizational domain, relay,
 hop, TLS, RFC, policy. A test enforces the list, and no
 semicolons, over every fixture and every case in
