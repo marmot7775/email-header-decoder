@@ -45,8 +45,9 @@ is handed out only after that. Status as of 2026-10-25.
    static guide and FAQ, head with JSON-LD, share card, host files.
    Published 2026-10-25: public repo marmot7775/email-header-decoder,
    live at headers.dns-audit.com (Workers static assets from dist/,
-   wrangler.jsonc, workers.dev off). Still to do: real headers from
-   Neil, the copy pass they drive, and the dns-audit.com nav link.
+   wrangler.jsonc, workers.dev off). Nav link on dns-audit.com live
+   2026-10-28 (dns-audit #234, 52dbbf5). Still to do: real headers
+   from Neil and the copy pass they drive.
 
 Decisions
 
