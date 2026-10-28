@@ -100,6 +100,9 @@ test('the receiver\'s own ARC seal is not a forward', () => {
   const f = run('two-dkim.txt').finding;
   assert.equal(f.status, 'pass');
   assert.equal(f.forwarded.yes, false);
+  const notes = run('gmail-show-original.txt').auth.notes;
+  assert.ok(notes.some(n => /added its own record of the checks when the message arrived\. That is not a forward\./.test(n.plain)));
+  assert.ok(notes.every(n => !/forwarding record/.test(n.plain)));
 });
 
 test('mailing list: a list that re-sent the message under its own domain is named as the cause, with its server\'s record quoted', () => {

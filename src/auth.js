@@ -484,9 +484,14 @@
     }
     const arc = auth.arc;
     for (const p of arc.problems) n.push(say('fail', p.text, 'The forwarding record on this message is broken or incomplete, so the results it carries cannot be relied on.', p.src));
+    // Gmail and others seal mail on arrival; a set from the receiver's own
+    // organization is its record, not a forward.
+    const rec = auth.primary >= 0 ? auth.all[auth.primary] : null;
+    const rcvOrg = rec && rec.authserv ? HA.psl.orgDomain(rec.authserv) : '';
+    const ownSeal = !!rcvOrg && arc.instances.every(s => s.sealer.domain && HA.psl.orgDomain(s.sealer.domain) === rcvOrg);
     if (arc.state === 'pass') {
       n.push(say('pass', 'ARC chain of ' + arc.instances.length + ' set' + (arc.instances.length === 1 ? '' : 's') + ' is intact: instances 1 to ' + arc.instances.length + ', cv=none at i=1' + (arc.instances.length > 1 ? ', cv=pass after' : '') + '. Sealed by ' + arc.instances.map(s => s.sealer.domain || '(unnamed)').join(', then ') + '. Seals are not verified here.',
-        'The message carries a complete forwarding record from ' + arc.instances.map(s => s.sealer.domain || 'an unnamed system').join(' and ') + '.', arc.instances.flatMap(s => s.src)));
+        ownSeal ? 'The receiving system (' + rcvOrg + ') added its own record of the checks when the message arrived. That is not a forward.' : 'The message carries a complete forwarding record from ' + arc.instances.map(s => s.sealer.domain || 'an unnamed system').join(' and ') + '.', arc.instances.flatMap(s => s.src)));
     }
     for (const sig of auth.signatures) for (const t of sig.notes) n.push(say('caveat', 'DKIM-Signature d=' + sig.d + ': ' + t, 'One of the message\'s signatures is set up in a weak or unusual way.', sig.src));
     const c = auth.computed;
