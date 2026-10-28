@@ -16,14 +16,14 @@ test('status pass: the headline names the aligned identifiers and the From domai
   const f = run('gmail-show-original.txt').finding;
   assert.equal(f.status, 'pass');
   assert.equal(f.state, 'pass');
-  assert.equal(f.headline.technical, 'DMARC passed because DKIM signed as sender.example and SPF checked sender.example, both aligned with the From domain sender.example.');
+  assert.equal(f.headline.technical, 'DMARC at mx.google.com passed because DKIM d=sender.example s=mail2026 passed and SPF passed for the RFC5321.MailFrom domain sender.example, and both align with the RFC5322.From domain sender.example.');
   assert.match(f.consequence.technical, /p=quarantine.*did not come into play/);
 });
 
 test('status fail: a sending service\'s own domains, in the one sentence the prompt describes', () => {
   const f = run('esp-unaligned.txt').finding;
   assert.equal(f.status, 'fail');
-  assert.equal(f.headline.technical, 'DMARC failed because DKIM signed as mailer.example and SPF checked bounce.mailer.example, so neither aligned with the From domain shop.example.');
+  assert.equal(f.headline.technical, 'DMARC at mx.google.com failed because DKIM d=mailer.example s=m1 passed and SPF passed for the RFC5321.MailFrom domain bounce.mailer.example, but neither aligns with the RFC5322.From domain shop.example.');
   assert.match(f.headline.plain, /signed by mailer\.example and it came from a server that bounce\.mailer\.example allows, but neither of those is shop\.example/);
   assert.match(f.cause.technical, /not shop\.example/);
   assert.match(f.consequence.technical, /p=quarantine.*sent this message to spam \(dis=QUARANTINE\)/);
@@ -41,7 +41,7 @@ test('status forwarded: the failure is blamed on the forward when the receiver v
   assert.equal(f.forwarded.yes, true);
   assert.deepEqual(f.forwarded.by, ['relay.example']);
   assert.equal(f.forwarded.preForward.result, 'pass');
-  assert.match(f.headline.technical, /^DMARC failed because the message was forwarded by relay\.example: before the forward, relay\.example recorded spf=pass \(bounce\.newsletter\.example\.net\), dkim=pass \(newsletter\.example\.net\), and dmarc=pass \(newsletter\.example\.net\)/);
+  assert.match(f.headline.technical, /^DMARC at .+? failed because the message was forwarded by relay\.example: before the forward, relay\.example recorded spf=pass \(bounce\.newsletter\.example\.net\), dkim=pass \(newsletter\.example\.net\), and dmarc=pass \(newsletter\.example\.net\)/);
   assert.match(f.cause.technical, /^The failure belongs to the forward, not to the sender\./);
   assert.ok(f.fixes.some(x => /trusted ARC sealers/.test(x.technical)));
   assert.match(f.consequence.technical, /action=oreject/);
