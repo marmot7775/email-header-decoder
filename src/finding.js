@@ -91,23 +91,28 @@
   function failClause(pieces, from) {
     const un = pieces.filter(x => x.unaligned).length;
     const t = joinList(pieces.map(x => x.t));
-    const p = joinList(pieces.map(x => x.p));
+    const p = joinList(pieces.map(x => x.p.split('the signature from ' + from).join('the signature').split(from + '\'s list of').join('the sender\'s list of')));
     if (un && un === pieces.length) return { t: t + ', but ' + (un === 1 ? 'it does not align' : 'neither aligns') + ' with the From domain ' + from + ' (RFC5322.From).', p: p + '. ' + (un === 1 ? 'That is not ' : 'Neither of those is ') + from + ', the domain in the From address.' };
     if (un) return { t: t + ', and nothing that passed aligns with the From domain ' + from + ' (RFC5322.From).', p: p + '. Nothing that checked out matches ' + from + ', the domain in the From address.' };
-    return { t: t + ', so no identifier passed for the From domain ' + from + ' (RFC5322.From).', p: p + '. Nothing proved the mail came from ' + from + '.' };
+    return { t: t + ', so no identifier passed for the From domain ' + from + ' (RFC5322.From).', p: p + '. Nothing proved it came from ' + from + '.' };
   }
   function passPieces(auth) {
     const out = [];
-    for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: 'DKIM d=' + k.domain + (k.selector ? ' s=' + k.selector : '') + ' passed', p: 'it was signed by ' + k.domain, relaxedOnly: k.relaxedOnly, src: k.src });
+    for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: 'DKIM d=' + k.domain + (k.selector ? ' s=' + k.selector : '') + ' passed', p: 'it was signed by ' + k.domain, d: k.domain, kind: 'dkim', relaxedOnly: k.relaxedOnly, src: k.src });
     const s = auth.spf;
-    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF passed for the Return-Path domain ' + s.domain + ' (RFC5321.MailFrom)', p: 'it came from a server that ' + s.domain + ' allows', relaxedOnly: s.relaxedOnly, src: s.src });
+    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF passed for the Return-Path domain ' + s.domain + ' (RFC5321.MailFrom)', p: 'it came from a server that ' + s.domain + ' allows', d: s.domain, kind: 'spf', relaxedOnly: s.relaxedOnly, src: s.src });
     return out;
   }
   function passClause(pieces, from) {
     const relaxed = pieces.some(x => x.relaxedOnly) ? ' under relaxed alignment, through the organizational domain' : '';
+    // Every pass is the From domain itself: name it once.
+    const own = !relaxed && pieces.every(x => x.d === from);
+    const both = pieces.length > 1;
+    const ownP = both ? 'it was signed by ' + from + ', the domain in the From address, and came from a server it allows.'
+      : pieces[0] && pieces[0].kind === 'spf' ? 'it came from a server allowed by ' + from + ', the domain in the From address.' : 'it was signed by ' + from + ', the domain in the From address.';
     return {
       t: joinList(pieces.map(x => x.t)) + ', and ' + (pieces.length === 1 ? 'it aligns' : 'both align') + ' with the From domain ' + from + ' (RFC5322.From)' + relaxed + '.',
-      p: joinList(pieces.map(x => x.p)) + '. ' + (pieces.length === 1 ? 'That' : 'Both') + (relaxed ? ' belong' + (pieces.length === 1 ? 's' : '') + ' to ' + from + ', the domain in the From address, or to its parent domain.' : ' match' + (pieces.length === 1 ? 'es ' : ' ') + from + ', the domain in the From address.'),
+      p: own ? ownP : joinList(pieces.map(x => x.p)) + '. ' + (pieces.length === 1 ? 'That' : 'Both') + (relaxed ? ' belong' + (pieces.length === 1 ? 's' : '') + ' to ' + from + ', the domain in the From address, or to its parent domain.' : ' match' + (pieces.length === 1 ? 'es ' : ' ') + from + ', the domain in the From address.'),
     };
   }
 
