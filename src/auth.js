@@ -429,7 +429,7 @@
       // computed pass
       if (otherFrom) return { reason: 'org-domain', state: 'caveat', technical: 'The receiver evaluated header.from=' + dmarc.headerFrom + ', not ' + from.domain + ', so it checked a different author domain.', plain: 'The receiving system checked a different sender domain than the one shown here.', src };
       if (approx || rows.some(r => r.relaxedOnly)) return { reason: 'org-domain', state: 'caveat', technical: 'The pass here rests on relaxed alignment through the organizational domain ' + from.org + '. The receiver found a different organizational domain' + (approx ? ' (this page\'s suffix list does not cover this name, so its answer is an approximation)' : '') + '.', plain: 'The receiving system drew the line around the sender\'s organization differently from this page.', src };
-      return { reason: 'local-policy', state: 'caveat', technical: 'The identifiers align and the receiver reported them as passing, yet it reported dmarc=fail. A local policy, or a result it did not write into these headers, is the likely reason.', plain: 'The checks line up, but the receiving system marked the message as failing anyway, probably because of its own rules.', src };
+      return { reason: 'local-policy', state: 'caveat', technical: 'The identifiers align and the receiver reported them as passing, yet it reported dmarc=fail. A local policy, or a result it did not write into these headers, is the likely reason.', plain: 'The checks line up, but the receiving system marked the message as failing, most likely under a rule of its own.', src };
     }
     // reported pass, computed fail
     const preForward = arc.present && arc.instances[0] && arc.instances[0].preForward.some(x => x.method === 'dmarc' && x.result === 'pass');

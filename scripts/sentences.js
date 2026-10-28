@@ -145,6 +145,9 @@ function meanings() {
   };
   const emit = (vendor, groups) => { for (const g of groups) for (const it of g.items) out.push([vendor + ' ' + it.key + ' ' + it.raw + ' (' + it.level + ')', it.technical, it.plain]); };
   const ff = (k, v) => decode(['X-Forefront-Antispam-Report: ' + k + ':' + v]);
+  // The card note, said once for every CAT, SCL and BCL value.
+  const card = decode(['X-Forefront-Antispam-Report: CAT:NONE;SCL:1;BCL:0'])[0].note;
+  out.push(['Microsoft card note', card.technical, card.plain]);
   for (const k of Object.keys(T.MS_CAT)) emit('Microsoft', ff('CAT', k));
   for (const k of Object.keys(T.MS_SFV)) emit('Microsoft', ff('SFV', k));
   for (const k of ['-1', '0', '1', '2', '5', '6', '7', '9', '10']) emit('Microsoft', ff('SCL', k));

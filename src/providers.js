@@ -48,12 +48,11 @@
   function sclItem(v, src, name) {
     const raw = String(v).trim();
     const n = /^-?\d+$/.test(raw) ? parseInt(raw, 10) : NaN;
-    const tail = ' In cloud organizations SCL does not decide the filing; CAT does.';
     const known = { '-1': ['pass', 'filtering skipped', 'Spam filtering was skipped.'], 0: ['pass', 'not spam', 'Not spam.'], 1: ['pass', 'not spam', 'Not spam.'], 5: ['fail', 'spam', 'Rated as spam.'], 6: ['fail', 'spam', 'Rated as spam.'], 9: ['fail', 'high confidence spam', 'Rated as spam with high confidence.'] };
     const k = known[n];
-    if (k) return item(name, raw, k[0], 'Spam confidence level ' + raw + ': ' + k[1] + '.' + tail, k[2], src);
-    if (n === 7 || n === 8) return item(name, raw, 'warn', 'Spam confidence level ' + raw + '. Microsoft gives this value no meaning of its own and says 5 or higher generally means the message is considered bad.' + tail, 'Rated as likely spam.', src);
-    if (n >= 2 && n <= 4) return item(name, raw, 'info', 'Spam confidence level ' + raw + ' is inside Microsoft\'s range but has no published meaning, so it is shown as written.' + tail, 'Microsoft recorded a spam score this page cannot interpret.', src);
+    if (k) return item(name, raw, k[0], 'Spam confidence level ' + raw + ': ' + k[1] + '.', k[2], src);
+    if (n === 7 || n === 8) return item(name, raw, 'warn', 'Spam confidence level ' + raw + '. Microsoft gives this value no meaning of its own and says 5 or higher generally means the message is considered bad.', 'Rated as likely spam.', src);
+    if (n >= 2 && n <= 4) return item(name, raw, 'info', 'Spam confidence level ' + raw + ' is inside Microsoft\'s range but has no published meaning, so it is shown as written.', 'Microsoft recorded a spam score this page cannot interpret.', src);
     return notListed(name, raw, 'Microsoft', src);
   }
 
@@ -61,7 +60,7 @@
     const n = /^\d+$/.test(raw) ? +raw : NaN;
     if (!(n >= 0 && n <= 9)) return notListed('BCL', raw, 'Microsoft', src);
     const [lvl, t, p] = n === 0 ? ['pass', 'not from a bulk sender', 'Not bulk mail.'] : n <= 3 ? ['info', 'a bulk sender that generates few complaints', 'Bulk mail from a sender with few complaints.'] : n <= 7 ? ['warn', 'a bulk sender that generates a mixed number of complaints', 'Bulk mail from a sender people sometimes complain about.'] : ['fail', 'a bulk sender that generates a high number of complaints', 'Bulk mail from a sender people often complain about.'];
-    return item('BCL', raw, lvl, 'Bulk complaint level ' + n + ': ' + t + '. The tenant\'s threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers.', p, src);
+    return item('BCL', raw, lvl, 'Bulk complaint level ' + n + ': ' + t + '.', p, src);
   }
 
   // PCL: Exchange publishes 1 to 3 as Neutral and 4 to 8 as Suspicious.
@@ -120,7 +119,7 @@
       for (const part of ff.value.split(';')) { const i = part.indexOf(':'); if (i > 0) kv[part.slice(0, i).trim().toUpperCase()] = part.slice(i + 1).trim(); }
       if (kv.CAT) {
         const m = MS_CAT[kv.CAT.toUpperCase()];
-        items.push(m ? item('CAT', kv.CAT, m[0], 'Threat category: ' + m[1] + ' In cloud organizations CAT, not SCL, says how the message was filtered.', m[2], s) : notListed('CAT', kv.CAT, 'Microsoft', s));
+        items.push(m ? item('CAT', kv.CAT, m[0], 'Threat category: ' + m[1], m[2], s) : notListed('CAT', kv.CAT, 'Microsoft', s));
       }
       if (kv.SFV) { const m = MS_SFV[kv.SFV.toUpperCase()]; items.push(m ? item('SFV', kv.SFV, m[0], m[1], m[2], s) : notListed('SFV', kv.SFV, 'Microsoft', s)); }
       if (kv.SCL) items.push(sclItem(kv.SCL, scl && scl.value.trim() === kv.SCL ? [ff.index, scl.index] : s, 'SCL'));
@@ -157,7 +156,14 @@
     if (authSrc && authSrc.value.trim()) items.push(item('AuthSource', authSrc.value.trim(), 'info', 'The server that evaluated authentication for the organization.', 'The Microsoft server that checked who sent this.', [authSrc.index]));
     if (auth.compauth) items.push(compauthItem(auth.compauth));
     const catItem = items.find(i => i.key === 'CAT');
-    return group('microsoft', 'Microsoft 365', items, ff ? say('unknown', 'Fields of X-Forefront-Antispam-Report that Microsoft does not document are left out; Microsoft says they are for its own diagnostics.', 'Only the parts Microsoft explains publicly are shown.', [ff.index]) : null, catItem || null);
+    // Notes that hold for every CAT, SCL and BCL value, said once on the card.
+    const has = (k) => items.some(i => i.key === k || i.key === 'X-MS-Exchange-Organization-SCL' && k === 'SCL');
+    const nt = [], np = [];
+    if (ff) { nt.push('Fields of X-Forefront-Antispam-Report that Microsoft does not document are left out; Microsoft says they are for its own diagnostics.'); np.push('Only the parts Microsoft explains publicly are shown.'); }
+    if (has('CAT') || has('SCL')) { nt.push('In cloud organizations CAT, not SCL, says how the message was filtered.'); np.push('Microsoft\'s threat category (CAT), not its spam score (SCL), decides where the message went.'); }
+    if (has('BCL')) { nt.push('The tenant\'s threshold decides the BCL action (7 by default, 6 Standard, 5 Strict); it is not in the headers.'); np.push('Each organization sets its own limit for bulk mail, and the headers don\'t show it.'); }
+    const noteSrc = Array.from(new Set(items.flatMap(i => i.src))).sort((a, b) => a - b);
+    return group('microsoft', 'Microsoft 365', items, nt.length ? say('unknown', nt.join(' '), np.join(' '), noteSrc) : null, catItem || null);
   }
 
   // Google writes no spam or placement decision into headers. Its own

@@ -398,9 +398,9 @@ Detail 2, plain: The sending server is approved, but by bounce.mailer.example, n
 
 Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
 
-Fix 1, plain: These headers don't show one clear fix. Send the same message to another mailbox, such as Gmail or Outlook, and compare.
+Fix 1, plain: The key lookup failed for a temporary reason, which isn't a setup fault. If it keeps happening, ask whoever hosts the DNS for shop.example whether their servers were slow to answer.
 
-Fix 1, technical: Nothing in these headers points at a single change. Compare with a copy of the same message delivered to a different mailbox provider.
+Fix 1, technical: A temperror on the key query says nothing about the key. If it repeats, check that the nameservers for shop.example answer promptly and that s1._domainkey.shop.example resolves.
 
 ## fail computed, no DMARC result reported
 
@@ -450,7 +450,7 @@ Detail 2, plain: The sending server is approved, but by list.example, not by the
 
 Detail 2, technical: SPF passed for list.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
 
-Fix 1, plain: If you sent this, your setup isn't the problem as far as these headers show. Mailing lists that change messages break these checks. That's a known side effect.
+Fix 1, plain: If you sent this, your setup isn't the problem as far as these headers show. Lists that change messages break these checks.
 
 Fix 1, technical: Nothing to change at shop.example on the strength of this message. Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list's ARC seal.
 
@@ -480,7 +480,7 @@ Detail 2, plain: The sending server is approved, but by list.example, not by the
 
 Detail 2, technical: SPF passed for list.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
 
-Fix 1, plain: If you sent this, your setup isn't the problem. Mailing lists that change messages break these checks. That's a known side effect.
+Fix 1, plain: If you sent this, your setup isn't the problem as far as these headers show. Lists that change messages break these checks.
 
 Fix 1, technical: Nothing to change at shop.example: its mail passed before the list. Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list's ARC seal.
 
@@ -490,11 +490,11 @@ Fix 2, technical: If you run club.list.example: have the list rewrite the From a
 
 ## fail with the receiver judging differently
 
-Plain headline: This message failed the sender check (DMARC), though it was signed for shop.example. The receiving system judged it differently from this page.
+Plain headline: This message failed the sender check (DMARC) even though it was signed by shop.example. The receiving system reported a failure the headers don't explain.
 
-Technical headline: DMARC at mx.receiver.example failed at mx.receiver.example even though DKIM d=shop.example s=s1 passed aligns with the From domain shop.example.
+Technical headline: DMARC at mx.receiver.example failed even though DKIM d=shop.example s=s1 passed and aligns with the From domain shop.example.
 
-Cause, plain: The checks line up, but the receiving system marked the message as failing anyway, probably because of its own rules.
+Cause, plain: The checks line up, but the receiving system marked the message as failing, most likely under a rule of its own.
 
 Cause, technical: The identifiers align and the receiver reported them as passing, yet it reported dmarc=fail. A local policy, or a result it did not write into these headers, is the likely reason.
 
@@ -518,7 +518,7 @@ Fix 1, technical: Nothing in these headers points at a single change. Compare wi
 
 Plain headline: This message failed the sender check (DMARC) although it was signed by a domain in the same organization as shop.example. The sender's DMARC setting probably demands an exact domain match.
 
-Technical headline: DMARC at mx.receiver.example failed even though DKIM d=mail.shop.example s=s1 passed aligns with shop.example in relaxed mode, so the DMARC record most likely requires strict alignment (adkim=s); the record itself is not in the headers.
+Technical headline: DMARC at mx.receiver.example failed even though DKIM d=mail.shop.example s=s1 passed and aligns with the From domain shop.example in relaxed mode, so the DMARC record most likely requires strict alignment (adkim=s); the record itself is not in the headers.
 
 Cause, plain: The sending domain's DMARC record probably demands an exact domain match, and this message only matches the wider organization.
 
@@ -536,9 +536,9 @@ Detail 2, plain: The sending server is approved, but by bounce.mailer.example, n
 
 Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
 
-Fix 1, plain: Once the signature is fixed, you can also give the service that sends this mail a custom return address on shop.example. Services call it a custom return path or sending domain. It's optional.
+Fix 1, plain: shop.example's DMARC record most likely requires an exact domain match. Either have the sending service sign with shop.example itself instead of mail.shop.example, or ask whoever manages the DNS for shop.example to allow subdomains (relaxed alignment). Check the record first. This page can't read it.
 
-Fix 1, technical: Second, after DKIM: set a custom Return-Path (bounce) domain under shop.example at the sending service so SPF aligns too.
+Fix 1, technical: The record most likely sets adkim=s. Sign with d=shop.example rather than a subdomain, or change the record to adkim=r. Confirm by reading _dmarc.shop.example; this page does not query DNS.
 
 ## dmarc none, would pass
 
@@ -704,7 +704,7 @@ Plain headline: This message failed the sender check (DMARC) because it was forw
 
 Technical headline: DMARC at mx.receiver.example failed because the message was forwarded by forward.example: before the forward, mx.forward.example recorded spf=pass (orders@shop.example), dkim=pass (shop.example), and dmarc=pass (shop.example), and after it DKIM d=shop.example s=s1 failed verification and SPF soft failed for the Return-Path domain shop.example (RFC5321.MailFrom).
 
-Cause, plain: The sender set things up correctly. Forwarding changed the message on the way, which is a known side effect of forwarding.
+Cause, plain: The sender's setup is fine. The forward re-sent the message from a server the sender's list doesn't include and changed it on the way, which broke the signature.
 
 Cause, technical: The failure belongs to the forward, not to the sender. The message passed on arrival at mx.forward.example. The forward broke SPF: it sent the message on from its own server, which the SPF record of shop.example does not authorize (spf=softfail). It also broke the DKIM signature from shop.example by changing the message.
 
@@ -796,7 +796,7 @@ Cause, technical: Some servers skip Authentication-Results, and some mail progra
 
 Policy: none written
 
-Detail 1, plain: The message carries a signature, but no receiver's check of it's recorded.
+Detail 1, plain: The message carries a signature, but no receiving system recorded checking it.
 
 Detail 1, technical: DKIM signatures present, not checked by any receiver here: d=shop.example (would align).
 
@@ -862,7 +862,7 @@ Cause, technical: A receiver writes Authentication-Results when it accepts the m
 
 Policy: none written
 
-Detail 1, plain: The message carries a signature, but no receiver's check of it's recorded.
+Detail 1, plain: The message carries a signature, but no receiving system recorded checking it.
 
 Detail 1, technical: DKIM signatures present, not checked by any receiver here: d=shop.example (would align).
 
@@ -1264,41 +1264,43 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 
 ## Filter code meanings
 
-Microsoft CAT NONE (pass). Technical: Threat category: No threat policy applied. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: No threat was detected.
+Microsoft card note. Technical: Fields of X-Forefront-Antispam-Report that Microsoft does not document are left out; Microsoft says they are for its own diagnostics. In cloud organizations CAT, not SCL, says how the message was filtered. The tenant's threshold decides the BCL action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Only the parts Microsoft explains publicly are shown. Microsoft's threat category (CAT), not its spam score (SCL), decides where the message went. Each organization sets its own limit for bulk mail, and the headers don't show it.
 
-Microsoft CAT SPM (fail). Technical: Threat category: Spam. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Filed as spam.
+Microsoft CAT NONE (pass). Technical: Threat category: No threat policy applied. Plain: No threat was detected.
 
-Microsoft CAT HSPM (fail). Technical: Threat category: High confidence spam. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Filed as spam with high confidence.
+Microsoft CAT SPM (fail). Technical: Threat category: Spam. Plain: Filed as spam.
 
-Microsoft CAT PHSH (fail). Technical: Threat category: Phishing. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Treated as phishing.
+Microsoft CAT HSPM (fail). Technical: Threat category: High confidence spam. Plain: Filed as spam with high confidence.
 
-Microsoft CAT HPHSH (fail). Technical: Threat category: High confidence phishing. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Treated as phishing with high confidence.
+Microsoft CAT PHSH (fail). Technical: Threat category: Phishing. Plain: Treated as phishing.
 
-Microsoft CAT HPHISH (fail). Technical: Threat category: High confidence phishing. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Treated as phishing with high confidence.
+Microsoft CAT HPHSH (fail). Technical: Threat category: High confidence phishing. Plain: Treated as phishing with high confidence.
 
-Microsoft CAT BULK (warn). Technical: Threat category: Bulk. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Treated as bulk mail, such as a newsletter.
+Microsoft CAT HPHISH (fail). Technical: Threat category: High confidence phishing. Plain: Treated as phishing with high confidence.
 
-Microsoft CAT SPOOF (fail). Technical: Threat category: Spoofing. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Treated as a forged sender.
+Microsoft CAT BULK (warn). Technical: Threat category: Bulk. Plain: Treated as bulk mail, such as a newsletter.
 
-Microsoft CAT MALW (fail). Technical: Threat category: Malware. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Malware was found.
+Microsoft CAT SPOOF (fail). Technical: Threat category: Spoofing. Plain: Treated as a forged sender.
 
-Microsoft CAT AMP (fail). Technical: Threat category: Anti-malware policy. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Caught by the malware filter.
+Microsoft CAT MALW (fail). Technical: Threat category: Malware. Plain: Malware was found.
 
-Microsoft CAT FTBP (fail). Technical: Threat category: Anti-malware common attachments filter. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Caught by the attachment type filter.
+Microsoft CAT AMP (fail). Technical: Threat category: Anti-malware policy. Plain: Caught by the malware filter.
 
-Microsoft CAT SAP (fail). Technical: Threat category: Safe Attachments (Defender for Office 365). In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Caught by attachment scanning.
+Microsoft CAT FTBP (fail). Technical: Threat category: Anti-malware common attachments filter. Plain: Caught by the attachment type filter.
 
-Microsoft CAT DIMP (fail). Technical: Threat category: Domain impersonation (Defender for Office 365). In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Looked like it was pretending to be a protected domain.
+Microsoft CAT SAP (fail). Technical: Threat category: Safe Attachments (Defender for Office 365). Plain: Caught by attachment scanning.
 
-Microsoft CAT UIMP (fail). Technical: Threat category: User impersonation (Defender for Office 365). In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Looked like it was pretending to be a protected person.
+Microsoft CAT DIMP (fail). Technical: Threat category: Domain impersonation (Defender for Office 365). Plain: Looked like it was pretending to be a protected domain.
 
-Microsoft CAT GIMP (fail). Technical: Threat category: Mailbox intelligence impersonation (Defender for Office 365). In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Looked like it was pretending to be someone the recipient usually hears from.
+Microsoft CAT UIMP (fail). Technical: Threat category: User impersonation (Defender for Office 365). Plain: Looked like it was pretending to be a protected person.
 
-Microsoft CAT BIMP (fail). Technical: Threat category: Brand impersonation (Defender for Office 365). In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Looked like it was pretending to be a known brand.
+Microsoft CAT GIMP (fail). Technical: Threat category: Mailbox intelligence impersonation (Defender for Office 365). Plain: Looked like it was pretending to be someone the recipient usually hears from.
 
-Microsoft CAT INTOS (fail). Technical: Threat category: Intra-organization phishing. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Treated as phishing from inside the organization.
+Microsoft CAT BIMP (fail). Technical: Threat category: Brand impersonation (Defender for Office 365). Plain: Looked like it was pretending to be a known brand.
 
-Microsoft CAT OSPM (warn). Technical: Threat category: Outbound spam. In cloud organizations CAT, not SCL, says how the message was filtered. Plain: Treated as outgoing spam.
+Microsoft CAT INTOS (fail). Technical: Threat category: Intra-organization phishing. Plain: Treated as phishing from inside the organization.
+
+Microsoft CAT OSPM (warn). Technical: Threat category: Outbound spam. Plain: Treated as outgoing spam.
 
 Microsoft SFV NSPM (pass). Technical: Spam filtering marked it as not spam. Plain: Microsoft's spam filter decided this isn't spam.
 
@@ -1320,43 +1322,43 @@ Microsoft SFV SKQ (info). Technical: Released from quarantine to the recipients.
 
 Microsoft SFV SKS (fail). Technical: Marked as spam before filtering, by a mail flow rule or an on-premises hybrid decision. Plain: A rule set by an administrator marked this message as spam.
 
-Microsoft SCL -1 (pass). Technical: Spam confidence level -1: filtering skipped. In cloud organizations SCL does not decide the filing; CAT does. Plain: Spam filtering was skipped.
+Microsoft SCL -1 (pass). Technical: Spam confidence level -1: filtering skipped. Plain: Spam filtering was skipped.
 
-Microsoft SCL 0 (pass). Technical: Spam confidence level 0: not spam. In cloud organizations SCL does not decide the filing; CAT does. Plain: Not spam.
+Microsoft SCL 0 (pass). Technical: Spam confidence level 0: not spam. Plain: Not spam.
 
-Microsoft SCL 1 (pass). Technical: Spam confidence level 1: not spam. In cloud organizations SCL does not decide the filing; CAT does. Plain: Not spam.
+Microsoft SCL 1 (pass). Technical: Spam confidence level 1: not spam. Plain: Not spam.
 
-Microsoft SCL 2 (info). Technical: Spam confidence level 2 is inside Microsoft's range but has no published meaning, so it is shown as written. In cloud organizations SCL does not decide the filing; CAT does. Plain: Microsoft recorded a spam score this page can't interpret.
+Microsoft SCL 2 (info). Technical: Spam confidence level 2 is inside Microsoft's range but has no published meaning, so it is shown as written. Plain: Microsoft recorded a spam score this page can't interpret.
 
-Microsoft SCL 5 (fail). Technical: Spam confidence level 5: spam. In cloud organizations SCL does not decide the filing; CAT does. Plain: Rated as spam.
+Microsoft SCL 5 (fail). Technical: Spam confidence level 5: spam. Plain: Rated as spam.
 
-Microsoft SCL 6 (fail). Technical: Spam confidence level 6: spam. In cloud organizations SCL does not decide the filing; CAT does. Plain: Rated as spam.
+Microsoft SCL 6 (fail). Technical: Spam confidence level 6: spam. Plain: Rated as spam.
 
-Microsoft SCL 7 (warn). Technical: Spam confidence level 7. Microsoft gives this value no meaning of its own and says 5 or higher generally means the message is considered bad. In cloud organizations SCL does not decide the filing; CAT does. Plain: Rated as likely spam.
+Microsoft SCL 7 (warn). Technical: Spam confidence level 7. Microsoft gives this value no meaning of its own and says 5 or higher generally means the message is considered bad. Plain: Rated as likely spam.
 
-Microsoft SCL 9 (fail). Technical: Spam confidence level 9: high confidence spam. In cloud organizations SCL does not decide the filing; CAT does. Plain: Rated as spam with high confidence.
+Microsoft SCL 9 (fail). Technical: Spam confidence level 9: high confidence spam. Plain: Rated as spam with high confidence.
 
 Microsoft SCL 10 (info). Technical: SCL 10 is not in Microsoft's published table, so it is shown as written. Plain: Microsoft recorded a code this page doesn't know. It's shown as written.
 
-Microsoft BCL 0 (pass). Technical: Bulk complaint level 0: not from a bulk sender. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Not bulk mail.
+Microsoft BCL 0 (pass). Technical: Bulk complaint level 0: not from a bulk sender. Plain: Not bulk mail.
 
-Microsoft BCL 1 (info). Technical: Bulk complaint level 1: a bulk sender that generates few complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender with few complaints.
+Microsoft BCL 1 (info). Technical: Bulk complaint level 1: a bulk sender that generates few complaints. Plain: Bulk mail from a sender with few complaints.
 
-Microsoft BCL 2 (info). Technical: Bulk complaint level 2: a bulk sender that generates few complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender with few complaints.
+Microsoft BCL 2 (info). Technical: Bulk complaint level 2: a bulk sender that generates few complaints. Plain: Bulk mail from a sender with few complaints.
 
-Microsoft BCL 3 (info). Technical: Bulk complaint level 3: a bulk sender that generates few complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender with few complaints.
+Microsoft BCL 3 (info). Technical: Bulk complaint level 3: a bulk sender that generates few complaints. Plain: Bulk mail from a sender with few complaints.
 
-Microsoft BCL 4 (warn). Technical: Bulk complaint level 4: a bulk sender that generates a mixed number of complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender people sometimes complain about.
+Microsoft BCL 4 (warn). Technical: Bulk complaint level 4: a bulk sender that generates a mixed number of complaints. Plain: Bulk mail from a sender people sometimes complain about.
 
-Microsoft BCL 5 (warn). Technical: Bulk complaint level 5: a bulk sender that generates a mixed number of complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender people sometimes complain about.
+Microsoft BCL 5 (warn). Technical: Bulk complaint level 5: a bulk sender that generates a mixed number of complaints. Plain: Bulk mail from a sender people sometimes complain about.
 
-Microsoft BCL 6 (warn). Technical: Bulk complaint level 6: a bulk sender that generates a mixed number of complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender people sometimes complain about.
+Microsoft BCL 6 (warn). Technical: Bulk complaint level 6: a bulk sender that generates a mixed number of complaints. Plain: Bulk mail from a sender people sometimes complain about.
 
-Microsoft BCL 7 (warn). Technical: Bulk complaint level 7: a bulk sender that generates a mixed number of complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender people sometimes complain about.
+Microsoft BCL 7 (warn). Technical: Bulk complaint level 7: a bulk sender that generates a mixed number of complaints. Plain: Bulk mail from a sender people sometimes complain about.
 
-Microsoft BCL 8 (fail). Technical: Bulk complaint level 8: a bulk sender that generates a high number of complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender people often complain about.
+Microsoft BCL 8 (fail). Technical: Bulk complaint level 8: a bulk sender that generates a high number of complaints. Plain: Bulk mail from a sender people often complain about.
 
-Microsoft BCL 9 (fail). Technical: Bulk complaint level 9: a bulk sender that generates a high number of complaints. The tenant's threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Bulk mail from a sender people often complain about.
+Microsoft BCL 9 (fail). Technical: Bulk complaint level 9: a bulk sender that generates a high number of complaints. Plain: Bulk mail from a sender people often complain about.
 
 Microsoft PCL 1 (pass). Technical: Phishing confidence level 1: Neutral, the content is not likely phishing. Plain: The content didn't look like phishing.
 

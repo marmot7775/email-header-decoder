@@ -87,7 +87,15 @@ is handed out only after that. Status as of 2026-10-25.
    and the meaning alone on the technical line; a test fails if a
    pass code renders the word fail. A detail that restates the
    cause is dropped. SPF details get one sentence per result. No
-   never, no Technical view, fewer metaphors.
+   never, no Technical view, fewer metaphors. Commit f03d76b.
+   Second half the same day: the receiver judging differently and
+   strict alignment headlines read passed and aligns with the From
+   domain; strict alignment now offers the adkim=s fix (sign with
+   the From domain or relax the record) instead of the custom
+   return path; DKIM temperror gets its own fix; forwarded and
+   mailing list wording cut down; the CAT versus SCL and BCL
+   threshold sentences moved off every item into one note on the
+   Microsoft card. Commit SHA_HERE.
    Still to do: more real headers from Neil and the copy pass they
    drive.
 
