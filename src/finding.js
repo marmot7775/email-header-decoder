@@ -18,6 +18,7 @@
   const HA = (root.HA = root.HA || {});
   const P = HA.parse;
   const say = P.sentence;
+  const SPF_CAUSES = new WeakSet(); // causes that already say what the SPF row says
 
   const STATE_OF = { pass: 'pass', fail: 'fail', forwarded: 'caveat', none: 'caveat', error: 'caveat', unknown: 'unknown' };
   const MAILBOX_OPERATORS = ['Google', 'Microsoft', 'Apple', 'Yahoo'];
@@ -341,7 +342,7 @@
       out.status = status;
       out.state = status === 'pass' && dm.disagreement ? 'caveat' : STATE_OF[status];
       out.headline = headline; out.cause = withCompauth(cause, auth.compauth);
-      out.details = out.details.filter(s => s.technical !== cause.technical);
+      out.details = out.details.filter(s => s.technical !== cause.technical && !(SPF_CAUSES.has(cause) && s === spfRow));
       out.consequence = consequenceOf(status, dm, fd, receiver, from.org);
       out.fixes = fixesOf(status, c);
       out.limits = from.defined && auth.primary >= 0 ? limitsOf(c) : [];
@@ -376,7 +377,8 @@
 
     const via = fw.yes ? 'forward' : list.take ? 'list' : '';
     for (const k of auth.dkim) out.details.push(rowSentence(k, fd, via));
-    out.details.push(rowSentence(auth.spf, fd, via));
+    const spfRow = rowSentence(auth.spf, fd, via);
+    out.details.push(spfRow);
     const allSrc = uniq(dm.src.concat(auth.computed.src));
 
     // Reported result first; computed only when the receiver wrote none.
@@ -525,11 +527,15 @@
     if (!parts.length) parts.push('Neither SPF nor DKIM produced a pass on a domain that aligns with ' + fd + '.');
     const plain = failedSig ? 'The message was changed after it was signed, or the signature does not match the sender\'s published key.'
       : dkimErr ? 'The signature on the message could not be checked, and nothing else proves it came from ' + fd + '.'
+        : spf.result === 'softfail' ? 'The server that sent this is not on the sender\'s list of approved servers (SPF), and the list asks receivers to treat that as suspicious rather than refuse it.'
         : spfFailed ? 'The server that sent this is not on the sender\'s list of approved servers (SPF).'
+          : spf.result === 'neutral' && spfErr ? 'The sender\'s list of approved servers (SPF) makes no statement about the server that sent this, and nothing else proves the mail came from ' + fd + '.'
           : spf.result === 'none' && spfErr ? 'The sender\'s domain publishes no list of approved servers, and nothing else proves the mail came from ' + fd + '.'
             : spfErr ? 'The sender\'s list of approved servers (SPF) could not be read, and nothing else proves the mail came from ' + fd + '.'
               : 'Nothing in the message proves it came from ' + fd + '.';
-    return say('fail', parts.join(' '), plain, src);
+    const cause = say('fail', parts.join(' '), plain, src);
+    if (!failedSig && !dkimErr && (spfFailed || spfErr)) SPF_CAUSES.add(cause);
+    return cause;
   }
 
   HA.finding = { build, forwardOf, joinList };

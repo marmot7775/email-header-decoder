@@ -128,17 +128,13 @@ Plain headline: This message failed the sender check (DMARC). It carried no sign
 
 Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF was neutral for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The sender's list of approved servers (SPF) couldn't be read, and nothing else proves the mail came from shop.example.
+Cause, plain: The sender's list of approved servers (SPF) makes no statement about the server that sent this, and nothing else proves the mail came from shop.example.
 
 Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The SPF record of shop.example makes no statement about the server that handed the message over (neutral), so SPF did not pass.
 
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
-
-Detail 1, plain: shop.example's list of approved servers makes no statement about the server that sent this.
-
-Detail 1, technical: SPF was neutral for shop.example.
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -262,10 +258,6 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example.
-
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -280,17 +272,13 @@ Plain headline: This message failed the sender check (DMARC). It carried no sign
 
 Technical headline: DMARC at mx.receiver.example failed because there was no DKIM signature and SPF soft failed for the Return-Path domain shop.example (RFC5321.MailFrom), so no identifier passed for the From domain shop.example (RFC5322.From).
 
-Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF).
+Cause, plain: The server that sent this isn't on the sender's list of approved servers (SPF), and the list asks receivers to treat that as suspicious rather than refuse it.
 
 Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The SPF record of shop.example does not authorize the server that handed the message over and asks receivers to treat it as suspicious rather than fail it outright (softfail), as mx.receiver.example reported.
 
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
-
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this, and asks receivers to treat that as suspicious rather than refuse it.
-
-Detail 1, technical: SPF soft failed for shop.example.
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -314,10 +302,6 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
-Detail 1, plain: shop.example publishes no list of approved servers.
-
-Detail 1, technical: SPF found no record for shop.example.
-
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -340,10 +324,6 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
-Detail 1, plain: shop.example's list of approved servers is set up wrong, so it couldn't be read.
-
-Detail 1, technical: SPF hit a permanent error in the record for shop.example.
-
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -365,10 +345,6 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. A t
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
-
-Detail 1, plain: shop.example's list of approved servers couldn't be read this time.
-
-Detail 1, technical: SPF hit a temporary DNS error for shop.example.
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -443,10 +419,6 @@ Policy, technical: mx.receiver.example did not quote the DMARC policy of shop.ex
 Detail 1, plain: The message was signed, but by mailer.example, not by the sender's own domain.
 
 Detail 1, technical: DKIM passed for d=mailer.example s=m1, which does not align with shop.example. A pass on another domain does not count for DMARC.
-
-Detail 2, plain: shop.example publishes no list of approved servers.
-
-Detail 2, technical: SPF found no record for shop.example.
 
 Fix 1, plain: In the settings of the service that sends this mail, turn on domain authentication for shop.example. The service gives you a few DNS records to add, and after that your mail is signed with your own domain instead of mailer.example.
 
@@ -866,10 +838,6 @@ Detail 1, plain: The message was signed, but by mailer.example, not by the sende
 
 Detail 1, technical: DKIM passed for d=mailer.example s=m1, which does not align with shop.example. A pass on another domain does not count for DMARC.
 
-Detail 2, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 2, technical: SPF failed for shop.example.
-
 Fix 1, plain: In the settings of the service that sends this mail, turn on domain authentication for shop.example. The service gives you a few DNS records to add, and after that your mail is signed with your own domain instead of mailer.example.
 
 Fix 1, technical: At the sending service, set up domain authentication for shop.example so the DKIM signature carries d=shop.example or a subdomain of it, instead of d=mailer.example.
@@ -990,10 +958,6 @@ Policy, plain: The sender's DMARC setting says to refuse fake mail. Microsoft ke
 
 Policy, technical: Microsoft recorded action=oreject: the domain's policy is reject and Microsoft overrode it. Microsoft's own pages disagree on whether that means junk or quarantine, so the page does not say which. The message was not refused outright.
 
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
-
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -1075,10 +1039,6 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The
 Policy, plain: Microsoft refused the message because of the sender's DMARC setting.
 
 Policy, technical: Microsoft recorded action=reject.
-
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -1184,10 +1144,6 @@ Policy, plain: Microsoft took no action over the failure, so it didn't send the 
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
 
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
-
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -1209,10 +1165,6 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The
 Policy, plain: Microsoft took no action over the failure, so it didn't send the message to junk for this reason.
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
-
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -1236,10 +1188,6 @@ Policy, plain: Microsoft put the message in junk or quarantine because of the se
 
 Policy, technical: Microsoft recorded action=quarantine: the policy sent this message to junk or quarantine.
 
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
-
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -1261,10 +1209,6 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The
 Policy, plain: Microsoft took no action over the failure, so it didn't send the message to junk for this reason.
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
-
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -1288,10 +1232,6 @@ Policy, plain: Microsoft put the message in junk or quarantine because of the se
 
 Policy, technical: Microsoft recorded action=quarantine: the policy sent this message to junk or quarantine.
 
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
-
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -1313,10 +1253,6 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The
 Policy, plain: Microsoft took no action over the failure, so it didn't send the message to junk for this reason.
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
-
-Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
-
-Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -1468,69 +1404,69 @@ Microsoft AuthAs Partner (info). Technical: Authentication source Partner. Plain
 
 Microsoft AuthSource BN3PEPF0000B077.namprd04.prod.outlook.com (info). Technical: The server that evaluated authentication for the organization. Plain: The Microsoft server that checked who sent this.
 
-Microsoft compauth pass reason=100 (pass). Technical: SPF or DKIM passed and aligns with the From domain. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=100 (pass). Technical: SPF or DKIM passed and aligns with the From domain. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=101 (pass). Technical: DKIM signed by the From domain. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=101 (pass). Technical: DKIM signed by the From domain. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=102 (pass). Technical: SPF passed and the MAIL FROM aligns with the From domain. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=102 (pass). Technical: SPF passed and the MAIL FROM aligns with the From domain. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=103 (pass). Technical: The From domain aligns with the PTR record of the source IP. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=103 (pass). Technical: The From domain aligns with the PTR record of the source IP. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=104 (pass). Technical: The PTR record of the source IP aligns with the From domain. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=104 (pass). Technical: The PTR record of the source IP aligns with the From domain. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=108 (pass). Technical: An earlier legitimate hop modified the body, so the DKIM signature did not verify. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=108 (pass). Technical: An earlier legitimate hop modified the body, so the DKIM signature did not verify. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=109 (pass). Technical: No DMARC record, but the message would pass. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=109 (pass). Technical: No DMARC record, but the message would pass. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=111 (pass). Technical: DMARC hit an error, but SPF or DKIM aligns with the From domain. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=111 (pass). Technical: DMARC hit an error, but SPF or DKIM aligns with the From domain. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=112 (pass). Technical: A DNS timeout prevented the DMARC record lookup. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=112 (pass). Technical: A DNS timeout prevented the DMARC record lookup. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=115 (pass). Technical: Sent from a Microsoft 365 organization where the From domain is an accepted domain. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=115 (pass). Technical: Sent from a Microsoft 365 organization where the From domain is an accepted domain. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=116 (pass). Technical: The MX record of the From domain aligns with the PTR record of the connecting IP. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=116 (pass). Technical: The MX record of the From domain aligns with the PTR record of the connecting IP. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=130 (pass). Technical: An ARC result from a trusted ARC sealer overrode the DMARC result. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=130 (pass). Technical: An ARC result from a trusted ARC sealer overrode the DMARC result. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth softpass reason=201 (warn). Technical: The PTR of the From domain aligns with the subnet of the connecting IP's PTR. Plain: Microsoft's own sender check gave a soft pass. The technical line gives the reason.
+Microsoft compauth softpass reason=201 (warn). Technical: The PTR of the From domain aligns with the subnet of the connecting IP's PTR. Plain: Microsoft's own sender check gave a soft pass.
 
-Microsoft compauth softpass reason=202 (warn). Technical: The From domain aligns with the domain of the connecting IP's PTR record. Plain: Microsoft's own sender check gave a soft pass. The technical line gives the reason.
+Microsoft compauth softpass reason=202 (warn). Technical: The From domain aligns with the domain of the connecting IP's PTR record. Plain: Microsoft's own sender check gave a soft pass.
 
-Microsoft compauth pass reason=501 (pass). Technical: DMARC not enforced: a valid bounce where sender and recipient had prior contact. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=501 (pass). Technical: DMARC not enforced: a valid bounce where sender and recipient had prior contact. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=502 (pass). Technical: DMARC not enforced: a valid bounce for a message this organization sent. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=502 (pass). Technical: DMARC not enforced: a valid bounce for a message this organization sent. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth fail reason=601 (fail). Technical: The From domain is one of the organization's accepted domains (self-to-self or intra-org spoofing). Plain: Microsoft's own sender check failed. The technical line gives the reason.
+Microsoft compauth fail reason=601 (fail). Technical: The From domain is one of the organization's accepted domains (self-to-self or intra-org spoofing). Plain: Microsoft's own sender check failed.
 
-Microsoft compauth none reason=905 (info). Technical: DMARC not enforced because of complex routing, such as mail through on-premises Exchange or another service first. Plain: Microsoft's own sender check was bypassed. The technical line gives the reason.
+Microsoft compauth none reason=905 (info). Technical: DMARC not enforced because of complex routing, such as mail through on-premises Exchange or another service first. Plain: Microsoft's own sender check was bypassed.
 
-Microsoft compauth fail reason=000 (fail). Technical: Explicit authentication failed: DMARC failed and the policy is quarantine or reject. Plain: Microsoft's own sender check failed. The technical line gives the reason.
+Microsoft compauth fail reason=000 (fail). Technical: Explicit authentication failed: DMARC failed and the policy is quarantine or reject. Plain: Microsoft's own sender check failed.
 
-Microsoft compauth fail reason=001 (fail). Technical: Implicit authentication failed: no authentication records, or only weak ones (SPF ~all or ?all, DMARC p=none). Plain: Microsoft's own sender check failed. The technical line gives the reason.
+Microsoft compauth fail reason=001 (fail). Technical: Implicit authentication failed: no authentication records, or only weak ones (SPF ~all or ?all, DMARC p=none). Plain: Microsoft's own sender check failed.
 
-Microsoft compauth fail reason=002 (fail). Technical: The organization prohibits this sender and domain pair from sending spoofed mail. Plain: Microsoft's own sender check failed. The technical line gives the reason.
+Microsoft compauth fail reason=002 (fail). Technical: The organization prohibits this sender and domain pair from sending spoofed mail. Plain: Microsoft's own sender check failed.
 
-Microsoft compauth fail reason=010 (fail). Technical: DMARC failed with quarantine or reject, and the From domain is one of the organization's own accepted domains. Plain: Microsoft's own sender check failed. The technical line gives the reason.
+Microsoft compauth fail reason=010 (fail). Technical: DMARC failed with quarantine or reject, and the From domain is one of the organization's own accepted domains. Plain: Microsoft's own sender check failed.
 
-Microsoft compauth pass reason=701 (pass). Technical: DMARC not enforced because the organization has a history of legitimate mail from this infrastructure. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=701 (pass). Technical: DMARC not enforced because the organization has a history of legitimate mail from this infrastructure. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=702 (pass). Technical: DMARC not enforced because the organization has a history of legitimate mail from this infrastructure. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=702 (pass). Technical: DMARC not enforced because the organization has a history of legitimate mail from this infrastructure. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=703 (pass). Technical: DMARC not enforced because the organization has a history of legitimate mail from this infrastructure. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=703 (pass). Technical: DMARC not enforced because the organization has a history of legitimate mail from this infrastructure. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth pass reason=704 (pass). Technical: DMARC not enforced because the organization has a history of legitimate mail from this infrastructure. Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=704 (pass). Technical: DMARC not enforced because the organization has a history of legitimate mail from this infrastructure. Plain: Microsoft's own sender check passed.
 
-Microsoft compauth softpass reason=299 (warn). Technical: Soft-passed implicit authentication (code 299 has no entry of its own). Plain: Microsoft's own sender check gave a soft pass. The technical line gives the reason.
+Microsoft compauth softpass reason=299 (warn). Technical: Soft-passed implicit authentication (code 299 has no entry of its own). Plain: Microsoft's own sender check gave a soft pass.
 
-Microsoft compauth none reason=399 (info). Technical: Not checked for composite authentication (code 399 has no entry of its own). Plain: Microsoft's own sender check was skipped. The technical line gives the reason.
+Microsoft compauth none reason=399 (info). Technical: Not checked for composite authentication (code 399 has no entry of its own). Plain: Microsoft's own sender check was skipped.
 
-Microsoft compauth none reason=499 (info). Technical: Bypassed composite authentication (code 499 has no entry of its own). Plain: Microsoft's own sender check was bypassed. The technical line gives the reason.
+Microsoft compauth none reason=499 (info). Technical: Bypassed composite authentication (code 499 has no entry of its own). Plain: Microsoft's own sender check was bypassed.
 
-Microsoft compauth fail reason=699 (fail). Technical: Failed implicit authentication (code 699 has no entry of its own). Plain: Microsoft's own sender check failed. The technical line gives the reason.
+Microsoft compauth fail reason=699 (fail). Technical: Failed implicit authentication (code 699 has no entry of its own). Plain: Microsoft's own sender check failed.
 
-Microsoft compauth pass reason=799 (pass). Technical: Passed implicit authentication (code 799 has no entry of its own). Plain: Microsoft's own sender check passed. The technical line gives the reason.
+Microsoft compauth pass reason=799 (pass). Technical: Passed implicit authentication (code 799 has no entry of its own). Plain: Microsoft's own sender check passed.
 
-Microsoft compauth none reason=999 (info). Technical: Bypassed composite authentication (code 999 has no entry of its own). Plain: Microsoft's own sender check was bypassed. The technical line gives the reason.
+Microsoft compauth none reason=999 (info). Technical: Bypassed composite authentication (code 999 has no entry of its own). Plain: Microsoft's own sender check was bypassed.
 
 Microsoft compauth fail reason=801 (fail). Technical: Reason code 801 is not in Microsoft's published table, so it is shown as written. Plain: Microsoft's own sender check failed. Its reason code isn't one Microsoft explains publicly.
 

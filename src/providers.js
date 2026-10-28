@@ -102,7 +102,7 @@
     // none is a skip for 3xx and a bypass for 4xx and 9xx.
     const did = { pass: 'passed', fail: 'failed', softpass: 'gave a soft pass' }[c.result] || (c.result === 'none' ? (/^[49]/.test(c.reason || '') ? 'was bypassed' : 'was skipped') : 'came out ' + c.result);
     if (c.reason && !meaning) return item('compauth', raw, lvl, 'Reason code ' + c.reason + ' is not in Microsoft\'s published table, so it is shown as written.', 'Microsoft\'s own sender check ' + did + '. Its reason code isn\'t one Microsoft explains publicly.', c.src);
-    return item('compauth', raw, lvl, meaning ? meaning.charAt(0).toUpperCase() + meaning.slice(1) + '.' : 'Microsoft wrote no reason code.', 'Microsoft\'s own sender check ' + did + '.' + (meaning ? ' The technical line gives the reason.' : ''), c.src);
+    return item('compauth', raw, lvl, meaning ? meaning.charAt(0).toUpperCase() + meaning.slice(1) + '.' : 'Microsoft wrote no reason code.', 'Microsoft\'s own sender check ' + did + '.', c.src);
   }
 
   function decodeMicrosoft(fields, auth) {
