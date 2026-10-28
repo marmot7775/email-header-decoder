@@ -182,3 +182,8 @@ test('build: the FAQ structured data matches the FAQ on the page', () => {
   assert.match(html, /<title>[^<]+<\/title>[\s\S]*<\/head>/);
   assert.ok(!/<body>[\s\S]*<title>/.test(html), 'title belongs in the head');
 });
+
+test('build: ui/app.js parses, so the page script runs', () => {
+  const vm = require('vm');
+  assert.doesNotThrow(() => new vm.Script(fs.readFileSync(path.join(__dirname, '..', 'ui', 'app.js'), 'utf8')));
+});

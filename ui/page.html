@@ -119,9 +119,6 @@ button { font: inherit; cursor: pointer; }
 .hint { margin: 10px 0 0; font-size: var(--font-sm); color: var(--muted); }
 
 /* Reader switch */
-.voice { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
-.voice button { border: 0; background: transparent; color: var(--text-2); font-size: var(--font-sm); font-weight: 600; padding: 6px 12px; min-height: 44px; }
-.voice button[aria-pressed="true"] { background: var(--primary-subtle); color: var(--text); }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .toolbar .read-as { font-size: var(--font-sm); color: var(--text-2); }
 
@@ -202,9 +199,9 @@ button { font: inherit; cursor: pointer; }
 .headline { margin: 0; font-size: var(--font-lg); font-weight: 600; line-height: 1.45; max-width: 68ch; overflow-wrap: anywhere; }
 .fpara { margin: 0; font-size: var(--font-base); line-height: 1.6; color: var(--text-2); max-width: 68ch; overflow-wrap: anywhere; }
 .fpara .src { margin-left: 6px; }
-/* Line tags point into the raw headers: Simple never shows them, and
-   Technical shows them only in the evidence fold and Full analysis. */
-body[data-voice="plain"] .src, #finding .src:not(.more .src) { display: none; }
+/* Line tags point into the raw headers: only in Technical details
+   and Full analysis, never in the plain finding. */
+#finding .src:not(.more .src) { display: none; }
 
 /* Filter headers: one row per decoded value, the raw value beside it */
 .fgroup { margin-top: 14px; }
@@ -451,10 +448,6 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <span class="read-as" id="read-as"></span>
       <span class="tools">
         <button class="btn small" type="button" id="copy-report">Copy report</button>
-        <span class="voice" role="group" aria-label="Wording">
-          <button type="button" data-voice="plain" aria-pressed="true">Summary</button>
-          <button type="button" data-voice="technical" aria-pressed="false">Technical</button>
-        </span>
       </span>
     </div>
     <section class="card finding" id="finding" aria-labelledby="h-finding"></section>

@@ -205,11 +205,12 @@ light both work. No horizontal scroll at 375px.
 
 ## Copy
 
-Every sentence has two voices. The switch on the page reads Summary
-and Technical (it read Simple until 2026-10-28, and these notes still
-call the everyday voice Simple); in code they stay `plain` and
-`technical`. Summary must never talk down: it names real terms in
-brackets and keeps sentences short, not childish.
+Every sentence has two voices, `plain` and `technical` in code, and
+the page shows both in one output with no switch (since
+2026-10-28). The finding speaks plainly; Technical details under it
+and the Full analysis carry the technical wording. These notes call
+the plain voice Simple. Simple must never talk down: it names real
+terms in brackets and keeps sentences short, not childish.
 
 Simple is for the owner of a small business: someone who sells
 coffee, knows what their website address is, and may have heard

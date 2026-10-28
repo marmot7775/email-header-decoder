@@ -12,9 +12,10 @@ Live at https://headers.dns-audit.com, part of
 
 - **The finding comes first.** One sentence names the cause, then
   the fix follows as steps. A pass says there's nothing to fix.
-- **Two views.** Summary gives the point and the fix in everyday
-  words and names each term it uses. Technical uses the protocol's
-  own terms for a deliverability practitioner.
+- **One output, two depths.** The finding is in everyday words and
+  names each term it uses. Technical details under it give the same
+  finding in the protocol's own terms, with the raw lines it came
+  from. Nobody has to pick a mode.
 - **Two DMARC results.** The page shows the receiver's result and
   one it works out from the identifiers, with the reason when they
   disagree.
@@ -27,8 +28,8 @@ Live at https://headers.dns-audit.com, part of
 - **Filter headers are decoded** for Microsoft 365, Google,
   Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd,
   with the raw value beside each one.
-- **Evidence points at its source.** In Technical, select a line
-  reference and the raw header lines it came from light up.
+- **Evidence points at its source.** In Technical details, select a
+  line reference and the raw header lines it came from light up.
 - **It says what headers can't show** instead of guessing.
 - **Copy report** gives a plain text summary for a ticket or a
   client email.

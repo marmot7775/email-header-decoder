@@ -214,3 +214,9 @@ Decisions
             talking down. Simple headlines split into the result,
             then the reason, so long sentences fell from 13 to four.
             SPF neutral, permerror, and temperror get everyday words.
+2026-10-28  One output, no switch. The finding reads in plain words;
+            a Technical details fold under it holds the technical
+            headline, cause, consequence, fixes, evidence, and limits
+            with line tags. Full analysis reads in technical wording.
+            Nobody is sorted into a category. A test now parses
+            ui/app.js, after a syntax error passed the suite.
