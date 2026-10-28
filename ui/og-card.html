@@ -1,0 +1,30 @@
+<!doctype html>
+<!-- The share card, 1200 by 630. Rendered to og-card.png with a headless browser. -->
+<meta charset="utf-8">
+<style>
+  body { margin: 0; width: 1200px; height: 630px; background: #0b1220; color: #eef2f8; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  .card { box-sizing: border-box; width: 1200px; height: 630px; padding: 56px 64px; display: flex; flex-direction: column; }
+  .top { display: flex; justify-content: space-between; align-items: center; }
+  .logo { font-weight: 700; font-size: 28px; }
+  .logo span { color: #5b8def; }
+  .beta { color: #e0a43c; border: 2px solid rgba(224, 164, 60, 0.4); border-radius: 999px; padding: 4px 14px; font-weight: 700; font-size: 18px; letter-spacing: 0.08em; }
+  h1 { font-size: 68px; margin: 82px 0 10px; letter-spacing: -0.02em; line-height: 1.1; }
+  p { margin: 0; font-size: 29px; line-height: 1.4; color: #a3b0c4; max-width: 930px; }
+  .tiles { margin-top: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .tile { background: #111a2e; border: 1px solid #263149; border-left: 6px solid #e0a43c; border-radius: 12px; padding: 16px 22px; }
+  .tile b { display: block; font-size: 18px; letter-spacing: 0.1em; color: #8e9bb0; }
+  .tile i { display: block; font-style: normal; font-weight: 700; font-size: 32px; margin-top: 4px; color: #e0a43c; line-height: 1.1; }
+  .fail { border-left-color: #f0767a; } .fail i { color: #f0767a; }
+  .ok { border-left-color: #34c07a; } .ok i { color: #34c07a; }
+</style>
+<div class="card">
+  <div class="top"><div class="logo">dns<span>-audit</span>.com</div><div class="beta">BETA</div></div>
+  <h1>Email Header Decoder</h1>
+  <p>Paste the headers. Read in one sentence why SPF, DKIM, or DMARC failed, and what to fix.</p>
+  <div class="tiles">
+    <div class="tile"><b>SPF</b><i>! Not aligned</i></div>
+    <div class="tile"><b>DKIM</b><i>! Not aligned</i></div>
+    <div class="tile fail"><b>DMARC</b><i>&#10005; Fail</i></div>
+    <div class="tile ok"><b>DELIVERY</b><i>&#10003; 1s</i></div>
+  </div>
+</div>
