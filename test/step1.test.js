@@ -146,13 +146,14 @@ test('psl: organizationalDomain and sameOperator', () => {
   assert.equal(HA.psl.sameOperator('', ''), false);
 });
 
-test('build: one self contained page with a CSP that has no connect-src and no external URLs', () => {
+test('build: one self contained page whose CSP connects only to dns-audit.com, and no external URLs', () => {
   const { build } = require('../build.js');
   const { csp: CSP } = build();
   const html = fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.html'), 'utf8');
   assert.match(html, /^<!doctype html>/);
   assert.ok(html.includes('http-equiv="Content-Security-Policy" content="' + CSP + '"'));
-  assert.ok(!/connect-src/.test(CSP));
+  // The usage note is the only connection the page may make
+  assert.equal((CSP.match(/connect-src ([^;]*)/) || [])[1], 'https://dns-audit.com');
   // script-src allows only the hash of the one inline script, never 'unsafe-inline'.
   assert.ok(!/script-src[^;]*'unsafe-inline'/.test(CSP));
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);

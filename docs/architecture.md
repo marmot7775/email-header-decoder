@@ -1,8 +1,10 @@
 Email Header Decoder, architecture
 
 Shape
-One static page. No server, no network calls, no storage. Pasted
-headers are parsed in the visitor's browser and never leave it.
+One static page. No server of its own and no storage. Pasted
+headers are parsed in the visitor's browser and never leave it. The
+one network call is a usage note with the finding status only, to
+dns-audit.com/api/usage.
 The same files run under Node for tests. This is the plan for the
 product, not a prototype shortcut: a header analyzer has no reason
 to send mail headers anywhere.

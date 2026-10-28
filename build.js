@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // build.js: inline src and ui into self-contained pages.
-// dist/index.html is a full document that opens from disk with the
-// network off. Its Content-Security-Policy has no connect-src, so the
-// browser blocks requests the page makes, and script-src allows only the
-// hash of the one inline script.
+// dist/index.html is a full document that opens from disk. Its
+// Content-Security-Policy lets the page connect only to dns-audit.com, for
+// the usage note after each read, and script-src allows only the hash of
+// the one inline script.
 // dist/artifact.html is the same body without the document shell, for
 // hosts that wrap the page themselves (the claude.ai preview).
 // The rest of dist is what the static host serves beside the page:
@@ -15,18 +15,20 @@ const crypto = require('crypto');
 
 const ROOT = __dirname;
 const SITE = 'https://headers.dns-audit.com/';
+// Where the page sends its usage note (POST /api/usage on the dns-audit.com server)
+const USAGE_ORIGIN = 'https://dns-audit.com';
 // Load order matters: each module reads the HA namespace the one before it filled.
 const SRC = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'providers.js', 'finding.js', 'analyze.js'];
 // Fixtures shown as samples on the page. Synthetic only; never real headers.
 const SAMPLES = { gmail: 'gmail-show-original.txt', esp: 'esp-unaligned.txt', forwarded: 'forwarded.txt', exchange: 'exchange-online-inbound.txt', arc: 'arc-forwarded-i2.txt', twodkim: 'two-dkim.txt' };
 // script-src names the sha256 of the inline script, so no other script runs.
-const cspFor = (script) => "default-src 'none'; script-src 'sha256-" + crypto.createHash('sha256').update(script, 'utf8').digest('base64') + "'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'";
+const cspFor = (script) => "default-src 'none'; script-src 'sha256-" + crypto.createHash('sha256').update(script, 'utf8').digest('base64') + "'; style-src 'unsafe-inline'; img-src data:; connect-src " + USAGE_ORIGIN + "; form-action 'none'; base-uri 'none'";
 // Links the page may carry. A link sends nothing until someone follows it;
 // the CSP still blocks every request the page itself could make.
 const LINKS = /https?:\/\/(?!datatracker\.ietf\.org|www\.rfc-editor\.org|dns-audit\.com|www\.linkedin\.com\/in\/neilanuskiewicz|github\.com\/marmot7775)/;
 
 const TITLE = 'Email Header Decoder: why SPF, DKIM, or DMARC failed';
-const DESCRIPTION = 'This free email header analyzer runs in your browser and sends nothing. It shows in one sentence why a message passed or failed SPF, DKIM, and DMARC, and what to fix.';
+const DESCRIPTION = 'This free email header analyzer shows in one sentence why a message passed or failed SPF, DKIM, and DMARC, and what to fix.';
 const ICON = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#2f5fcc"/><path d="M7 10h18v12H7z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="m7 10 9 7 9-7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>');
 
 function read(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
@@ -64,7 +66,6 @@ function jsonLd(page) {
         'Forwarded mail read through the ARC chain',
         'Hop timeline with delays, TLS, and the receiver custody point',
         'Spam filter headers decoded for Microsoft 365, Google, Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd',
-        'No network requests: pasted headers never leave the browser',
       ],
       author: { '@id': 'https://dns-audit.com/about#neil' },
       isPartOf: { '@type': 'WebSite', name: 'dns-audit.com', url: 'https://dns-audit.com/' },

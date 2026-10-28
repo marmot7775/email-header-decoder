@@ -485,6 +485,19 @@
     if (lit.length) highlight(lit);
   }
 
+  // One usage note per new read to dns-audit.com, so its maker can see the page is
+  // used: the finding status only, never header text. text/plain needs no CORS
+  // preflight; the reply is not read and a failure is ignored.
+  let noted = null;
+  function note(text) {
+    if (text === noted) return;
+    noted = text;
+    const body = { tool: 'header-decoder', status: (R.finding && R.finding.status) || 'unknown', sample: !!sample };
+    try {
+      fetch('https://dns-audit.com/api/usage', { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) }).catch(() => {});
+    } catch (e) { /* never let the note break the page */ }
+  }
+
   function run(scroll) {
     const text = $('headers').value;
     if (!text.trim()) { $('results').hidden = true; R = null; return; }
@@ -507,6 +520,7 @@
     }
     ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).hidden = false; });
     renderAll();
+    note(text);
     if (scroll) $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
 

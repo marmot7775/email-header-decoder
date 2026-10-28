@@ -13,9 +13,13 @@ two tests check for it on purpose.
 
 ## Hard rules
 
-Everything runs in the visitor's browser. No server, no network
-calls, no storage, no analytics. Pasted headers never leave the
-machine, and the page says so in one line.
+Everything runs in the visitor's browser. No storage, no analytics
+scripts. Pasted headers never leave the machine, and the page says
+so in one line. The one network call is the usage note (Neil,
+2026-10-28: he wants to see the tool is used): after each new read,
+ui/app.js posts the finding status only to
+https://dns-audit.com/api/usage, the CSP's only connect-src. Never
+add header text, addresses, or domains to it.
 
 Standalone repo, not a dns-audit.com feature. Hosting comes in
 step 4 as a static site; the droplet never serves it.

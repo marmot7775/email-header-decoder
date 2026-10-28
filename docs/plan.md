@@ -66,6 +66,9 @@ Decisions
 
 2026-10-15  Runs entirely in the browser. No server, no network
             calls, no DNS, no signature verification.
+2026-10-28  One network call after all: a usage note with the
+            finding status, posted to dns-audit.com/api/usage, so
+            Neil can see the tool is used. Headers still never leave.
 2026-10-23  Step 2 check rules, as listed in CLAUDE.md under
             Settled by the step 2 check.
 2026-10-24  Renamed Header Verdict to Email Header Decoder; the one

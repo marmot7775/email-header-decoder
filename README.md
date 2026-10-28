@@ -34,11 +34,12 @@ Live at https://headers.dns-audit.com, part of
 
 ## Privacy
 
-Everything runs in your browser. There is no server, no analytics,
-and no storage, and the page makes no network requests. Its
-Content Security Policy has no `connect-src`, so the browser blocks
-requests the page makes. You can save the page and use it with
-the network off.
+The headers you paste are read in your browser and never sent,
+stored, or logged. After each read the page sends dns-audit.com one
+usage note with the overall result (pass, fail, and so on), so its
+maker can see it is used: no header text, addresses, or domains. The
+Content Security Policy allows that one connection and nothing else.
+Saved to disk, the page still works with the network off.
 
 ## Limits
 
