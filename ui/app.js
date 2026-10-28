@@ -492,7 +492,10 @@
   function note(text) {
     if (text === noted) return;
     noted = text;
-    const body = { tool: 'header-decoder', status: (R.finding && R.finding.status) || 'unknown', sample: !!sample };
+    // Where the visitor came from, host only; a link within the site is not a source
+    let ref;
+    try { const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) ref = h; } catch (e) { /* no referrer */ }
+    const body = { tool: 'header-decoder', status: (R.finding && R.finding.status) || 'unknown', sample: !!sample, ref };
     try {
       fetch('https://dns-audit.com/api/usage', { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) }).catch(() => {});
     } catch (e) { /* never let the note break the page */ }
