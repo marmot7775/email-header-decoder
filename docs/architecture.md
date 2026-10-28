@@ -62,7 +62,10 @@ ui/page.html     Markup and tokens. The dns-audit.com site bar,
                  headers, and the FAQ. Then the site footer.
 ui/app.js        Rendering only. No parsing logic lives here. The
                  tiles and the copied report read values already
-                 in the result; they decide nothing new.
+                 in the result; they decide nothing new. The raw
+                 header list is drawn when opened, 200 fields at a
+                 time, and a field over 2,000 characters shows
+                 clipped with a button to show all of it.
 ui/og-card.png   The share card, 1200 by 630.
 build.js         Inlines src and ui into dist/index.html (full
                  document: head with CSP, title, description,

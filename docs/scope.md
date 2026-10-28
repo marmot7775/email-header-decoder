@@ -45,7 +45,8 @@ First release
 7. Provider decode in one place regardless of who wrote it:
    Microsoft, Google, Proofpoint, Mimecast, Cisco, Barracuda,
    SpamAssassin, and Rspamd.
-8. Raw headers collapsed under everything, searchable.
+8. Raw headers collapsed under everything, searchable, drawn 200
+   fields at a time with long fields clipped until expanded.
 9. Plain and technical wording, plain first. The switch changes
    every sentence; Copy report carries both headlines.
 10. Copy report: the finding, the tiles, and the fixes as plain

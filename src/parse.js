@@ -27,7 +27,9 @@
     return String(text || '')
       .replace(/^﻿/, '')
       .replace(/\r\n?/g, '\n')
-      .replace(/ /g, ' ');
+      .replace(/ /g, ' ')
+      // Rich text copied from Outlook or a web page carries soft hyphens and zero width characters inside names.
+      .replace(/[\u00ad\u200b-\u200d\u2060]/g, '');
   }
 
   function isFieldStart(line) {

@@ -188,7 +188,7 @@
     const pp = first(fields, 'x-proofpoint-spam-details');
     if (pp) {
       const s = [pp.index], kv = {}, items = [];
-      for (const m of pp.value.matchAll(/([a-z]+)=([^\s]+)/gi)) kv[m[1].toLowerCase()] = m[2];
+      for (const m of pp.value.matchAll(/(?<![a-z])([a-z]+)=(\S+)/gi)) kv[m[1].toLowerCase()] = m[2];
       if (kv.rule) {
         const r = kv.rule.toLowerCase();
         items.push(r === 'notspam' ? item('rule', kv.rule, 'pass', 'Classification rule notspam: not spam.', 'Proofpoint decided this is not spam.', s)

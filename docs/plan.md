@@ -59,8 +59,30 @@ is handed out only after that. Status as of 2026-10-25.
    Outlook, pasted twice): the page called it a two From forgery.
    Fixed: a doubled paste reads once, mailing list mail gets its own
    finding, the full analysis starts closed, the box opens empty.
-   Still to do: more real headers from Neil (one with a large font
-   choked the page) and the copy pass they drive.
+   Large paste stall 2026-10-28, commit SHA_PENDING. Five synthetic
+   pastes (2 MB with 400 Received, a 500 KB value with no spaces,
+   a DKIM b= of 100 KB, Outlook rich text with no break spaces and
+   soft hyphens, 5000 fields) stayed under 400 ms to the finding,
+   so none of them was the stall. A probe of every field name the
+   code reads with 25 and 50 KB unbroken runs found three regular
+   expressions that rescanned a run from every character: PROP_RE
+   in auth.js (Received-SPF and Authentication-Results properties),
+   the Proofpoint key=value scan in providers.js, and the List-Id
+   angle bracket match in finding.js. 100 KB in Received-SPF took
+   38.8 seconds to the finding in Chromium, Proofpoint 13.2, List-Id
+   5.7. Each now starts a match only at a token boundary and runs in
+   linear time. The Outlook paste was also misread: soft hyphens
+   inside field names hid 64 of 67 fields, so parse.js drops soft
+   hyphens and zero width characters. The raw header list was drawn
+   in full on every read (20,707 nodes for 2 MB, 620 ms to open,
+   650 ms per search keystroke); app.js now draws it when opened,
+   200 fields at a time, with fields over 2,000 characters clipped
+   behind a Show all button. test/large-input.test.js fails if
+   analyze() takes 500 ms on any of the five pastes or the three
+   runs. Neil's original paste was not available, so the cause is
+   the likeliest match, not a confirmed one.
+   Still to do: more real headers from Neil and the copy pass they
+   drive.
 
 Decisions
 
@@ -225,3 +247,9 @@ Decisions
             with line tags. Full analysis reads in technical wording.
             Nobody is sorted into a category. A test now parses
             ui/app.js, after a syntax error passed the suite.
+2026-10-28  Large pastes. No regular expression may rescan a long
+            run from each character: a scan for name=value starts
+            only at a token boundary. The raw header list draws when
+            opened, 200 fields at a time, and clips a field over
+            2,000 characters until expanded. analyze() stays under
+            500 ms in Node on the speed test inputs.

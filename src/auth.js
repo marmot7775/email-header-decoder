@@ -26,7 +26,8 @@
     return parts;
   }
 
-  const PROP_RE = /([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s;]+)/g;
+  // The lookbehind starts a name only at the start of a run, so a long run with no = is scanned once, not once per character.
+  const PROP_RE = /(?<![A-Za-z0-9_-])([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s;]+)/g;
   // The identifiers the page shows for every method (RFC 8601 2.7).
   const IDS = ['header.d', 'header.i', 'header.s', 'header.b', 'smtp.mailfrom', 'smtp.helo', 'header.from'];
 

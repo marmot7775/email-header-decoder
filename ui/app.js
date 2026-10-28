@@ -412,21 +412,34 @@
       '<div class="rawbox" id="rawbox"></div></details>';
     if (R.input.bodyPresent) h += '<p class="note-line">A message body followed the headers. It was not read.</p>';
     $('raw').innerHTML = h;
-    drawRaw('');
+    rawLimit = RAW_CHUNK; rawFull = new Set(); rawDrawn = false;
+    $('raw-details').addEventListener('toggle', (e) => { if (e.target.open && !rawDrawn) drawRaw($('raw-filter').value); });
     $('raw-filter').addEventListener('input', (e) => drawRaw(e.target.value));
     $('raw-clear-hl').addEventListener('click', () => highlight([]));
   }
 
-  let lit = [];
+  // A real paste can carry thousands of fields or a value of hundreds of
+  // kilobytes. The list is drawn when opened, RAW_CHUNK fields at a time,
+  // and a field longer than RAW_CLIP characters shows clipped until expanded.
+  const RAW_CHUNK = 200, RAW_CLIP = 2000;
+  let lit = [], rawLimit = RAW_CHUNK, rawFull = new Set(), rawDrawn = false;
   function drawRaw(q) {
+    rawDrawn = true;
     q = (q || '').trim().toLowerCase();
     const mark = (t) => { if (!q) return esc(t); const i = t.toLowerCase().indexOf(q); return i < 0 ? esc(t) : esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length)); };
-    const shown = R.fields.filter(f => !q || f.raw.toLowerCase().includes(q));
-    $('rawbox').innerHTML = shown.map(f => '<div class="f' + (lit.includes(f.index) ? ' hl' : '') + '" data-field="' + f.index + '">' + f.raw.split('\n').map((t, k) => {
-      const body = k === 0 ? '<span class="nm">' + mark(t.slice(0, f.name.length + 1)) + '</span>' + mark(t.slice(f.name.length + 1)) : mark(t);
-      return '<div class="l"><span class="ln">' + (f.lines[0] + k + 1) + '</span><span class="tx">' + body + '</span></div>';
-    }).join('') + '</div>').join('') || '<p class="empty-raw">No header matches that search.</p>';
-    $('raw-status').textContent = q ? shown.length + ' of ' + R.fields.length + ' fields match' : '';
+    const matched = R.fields.filter(f => !q || f.raw.toLowerCase().includes(q));
+    const shown = matched.slice(0, rawLimit);
+    const n = (x) => x.toLocaleString('en-US');
+    $('rawbox').innerHTML = shown.map(f => {
+      const clip = f.raw.length > RAW_CLIP && !rawFull.has(f.index);
+      const raw = clip ? f.raw.slice(0, RAW_CLIP) : f.raw;
+      return '<div class="f' + (lit.includes(f.index) ? ' hl' : '') + '" data-field="' + f.index + '">' + raw.split('\n').map((t, k) => {
+        const body = k === 0 ? '<span class="nm">' + mark(t.slice(0, f.name.length + 1)) + '</span>' + mark(t.slice(f.name.length + 1)) : mark(t);
+        return '<div class="l"><span class="ln">' + (f.lines[0] + k + 1) + '</span><span class="tx">' + body + '</span></div>';
+      }).join('') + (clip ? '<button type="button" class="link-btn raw-more" data-expand="' + f.index + '">Show all ' + n(f.raw.length) + ' characters of ' + esc(f.name) + '</button>' : '') + '</div>';
+    }).join('') + (matched.length > shown.length ? '<button type="button" class="link-btn raw-more" data-more>Show the next ' + n(Math.min(RAW_CHUNK, matched.length - shown.length)) + ' of ' + n(matched.length - shown.length) + ' more fields</button>' : '') ||
+      '<p class="empty-raw">No header matches that search.</p>';
+    $('raw-status').textContent = q ? matched.length + ' of ' + R.fields.length + ' fields match' : '';
   }
 
   function highlight(src) {
@@ -438,7 +451,11 @@
     const det = $('raw-details');
     det.open = true;
     const filter = $('raw-filter');
-    if (filter.value && !lit.every(i => document.querySelector('#rawbox .f[data-field="' + i + '"]'))) { filter.value = ''; drawRaw(''); }
+    if (!lit.every(i => document.querySelector('#rawbox .f[data-field="' + i + '"]'))) {
+      filter.value = '';
+      rawLimit = Math.max(rawLimit, Math.max.apply(null, lit) + 1);
+      drawRaw('');
+    }
     const firstEl = document.querySelector('#rawbox .f[data-field="' + Math.min.apply(null, lit) + '"]');
     if (firstEl) firstEl.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
     const names = lit.map(i => R.fields[i].name + ' (' + linesOf([i]) + ')');
@@ -448,6 +465,12 @@
   document.addEventListener('click', (e) => {
     const jump = e.target.closest('[data-jump]');
     if (jump && R) { if ($('analysis').contains($(jump.dataset.jump))) $('analysis').open = true; $(jump.dataset.jump).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); return; }
+    const more = e.target.closest('[data-more], [data-expand]');
+    if (more && R) {
+      if (more.dataset.expand) rawFull.add(+more.dataset.expand); else rawLimit += RAW_CHUNK;
+      drawRaw($('raw-filter').value);
+      return;
+    }
     const el = e.target.closest('[data-src]');
     if (!el || !R) return;
     if (el.closest('summary')) e.preventDefault(); // a source button inside a group row should not also toggle it

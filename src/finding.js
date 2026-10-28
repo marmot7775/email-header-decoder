@@ -177,7 +177,7 @@
     const fields = ctx.fields || [];
     const lid = decoded.list.find(i => i.key === 'List-Id');
     if (!lid) return { yes: false, take: false };
-    const m = /<([^>]+)>/.exec(lid.raw);
+    const m = /<([^<>]+)>/.exec(lid.raw); // [^<>] keeps a long run of < linear
     const id = (m ? m[1] : lid.raw).trim().toLowerCase();
     const org = HA.psl.orgDomain(id) || id;
     const ofList = (d) => !!d && HA.psl.orgDomain(d) === org;
