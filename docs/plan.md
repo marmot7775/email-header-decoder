@@ -179,3 +179,8 @@ Decisions
             Technical keeps the protocol's own terms. Both follow
             Neil's house style. Line tags never show in Simple, and
             in Technical only in the evidence fold and Full analysis.
+2026-10-28  The finding card reads top down under labels: the
+            headline, What to do (Nothing to fix on a pass), The
+            checks, Why, What the DMARC setting did, then the
+            evidence fold. Copy report follows the same order. Simple
+            tiles say Failed, matching the DMARC tile.

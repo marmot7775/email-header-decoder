@@ -51,8 +51,9 @@ src/analyze.js   analyze(text) returns one plain result object.
                  The page renders it; the tests assert on it.
 
 ui/page.html     Markup and tokens. The dns-audit.com site bar,
-                 the paste box, then the results: finding (with
-                 the four check tiles), message, alignment,
+                 the paste box, then the results: finding (headline,
+                 what to do, the four check tiles, why, what the
+                 DMARC setting did, evidence), message, alignment,
                  authentication, path, filter headers, raw headers
                  collapsed. Below the tool, static text for readers
                  and search engines: what it reads, how to copy the

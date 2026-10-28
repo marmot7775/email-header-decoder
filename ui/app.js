@@ -71,7 +71,7 @@
   function tiles() {
     const rows = R.alignment.rows;
     const plain = voice === 'plain';
-    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? (plain ? 'Passed' : 'Pass, aligned') : x.state === 'caveat' ? (plain ? 'Passed for another domain' : 'Pass, not aligned') : x.result ? cap(x.result) : 'Not reported';
+    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? (plain ? 'Passed' : 'Pass, aligned') : x.state === 'caveat' ? (plain ? 'Passed for another domain' : 'Pass, not aligned') : x.result ? (plain && x.result === 'fail' ? 'Failed' : cap(x.result)) : 'Not reported';
     const idState = (x) => !x || x.absent ? 'unknown' : x.state;
     const spf = rows.find(x => x.kind === 'spf');
     const dkims = rows.filter(x => x.kind === 'dkim' && !x.absent).sort((a, b) => RANK[a.state] - RANK[b.state]);
@@ -112,8 +112,9 @@
       '<span class="tv"><span class="sym" aria-hidden="true">' + (STATES[t.state] || STATES.unknown)[0] + '</span>' + esc(t.v) + '</span>' + (t.d ? '<span class="td">' + esc(t.d) + '</span>' : '') + '</button>';
   }
 
-  // The finding: the one sentence, the four checks, why and what the policy
-  // did, what to do. The evidence and the limits fold away under it.
+  // The finding, top down: what happened, what to do, the four checks, why,
+  // and what the DMARC setting did. Each part sits under a label that says
+  // what it is. The evidence and the limits fold away under it.
   function renderFinding() {
     const f = R.finding;
     const para = (s) => s ? '<p class="fpara">' + esc(s[voice]) + srcBtn(s.src) + '</p>' : '';
@@ -121,9 +122,11 @@
     let h = '<h2 id="h-finding">Finding</h2><div class="fhead">' + chip(f.state, STATUS_WORD[f.status]) +
       '<p class="headline">' + esc(f.headline[voice]) + srcBtn(f.headline.src) + '</p>' +
       '</div>';
-    h += '<div class="tiles">' + tiles().map(tileHtml).join('') + '</div>';
-    h += para(f.cause) + para(f.consequence);
     if (f.fixes.length) h += '<h3>What to do</h3><ol class="steps">' + f.fixes.map(x => '<li><span class="txt">' + esc(x[voice]) + srcBtn(x.src) + '</span></li>').join('') + '</ol>';
+    else if (f.state === 'pass') h += '<h3>What to do</h3><p class="fpara">Nothing to fix.</p>';
+    h += '<h3>The checks</h3><div class="tiles">' + tiles().map(tileHtml).join('') + '</div>';
+    if (f.cause) h += '<h3>Why</h3>' + para(f.cause);
+    if (f.consequence) h += '<h3>What the DMARC setting did</h3>' + para(f.consequence);
     if (f.flags.length) h += '<h3>Also worth knowing</h3>' + says(f.flags);
     const n = f.details.length + f.limits.length;
     if (n) {
@@ -143,10 +146,12 @@
     if (m.date) L.push('Date: ' + m.date.text);
     L.push('', STATUS_WORD[f.status] + ': ' + f.headline[voice]);
     if (voice === 'plain' && f.headline.technical !== f.headline.plain) L.push('Technical: ' + f.headline.technical);
-    for (const s of [f.cause, f.consequence]) if (s) L.push(s[voice]);
-    L.push('');
-    for (const t of tiles()) L.push(t.k + ': ' + t.v + (t.d ? ' (' + t.d + ')' : ''));
     if (f.fixes.length) { L.push('', 'What to do:'); f.fixes.forEach(x => L.push('- ' + x[voice])); }
+    else if (f.state === 'pass') L.push('', 'What to do: Nothing to fix.');
+    L.push('', 'The checks:');
+    for (const t of tiles()) L.push(t.k + ': ' + t.v + (t.d ? ' (' + t.d + ')' : ''));
+    if (f.cause) L.push('', 'Why: ' + f.cause[voice]);
+    if (f.consequence) L.push('', 'What the DMARC setting did: ' + f.consequence[voice]);
     if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
     L.push('', 'Decoded in the browser at headers.dns-audit.com. The headers were not sent anywhere.');
     return L.join('\n');
