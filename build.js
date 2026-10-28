@@ -26,7 +26,7 @@ const cspFor = (script) => "default-src 'none'; script-src 'sha256-" + crypto.cr
 const LINKS = /https?:\/\/(?!datatracker\.ietf\.org|www\.rfc-editor\.org|dns-audit\.com|www\.linkedin\.com\/in\/neilanuskiewicz|github\.com\/marmot7775)/;
 
 const TITLE = 'Email Header Decoder: why SPF, DKIM, or DMARC failed';
-const DESCRIPTION = 'Free email header analyzer. Paste headers and read in one sentence why a message passed or failed SPF, DKIM, and DMARC, what a forward broke, and what to fix. Runs in your browser; nothing is sent.';
+const DESCRIPTION = 'This free email header analyzer runs in your browser and sends nothing. It shows in one sentence why a message passed or failed SPF, DKIM, and DMARC, and what to fix.';
 const ICON = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#2f5fcc"/><path d="M7 10h18v12H7z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="m7 10 9 7 9-7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>');
 
 function read(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
