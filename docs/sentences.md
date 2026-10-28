@@ -236,9 +236,9 @@ Plain headline: This message failed the sender check (DMARC) because it carried 
 
 Technical headline: DMARC failed because there was no DKIM signature and SPF checked the server name o1.mailer.example, and nothing that passed aligned with the From domain shop.example.
 
-Cause, plain: The service sending this mail is using its own domain instead of shop.example, so the checks pass for the service but not for the sender.
+Cause, plain: The message had no bounce address, so the only check that passed was on the sending server's own name, which does not belong to shop.example.
 
-Cause, technical: The checks passed, but for o1.mailer.example, a domain that is not shop.example. That is what happens when the sending service's own domain signs and bounces the mail. DMARC counts a pass only on the From domain or, in relaxed mode, its organizational domain.
+Cause, technical: SPF passed only for the server name o1.mailer.example, which is not shop.example. The bounce address was empty, so SPF checked the name the sending server gave itself (HELO) instead of a sender domain, and nothing else passed for shop.example.
 
 Policy, plain: The sender's domain asks for forged mail to be refused. The receiving system (mx.receiver.example) refused this message.
 
@@ -716,7 +716,7 @@ Technical headline: DMARC failed because the message was forwarded by forward.ex
 
 Cause, plain: The sender set things up correctly. Forwarding changed the message on the way, which is a known side effect of forwarding.
 
-Cause, technical: The failure belongs to the forward, not to the sender. The message passed on arrival at mx.forward.example; the forward then broke SPF, because the forward sent it on from its own server and SPF now checks shop.example and the DKIM signature from shop.example, because the forward changed the message.
+Cause, technical: The failure belongs to the forward, not to the sender. The message passed on arrival at mx.forward.example. The forward broke SPF: it sent the message on from its own server, which the SPF record of shop.example does not authorize (spf=softfail). It also broke the DKIM signature from shop.example by changing the message.
 
 Policy, plain: The sender's domain asks for forged mail to be refused. The receiving system (mx.receiver.example) refused this message.
 

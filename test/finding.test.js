@@ -75,7 +75,7 @@ test('status forwarded through two forwarders: the earliest forwarder\'s record 
   assert.deepEqual(f.forwarded.by, ['list.example', 'forward.example']);
   assert.equal(f.forwarded.preForward.writer, 'mx.list.example');
   assert.match(f.headline.technical, /before the forward, mx\.list\.example recorded .*dmarc=pass \(author\.example\)/);
-  assert.match(f.cause.technical, /the DKIM signature from author\.example, because the forward changed the message/);
+  assert.match(f.cause.technical, /broke the DKIM signature from author\.example by changing the message/);
 });
 
 test('forwarded mail that already failed before the forward stays a sender failure', () => {

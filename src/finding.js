@@ -388,10 +388,10 @@
         const after = joinList(fp.map(x => x.t));
         const head = say('caveat', lead + (computedOnly ? 'fails' : 'failed') + ' because the message was forwarded by ' + joinList(fw.by) + ': ' + preSay + ', and after it ' + after + '.', plainLead + 'failed the sender check (DMARC) because it was forwarded by ' + joinList(fw.by) + '. Before the forward it passed; the forward broke it.', uniq(fw.aarSrc.concat(fp.flatMap(x => x.src))));
         const broke = [];
-        if (fw.pre.some(x => x.method === 'spf' && x.result === 'pass') && !(auth.spf.result === 'pass' && auth.spf.relaxed)) broke.push('SPF, because the forward sent it on from ' + (auth.spf.ip || 'its own server') + (auth.spf.domain ? ' and SPF now checks ' + auth.spf.domain : ''));
+        if (fw.pre.some(x => x.method === 'spf' && x.result === 'pass') && !(auth.spf.result === 'pass' && auth.spf.relaxed)) broke.push('The forward broke SPF: it sent the message on from ' + (auth.spf.ip || 'its own server') + (!auth.spf.domain ? '.' : auth.spf.result === 'pass' ? ', so SPF now checks ' + auth.spf.domain + ', which is not ' + fd + '.' : ', which the SPF record of ' + auth.spf.domain + ' does not authorize (spf=' + auth.spf.result + ').'));
         const dkBroke = auth.dkim.filter(k => k.result === 'fail' && fw.pre.some(x => x.method === 'dkim' && x.result === 'pass' && P.domainOf(x.ids['header.d'] || x.ids['header.i'] || '') === k.domain));
-        if (dkBroke.length) broke.push('the DKIM signature from ' + joinList(dkBroke.map(k => k.domain)) + ', because the forward changed the message');
-        const cause = say('caveat', 'The failure belongs to the forward, not to the sender. The message passed on arrival at ' + fw.writer + '; ' + (broke.length ? 'the forward then broke ' + joinList(broke) + '.' : 'after the forward nothing aligned with ' + fd + '.'), 'The sender set things up correctly. Forwarding changed the message on the way, which is a known side effect of forwarding.', uniq(fw.aarSrc.concat(fp.flatMap(x => x.src))));
+        if (dkBroke.length) broke.push('It also broke the DKIM signature from ' + joinList(dkBroke.map(k => k.domain)) + ' by changing the message.');
+        const cause = say('caveat', 'The failure belongs to the forward, not to the sender. The message passed on arrival at ' + fw.writer + '. ' + (broke.length ? broke.join(' ').replace(/^It also broke/, 'The forward broke') : 'After the forward nothing aligned with ' + fd + '.'), 'The sender set things up correctly. Forwarding changed the message on the way, which is a known side effect of forwarding.', uniq(fw.aarSrc.concat(fp.flatMap(x => x.src))));
         out.forwarded.blamed = true;
         return finish('forwarded', head, cause);
       }
@@ -439,6 +439,8 @@
     const spf = auth.spf;
     const spfFailed = ['fail', 'softfail'].includes(spf.result);
     const spfErr = ['none', 'neutral', 'permerror', 'temperror'].includes(spf.result) && spf.domain;
+    const heloOnly = spf.result === 'pass' && !spf.relaxed && /helo/i.test(spf.identity) && !auth.dkim.some(k => k.result === 'pass');
+    if (heloOnly && !failedSig && !dkimErr) return say('fail', 'SPF passed only for the server name ' + spf.domain + ', which is not ' + fd + '. The bounce address was empty, so SPF checked the name the sending server gave itself (HELO) instead of a sender domain, and nothing else passed for ' + fd + '.', 'The message had no bounce address, so the only check that passed was on the sending server\'s own name, which does not belong to ' + fd + '.', src);
     if (passedElsewhere.length && !failedSig && !dkimErr && !spfFailed && !spfErr) {
       const own = svc.t === 'the sending service' ? 'the sending service\'s own' : svc.t + '\'s own';
       return say('fail', 'The checks passed, but for ' + joinList(Array.from(new Set(passedElsewhere))) + ', ' + (passedElsewhere.length === 1 ? 'a domain' : 'domains') + ' that ' + (passedElsewhere.length === 1 ? 'is' : 'are') + ' not ' + fd + '. That is what happens when ' + own + ' domain signs and bounces the mail. DMARC counts a pass only on the From domain or, in relaxed mode, its organizational domain.', 'The service sending this mail is using its own domain instead of ' + fd + ', so the checks pass for the service but not for the sender.', src);
