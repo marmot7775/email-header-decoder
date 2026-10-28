@@ -9,7 +9,7 @@
   const P = HA.parse;
   const say = P.sentence;
 
-  function item(key, raw, level, technical, plain, src) { return { key, raw: String(raw), level: level || 'info', technical, plain: plain || technical, src: src || [] }; }
+  function item(key, raw, level, technical, plain, src) { return { key, raw: String(raw), level: level || 'info', technical, plain: P.contract(plain || technical), src: src || [] }; }
   const notListed = (key, raw, vendor, src) => item(key, raw, 'info', key + ' ' + raw + ' is not in ' + vendor + '\'s published table, so it is shown as written.', vendor + ' recorded a code this page does not know. It is shown as written.', src);
   const first = (fields, name) => fields.find(f => f.lower === name) || null;
 
@@ -380,21 +380,21 @@
     if (lu) {
       const https = /<https:/i.test(lu.value), mailto = /<mailto:/i.test(lu.value);
       const kinds = [https && 'https', mailto && 'mailto'].filter(Boolean).join(' and ');
-      items.push(kinds ? item('List-Unsubscribe', kinds, 'pass', 'Unsubscribe offered (RFC 2369) by ' + kinds + '.', 'The message offers a way to unsubscribe.', [lu.index])
-        : item('List-Unsubscribe', lu.value.trim().slice(0, 60), 'warn', 'List-Unsubscribe holds no https or mailto address this page can read.', 'The unsubscribe header is there but holds no usable link.', [lu.index]));
+      items.push(kinds ? item('List-Unsubscribe', kinds, 'pass', 'List-Unsubscribe offers ' + kinds + ' (RFC 2369).', https ? 'The message has an unsubscribe link.' : 'The message offers a way to unsubscribe by email.', [lu.index])
+        : item('List-Unsubscribe', lu.value.trim().slice(0, 60), 'warn', 'List-Unsubscribe has no https or mailto URI this page can read.', 'The message has an unsubscribe option, but no link in it works.', [lu.index]));
       if (lup && /^\s*List-Unsubscribe=One-Click\s*$/i.test(lup.value)) {
         // RFC 8058 section 4: a DKIM signature must cover both fields.
         const covering = auth.signatures.filter(s => s.signedHeaders.includes('list-unsubscribe') && s.signedHeaders.includes('list-unsubscribe-post'));
         const passed = covering.filter(s => auth.dkim.some(k => k.signature === auth.signatures.indexOf(s) && k.result === 'pass'));
         const sigSrc = covering.flatMap(s => s.src);
-        if (!https) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'One-click declared, but RFC 8058 needs an https address in List-Unsubscribe and there is none.', 'One-click unsubscribe is declared but cannot work without a web link.', [lup.index, lu.index]));
-        else if (!covering.length) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'RFC 8058 one-click declared, but no DKIM-Signature lists both List-Unsubscribe and List-Unsubscribe-Post in h=, which RFC 8058 section 4 requires.', 'One-click unsubscribe is declared, but the message signature does not cover it, so mailbox providers may ignore it.', [lup.index, lu.index].concat(auth.signatures.flatMap(s => s.src))));
-        else if (!passed.length) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'RFC 8058 one-click declared and signed by d=' + covering.map(s => s.d).join(', ') + ', but no result shows that signature passing.', 'One-click unsubscribe is declared, but the signature that covers it did not check out.', [lup.index, lu.index].concat(sigSrc)));
-        else items.push(item('List-Unsubscribe-Post', 'One-Click', 'pass', 'RFC 8058 one-click unsubscribe, covered by the passing DKIM signature of d=' + passed.map(s => s.d).join(', ') + '. Gmail and Yahoo require this of bulk senders.', 'Recipients can unsubscribe with one click.', [lup.index, lu.index].concat(passed.flatMap(s => s.src))));
+        if (!https) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'List-Unsubscribe-Post declares one-click, but List-Unsubscribe has no https URI, which RFC 8058 requires.', 'One-click unsubscribe is turned on, but it can\'t work without a web link.', [lup.index, lu.index]));
+        else if (!covering.length) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'One-click is declared, but no DKIM-Signature has both List-Unsubscribe and List-Unsubscribe-Post in h=. RFC 8058 section 4 requires that.', 'One-click unsubscribe is turned on, but the digital signature doesn\'t cover it, so Gmail and Yahoo may not offer it. The sender\'s email service can fix that.', [lup.index, lu.index].concat(auth.signatures.flatMap(s => s.src))));
+        else if (!passed.length) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'One-click is declared and signed by d=' + covering.map(s => s.d).join(', ') + ', but no result shows that signature passing.', 'One-click unsubscribe is turned on, but the digital signature that covers it didn\'t check out.', [lup.index, lu.index].concat(sigSrc)));
+        else items.push(item('List-Unsubscribe-Post', 'One-Click', 'pass', 'One-click unsubscribe per RFC 8058, covered by the passing DKIM signature of d=' + passed.map(s => s.d).join(', ') + '. Gmail and Yahoo require it of bulk senders.', 'Recipients can unsubscribe with one click, the way Gmail and Yahoo expect.', [lup.index, lu.index].concat(passed.flatMap(s => s.src))));
       } else if (lup) {
-        items.push(item('List-Unsubscribe-Post', lup.value.trim().slice(0, 60), 'warn', 'List-Unsubscribe-Post must be exactly List-Unsubscribe=One-Click (RFC 8058); this value is shown as written.', 'The one-click unsubscribe header is written wrong, so it will not work.', [lup.index]));
+        items.push(item('List-Unsubscribe-Post', lup.value.trim().slice(0, 60), 'warn', 'List-Unsubscribe-Post must read exactly List-Unsubscribe=One-Click (RFC 8058). The value is shown as written.', 'The one-click unsubscribe setting is written wrong, so it won\'t work.', [lup.index]));
       } else if (https) {
-        items.push(item('List-Unsubscribe-Post', 'missing', 'warn', 'No List-Unsubscribe-Post, so there is no RFC 8058 one-click unsubscribe. Gmail and Yahoo require it of bulk senders.', 'There is no one-click unsubscribe, which Gmail and Yahoo require of bulk senders.', [lu.index]));
+        items.push(item('List-Unsubscribe-Post', 'missing', 'warn', 'No List-Unsubscribe-Post, so there\'s no one-click unsubscribe (RFC 8058). Gmail and Yahoo require it of bulk senders.', 'There\'s no one-click unsubscribe. Gmail and Yahoo require it from anyone who sends bulk mail.', [lu.index]));
       }
     }
     const lid = first(fields, 'list-id');
@@ -402,7 +402,7 @@
     const rt = first(fields, 'reply-to');
     if (rt && from) {
       const a = P.parseAddresses(rt.value)[0];
-      if (a && a.domain && org(a.domain) !== org(from)) items.push(item('Reply-To', a.address, 'warn', 'Replies go to ' + a.domain + ', a different organization from ' + from + '. Normal for some platforms and help desks; a phishing sign when unexpected.', 'Replies go to a different company than the one the message says it is from. Check that this is expected.', [rt.index]));
+      if (a && a.domain && org(a.domain) !== org(from)) items.push(item('Reply-To', a.address, 'warn', 'Replies go to ' + a.domain + ', a different organization from ' + from + '. Normal for some platforms and help desks; a phishing sign when unexpected.', 'Replies go to a different company than the one in the From address. Check that you expected that.', [rt.index]));
     }
     const snd = first(fields, 'sender');
     if (snd && from) {
@@ -416,7 +416,12 @@
         : item('Message-ID', d, 'info', 'Message-ID domain ' + d + ', a different organization from ' + from + '. Usually the sending platform or mail server that created the message.', 'The message ID was made by ' + d + ', usually the service or server that created the message.', message.messageId.src));
     }
     const prec = first(fields, 'precedence');
-    if (prec) items.push(item('Precedence', prec.value.trim(), 'info', /bulk|list|junk/i.test(prec.value) ? 'Declares bulk or list mail; auto-responders should not answer it.' : 'Precedence ' + prec.value.trim() + ', shown as written.', /bulk|list|junk/i.test(prec.value) ? 'The sender marked this as bulk mail.' : 'The sender set a priority label.', [prec.index]));
+    if (prec) {
+      // bulk, list and junk are the values auto-responders act on (RFC 3834 section 3.1.8).
+      const v = prec.value.trim(), known = /^(bulk|list|junk)$/i.test(v);
+      items.push(item('Precedence', v, 'info', known ? 'Precedence: ' + v.toLowerCase() + ' marks bulk or list mail, so auto-responders shouldn\'t answer it.' : 'Precedence: ' + v + ' isn\'t bulk, list, or junk, the values mail software acts on. It has no defined effect.',
+        known ? 'The sender marked this as ' + (/list/i.test(v) ? 'mailing list' : 'bulk') + ' mail, so automatic replies skip it.' : 'The sender added a label that mail software ignores.', [prec.index]));
+    }
     const auto = first(fields, 'auto-submitted');
     if (auto && !/^\s*no\b/i.test(auto.value)) items.push(item('Auto-Submitted', auto.value.trim(), 'info', 'Generated automatically (RFC 3834).', 'A machine sent this, not a person.', [auto.index]));
     const fid = first(fields, 'feedback-id');

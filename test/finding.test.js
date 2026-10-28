@@ -101,7 +101,7 @@ test('the receiver\'s own ARC seal is not a forward', () => {
   assert.equal(f.status, 'pass');
   assert.equal(f.forwarded.yes, false);
   const notes = run('gmail-show-original.txt').auth.notes;
-  assert.ok(notes.some(n => /added its own record of the checks when the message arrived\. That is not a forward\./.test(n.plain)));
+  assert.ok(notes.some(n => /added its own record of the checks when the message arrived\. That isn.t a forward\./.test(n.plain)));
   assert.ok(notes.every(n => !/forwarding record/.test(n.plain)));
 });
 
@@ -300,7 +300,7 @@ test('every fixture pasted twice gives the same finding as one paste', () => {
 
 // The Simple voice word list in CLAUDE.md, over every sentence the
 // page can show for every fixture.
-const SIMPLE_BANNED = /(?<![\w.-])(aligned|alignment|unaligned|bounce|bounces|Return-Path|envelope|HELO|EHLO|selector|authserv|ARC|seal|seals|sealer|compauth|SCL|BCL|PCL|organizational domain|relay|relays|hop|hops|TLS|RFC|policy|policies)(?![\w.-])|\b[a-z]=/i;
+const { SIMPLE_BANNED } = require('./simple-words.js');
 test('Simple wording uses none of the technical words', () => {
   const bad = [];
   for (const name of FIXTURES) {
@@ -308,7 +308,7 @@ test('Simple wording uses none of the technical words', () => {
     const f = r.finding;
     const all = [].concat(f ? [f.headline, f.cause, f.consequence].concat(f.details, f.fixes, f.flags, f.limits) : [], r.input.notes, r.message.notes || [], r.decoded.notes || [], (r.decoded.filters || []).flatMap(g => g.items || []), r.decoded.list || [], r.decoded.platform && r.decoded.platform.statement ? [r.decoded.platform.statement] : [], r.chain.notes || [], r.auth.notes || []).filter(Boolean);
     // Microsoft's own setting name is quoted so an admin can find it.
-    for (const x of all) if (x.plain && SIMPLE_BANNED.test(x.plain.replace(/Trusted ARC sealers/g, ''))) bad.push(name + ': ' + x.plain);
+    for (const x of all) if (x.plain && (SIMPLE_BANNED.test(x.plain.replace(/Trusted ARC sealers/g, '')) || x.plain.includes(';'))) bad.push(name + ': ' + x.plain);
   }
   assert.deepEqual(Array.from(new Set(bad)).slice(0, 40), []);
 });

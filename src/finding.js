@@ -219,7 +219,7 @@
     if (disp.source === 'dis') {
       const D = { none: 'did not apply it to this message', quarantine: 'sent this message to spam', reject: 'refused this message' };
       const did = D[disp.value] || 'recorded ' + disp.raw;
-      return say(disp.value === 'none' ? 'caveat' : 'fail', pub + ', and ' + receiver + ' ' + did + ' (' + disp.raw + ').', (sub ? org : from) + '\'s DMARC setting ' + (pv === 'reject' ? 'asks providers to refuse fake mail' : pv === 'quarantine' ? 'asks providers to send fake mail to spam' : 'only watches and asks for no action') + '. ' + plainReceiver(receiver) + ' ' + did + '.', src);
+      return say(disp.value === 'none' ? 'caveat' : 'fail', pub + ', and ' + receiver + ' ' + did + ' (' + disp.raw + ').', (sub ? org : from) + '\'s DMARC setting ' + (pv === 'reject' ? 'asks providers to refuse fake mail' : pv === 'quarantine' ? 'asks providers to send fake mail to spam' : 'only watches and asks for no action') + '. ' + plainReceiver(receiver).replace(/^t/, 'T') + ' ' + did + '.', src);
     }
     return say('unknown', pub + '. The headers do not record what ' + receiver + ' did with this message.', 'The headers show ' + (sub ? org : from) + '\'s DMARC setting, but not what ' + plainReceiver(receiver) + ' did with this message.', src);
   }
@@ -243,7 +243,7 @@
     }
     if (ctx.list && ctx.list.take) {
       const L = ctx.list, ok = L.preResult === 'pass';
-      add('caveat', 'Nothing to change at ' + from + (ok ? ': its mail passed before the list.' : ' on the strength of this message.') + ' Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list\'s ARC seal.', 'If you sent this, your setup is not the problem' + (ok ? '' : ' as far as these headers show') + '. Mailing lists that change messages break these checks; it is a known side effect.', L.preSrc.concat(L.src));
+      add('caveat', 'Nothing to change at ' + from + (ok ? ': its mail passed before the list.' : ' on the strength of this message.') + ' Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list\'s ARC seal.', 'If you sent this, your setup is not the problem' + (ok ? '' : ' as far as these headers show') + '. Mailing lists that change messages break these checks. That\'s a known side effect.', L.preSrc.concat(L.src));
       add('caveat', 'If you run ' + L.id + ': ' + (L.mailman ? 'in Mailman, set DMARC mitigation to replace the From address with the list\'s own for every post, not only for domains with p=quarantine or p=reject' : 'have the list rewrite the From address to its own') + '; or stop tagging the subject and adding a footer; or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.', 'If you run the list: have it send under its own address (it can keep the sender\'s name), or stop it adding a subject tag and a footer.', L.src);
       return f;
     }
@@ -411,7 +411,7 @@
     if (result === 'permerror' || result === 'temperror') {
       const perm = result === 'permerror';
       return finish('error', say('caveat', 'DMARC could not be evaluated because ' + receiver + ' hit ' + (perm ? 'a permanent error reading the DMARC record' : 'a temporary DNS error looking up the DMARC record') + ' for ' + fd + ' (dmarc=' + result + ').', 'The sender check could not run because ' + (perm ? 'the DMARC record of ' + fd + ' is written wrong.' : 'looking up the DMARC record of ' + fd + ' failed for a temporary reason.'), dm.src),
-        say('caveat', (perm ? 'A permanent error means the record exists but cannot be read: a syntax mistake, a missing v=DMARC1, or more than one record. ' : 'A temporary error says nothing about the record itself. ') + 'Computed from the identifiers, the message ' + (auth.computed.result === 'pass' ? 'would pass.' : 'would fail.'), perm ? 'The record is there but broken, so mail systems treat the domain as if it had none.' : 'The lookup failed this time; the next one may work.', allSrc));
+        say('caveat', (perm ? 'A permanent error means the record exists but cannot be read: a syntax mistake, a missing v=DMARC1, or more than one record. ' : 'A temporary error says nothing about the record itself. ') + 'Computed from the identifiers, the message ' + (auth.computed.result === 'pass' ? 'would pass.' : 'would fail.'), perm ? 'The record is there but broken, so mail systems treat the domain as if it had none.' : 'The lookup failed this time. The next one may work.', allSrc));
     }
 
     if (result !== 'fail') {
@@ -432,7 +432,7 @@
       const vouched = fw.receiverArc === 'pass' || !!(auth.compauth && auth.compauth.reason === '130');
       if (fw.preResult === 'pass' && fw.intact && vouched) {
         const after = joinList(fp.map(x => x.t));
-        const head = say('caveat', lead + (computedOnly ? 'fails' : 'failed') + ' because the message was forwarded by ' + joinList(fw.by) + ': ' + preSay + ', and after it ' + after + '.', plainLead + 'failed the sender check (DMARC) because it was forwarded by ' + joinList(fw.by) + '. Before the forward it passed; the forward broke it.', uniq(fw.aarSrc.concat(fp.flatMap(x => x.src))));
+        const head = say('caveat', lead + (computedOnly ? 'fails' : 'failed') + ' because the message was forwarded by ' + joinList(fw.by) + ': ' + preSay + ', and after it ' + after + '.', plainLead + 'failed the sender check (DMARC) because it was forwarded by ' + joinList(fw.by) + '. It passed before the forward, and the forward broke it.', uniq(fw.aarSrc.concat(fp.flatMap(x => x.src))));
         const broke = [];
         if (fw.pre.some(x => x.method === 'spf' && x.result === 'pass') && !(auth.spf.result === 'pass' && auth.spf.relaxed)) broke.push('The forward broke SPF: it sent the message on from ' + (auth.spf.ip || 'its own server') + (!auth.spf.domain ? '.' : auth.spf.result === 'pass' ? ', so SPF now checks ' + auth.spf.domain + ', which is not ' + fd + '.' : ', which the SPF record of ' + auth.spf.domain + ' does not authorize (spf=' + auth.spf.result + ').'));
         const dkBroke = auth.dkim.filter(k => k.result === 'fail' && fw.pre.some(x => x.method === 'dkim' && x.result === 'pass' && P.domainOf(x.ids['header.d'] || x.ids['header.i'] || '') === k.domain));
@@ -454,7 +454,7 @@
       const howPlain = list.tag ? ', for example by adding ' + list.tag + ' to the subject.' : ', for example by adding a footer.';
       const cause = list.pre.length
         ? say('caveat', 'Before the list, ' + list.writer + ' recorded ' + preText(list) + ' in its ' + list.origName + ' field. The list\'s own server wrote that record and this page cannot verify it' + (list.preResult === 'pass' ? ', but it shows the message passed on arrival.' : '.') + how,
-          list.preResult === 'pass' ? 'Before the list, the list\'s own server recorded that the message passed. The sender\'s setup looks fine; the list broke the checks by changing the message' + howPlain : 'The list\'s own server kept a record of the checks before the list, but it does not show a clear pass. The list changed the message' + howPlain, uniq(list.preSrc.concat(list.src)))
+          list.preResult === 'pass' ? 'Before the list, the list\'s own server recorded that the message passed. The sender\'s setup looks fine. The list broke the checks by changing the message' + howPlain : 'The list\'s own server kept a record of the checks before the list, but it does not show a clear pass. The list changed the message' + howPlain, uniq(list.preSrc.concat(list.src)))
         : say('caveat', 'No record from before the list is in the headers, so this page cannot show that the message passed before the list changed it.' + how, 'The headers carry no record of how the message looked before the list, so this page cannot confirm the sender\'s own setup. Lists break these checks by changing the message' + howPlain, list.src);
       return finish('fail', head, cause);
     } else if (listId) {
@@ -464,7 +464,7 @@
     const d = dm.disagreement;
     if (d && d.reason === 'strict-mode') {
       const pp = passPieces(auth);
-      return finish('fail', say('fail', lead + (computedOnly ? 'fails' : 'failed') + ' even though ' + joinList(pp.map(x => x.t)) + ' aligns with ' + fd + ' in relaxed mode, so the DMARC record most likely requires strict alignment (' + joinList(auth.computed.tags.map(t => t + '=s'), 'or') + '); the record itself is not in the headers.', plainLead + 'failed the sender check (DMARC) although it was signed by a domain in the same organization as ' + fd + '. The sender\'s policy probably demands an exact domain match.', uniq(pp.flatMap(x => x.src).concat(dm.src))),
+      return finish('fail', say('fail', lead + (computedOnly ? 'fails' : 'failed') + ' even though ' + joinList(pp.map(x => x.t)) + ' aligns with ' + fd + ' in relaxed mode, so the DMARC record most likely requires strict alignment (' + joinList(auth.computed.tags.map(t => t + '=s'), 'or') + '); the record itself is not in the headers.', plainLead + 'failed the sender check (DMARC) although it was signed by a domain in the same organization as ' + fd + '. The sender\'s DMARC setting probably demands an exact domain match.', uniq(pp.flatMap(x => x.src).concat(dm.src))),
         say('caveat', d.technical, d.plain, d.src));
     }
     if (d) {
@@ -484,7 +484,7 @@
     if (!cause || !c) return cause;
     const m = HA.providers.compauthMeaning(c.reason);
     const t = 'Microsoft recorded compauth=' + c.result + (c.reason ? ' reason=' + c.reason : '') + (m ? ', meaning ' + m + '.' : c.reason ? ', a code not in its published table.' : '.');
-    return say(cause.state, cause.technical + ' ' + t, cause.plain + ({ fail: ' Microsoft\'s own sender check failed it too.', pass: ' Microsoft\'s own sender check passed it anyway.', softpass: ' Microsoft\'s own sender check gave it a soft pass.' }[c.result] || ''), uniq(cause.src.concat(c.src)));
+    return say(cause.state, cause.technical + ' ' + t, cause.plain + ({ fail: ' Microsoft\'s own sender check failed it too.', pass: ' Microsoft\'s own sender check still passed it.', softpass: ' Microsoft\'s own sender check gave it a soft pass.' }[c.result] || ''), uniq(cause.src.concat(c.src)));
   }
 
   // The mechanism behind a failure, in a sentence or two.
@@ -497,7 +497,7 @@
     const spfFailed = ['fail', 'softfail'].includes(spf.result);
     const spfErr = ['none', 'neutral', 'permerror', 'temperror'].includes(spf.result) && spf.domain;
     const heloOnly = spf.result === 'pass' && !spf.relaxed && /helo/i.test(spf.identity) && !auth.dkim.some(k => k.result === 'pass');
-    if (heloOnly && !failedSig && !dkimErr) return say('fail', 'SPF passed only for the server name ' + spf.domain + ', which is not ' + fd + '. The bounce address was empty, so SPF checked the name the sending server gave itself (HELO) instead of a sender domain, and nothing else passed for ' + fd + '.', 'The message had no bounce address, so the only check that passed was on the sending server\'s own name, which does not belong to ' + fd + '.', src);
+    if (heloOnly && !failedSig && !dkimErr) return say('fail', 'SPF passed only for the server name ' + spf.domain + ', which is not ' + fd + '. The bounce address was empty, so SPF checked the name the sending server gave itself (HELO) instead of a sender domain, and nothing else passed for ' + fd + '.', 'The message had no hidden return address, so the only check that passed was on the sending server\'s own name, which does not belong to ' + fd + '.', src);
     if (passedElsewhere.length && !failedSig && !dkimErr && !spfFailed && !spfErr) {
       const own = svc.t === 'the sending service' ? 'the sending service\'s own' : svc.t + '\'s own';
       return say('fail', 'The checks passed, but for ' + joinList(Array.from(new Set(passedElsewhere))) + ', ' + (passedElsewhere.length === 1 ? 'a domain' : 'domains') + ' that ' + (passedElsewhere.length === 1 ? 'is' : 'are') + ' not ' + fd + '. That is what happens when ' + own + ' domain signs and bounces the mail. DMARC counts a pass only on the From domain or, in relaxed mode, its organizational domain.', 'The service sending this mail is using its own domain instead of ' + fd + ', so the checks pass for the service but not for the sender.', src);

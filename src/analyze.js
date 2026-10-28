@@ -98,6 +98,14 @@
     const finding = parsed.blockFound ? HA.finding.build({ message, chain, auth, alignment, decoded, fields }) : null;
     const flags = flagsOf(text, parsed, message, chain, auth);
     if (finding && finding.status === 'forwarded') flags.push('forwarded');
+    // Sentences joined after say() built them get contracted here too.
+    const seen = new Set();
+    (function walk(x) {
+      if (!x || typeof x !== 'object' || seen.has(x)) return;
+      seen.add(x);
+      if (typeof x.plain === 'string') x.plain = P.contract(x.plain);
+      for (const k in x) walk(x[k]);
+    })({ message, chain, finding, alignment, auth, decoded, notes: parsed.notes });
     return {
       version: '0.4',
       step: STEP,

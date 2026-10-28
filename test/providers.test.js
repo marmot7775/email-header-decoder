@@ -186,7 +186,7 @@ test('list headers: RFC 8058 one-click must be signed by a passing DKIM signatur
   const missing = HA.analyze(fixture('platform-sendgrid.txt').replace(/List-Unsubscribe-Post:[^\n]*\n/, '')).decoded.list;
   assert.equal(missing.find(i => i.key === 'List-Unsubscribe-Post').raw, 'missing');
   const mailtoOnly = HA.analyze(fixture('platform-sendgrid.txt').replace('<https://u2210.ct.sendgrid.net/unsub/602>, ', '')).decoded.list;
-  assert.match(mailtoOnly.find(i => i.key === 'List-Unsubscribe-Post').technical, /needs an https address/);
+  assert.match(mailtoOnly.find(i => i.key === 'List-Unsubscribe-Post').technical, /has no https URI, which RFC 8058 requires/);
   assert.equal(ok.find(i => i.key === 'Feedback-ID').raw, '2210:club:sendgrid');
 });
 

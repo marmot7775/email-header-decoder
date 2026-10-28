@@ -184,3 +184,13 @@ Decisions
             checks, Why, What the DMARC setting did, then the
             evidence fold. Copy report follows the same order. Simple
             tiles say Failed, matching the DMARC tile.
+2026-10-28  Simple gets its contractions in one place (P.contract,
+            run by sentence(), item(), and a last pass in analyze),
+            not string by string. Technical keeps long forms because
+            it can quote a receiver's words. The Simple word list and
+            a no semicolon rule now cover docs/sentences.md too, which
+            caught bounce address, policy, and a lowercase sentence
+            start. List header notes rewritten in both voices.
+            Precedence names bulk, list, and junk as the values
+            software acts on. Hops without a time zone share one
+            note. Counts under 10 are words.

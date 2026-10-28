@@ -73,8 +73,19 @@
   // A sentence the page shows. Every one carries a state (pass, caveat,
   // fail, unknown), a technical wording, a plain wording for a reader
   // who is not technical, and the indexes of the fields it came from.
+  // Simple wording uses contractions (house style). Technical keeps the
+  // long forms, since it can quote a receiver's own words.
+  const CONTRACT = { 'is not': "isn't", 'are not': "aren't", 'was not': "wasn't", 'were not': "weren't", 'do not': "don't", 'does not': "doesn't", 'did not': "didn't", 'could not': "couldn't", 'would not': "wouldn't", 'should not': "shouldn't", 'has not': "hasn't", 'have not': "haven't", 'will not': "won't", 'cannot': "can't" };
+  function contract(text) {
+    if (typeof text !== 'string') return text;
+    return text.replace(/\b(is|are|was|were|do|does|did|could|would|should|has|have|will) not\b|\bcannot\b/gi, (m) => {
+      const c = CONTRACT[m.toLowerCase()];
+      return m[0] === m[0].toUpperCase() ? c[0].toUpperCase() + c.slice(1) : c;
+    });
+  }
+
   function sentence(state, technical, plain, src) {
-    return { state, technical, plain, src: (src || []).filter(i => i !== null && i !== undefined) };
+    return { state, technical, plain: contract(plain), src: (src || []).filter(i => i !== null && i !== undefined) };
   }
 
   // Build fields. Continuation lines start with WSP (RFC 5322 folding).
@@ -90,7 +101,7 @@
     const block = locateHeaderBlock(lines);
     const notes = [];
     if (!block) {
-      notes.push(sentence('unknown', 'No header block found: no line in the paste has the form Name: value with a field real mail carries.', 'This looks like the text of an email, not its headers. Copy the message source instead; the box below the paste area says where to find it.', []));
+      notes.push(sentence('unknown', 'No header block found: no line in the paste has the form Name: value with a field real mail carries.', 'This looks like the text of an email, not its headers. Copy the message source instead. The box below the paste area says where to find it.', []));
       return { fields: [], notes, block: null, format: 'none', bodyPresent: false, blockFound: false, repairedLines: 0 };
     }
     const fields = [];
@@ -334,7 +345,7 @@
     return { tags, order };
   }
 
-  HA.parse = { parseHeaders, sentence, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
+  HA.parse = { parseHeaders, sentence, contract, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.parse;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

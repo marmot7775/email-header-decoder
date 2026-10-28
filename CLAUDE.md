@@ -229,7 +229,10 @@ when known. Fixed words, used the same way everywhere:
 Never in Simple: aligned, alignment, bounce, Return-Path,
 envelope, HELO, EHLO, selector, d=, s=, header, field, authserv,
 ARC, seal, compauth, SCL, BCL, PCL, organizational domain, relay,
-hop, TLS, RFC, policy. A test enforces the list.
+hop, TLS, RFC, policy. A test enforces the list, and no
+semicolons, over every fixture and every case in
+docs/sentences.md. Contractions in Simple are applied in one place,
+P.contract in parse.js, so write Simple strings either way.
 
 Technical is for a deliverability practitioner. Use the protocol's
 own terms exactly: RFC5322.From, RFC5321.MailFrom, the HELO

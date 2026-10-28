@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const S = require('../scripts/sentences.js');
+const { SIMPLE_BANNED } = require('./simple-words.js');
 
 // A hyphen with space on both sides, or an en or em dash anywhere.
 const DASH = /[–—]|\s-+\s/;
@@ -17,9 +18,13 @@ test('sentences: every case runs, and no sentence breaks the copy rules', () => 
   for (const [name, text] of S.CASES) {
     let f;
     assert.doesNotThrow(() => { f = S.run(name, text); }, name + ' threw');
-    for (const [label, s] of S.lines(f)) check(name + ', ' + label, s);
+    for (const [label, s] of S.lines(f)) {
+      check(name + ', ' + label, s);
+      if (/plain/i.test(label)) assert.ok(!/;/.test(s), name + ', ' + label + ' has a semicolon: ' + s);
+      if (/plain/i.test(label)) assert.ok(!SIMPLE_BANNED.test(s.replace(/Trusted ARC sealers/g, '')), name + ', ' + label + ' uses a word Simple avoids: ' + s);
+    }
   }
-  for (const [code, t, p] of S.meanings()) { check(code, t); check(code, p); }
+  for (const [code, t, p] of S.meanings()) { check(code, t); check(code, p); assert.ok(!SIMPLE_BANNED.test(p.replace(/Trusted ARC sealers/g, '')), code + ' Simple uses a word Simple avoids: ' + p); }
 });
 
 test('sentences: no two cases share a cause', () => {
