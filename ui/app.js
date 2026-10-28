@@ -535,7 +535,6 @@
   });
 
   setVoice(voice);
-  // Open on a sample so the page shows what it does before anyone pastes:
-  // the forward case, the one a plain hop table explains worst.
-  if (!$('headers').value.trim()) loadSample('forwarded', false);
+  // A browser restoring form state can refill the box; read it if so.
+  run(false);
 })();

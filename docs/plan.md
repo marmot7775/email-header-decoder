@@ -82,7 +82,9 @@ Decisions
             search and AI crawlers. The JSON-LD FAQ is generated
             from the page's FAQ so the two match; a test checks it.
 2026-10-25  The page opens on the forwarded sample, labelled as a
-            sample.
+            sample. Reversed 2026-10-28: the box opens empty, as Neil
+            found headers already in it that he had to delete first.
+            The sample buttons stay.
 2026-10-25  Check tiles and Copy report read values already in the
             result. When the finding blames a forward, the tiles say
             failed after the forward and passed before it, from the
