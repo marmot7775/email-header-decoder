@@ -76,7 +76,7 @@
     const name = helo ? 'the HELO identity ' + d : 'the Return-Path domain ' + d + ' (RFC5321.MailFrom)';
     if (spf.result === 'pass' && !spf.relaxed) return { t: 'SPF passed for ' + name, p: helo ? 'the sending server called itself ' + d : 'it came from a server that ' + d + ' allows', unaligned: true, src: spf.src };
     if (spf.result === 'pass') return null;
-    const plain = { fail: 'the sending server is not on ' + d + '\'s list of approved servers', softfail: 'the sending server is not on ' + d + '\'s list of approved servers', none: d + ' publishes no list of approved servers' }[spf.result] || 'the sending server check for ' + d + ' came out ' + spf.result;
+    const plain = { fail: 'the sending server is not on ' + d + '\'s list of approved servers', softfail: 'the sending server is not on ' + d + '\'s list of approved servers', none: d + ' publishes no list of approved servers' }[spf.result] || { neutral: d + '\'s list of approved servers gave no clear answer', permerror: d + '\'s list of approved servers is set up wrong, so it couldn\'t be read', temperror: d + '\'s list of approved servers couldn\'t be read this time' }[spf.result] || 'the sending server check for ' + d + ' gave no clear answer';
     return { t: 'SPF ' + (SPF_WORD[spf.result] || 'returned ' + spf.result) + ' for ' + name, p: plain, src: spf.src };
   }
   function failPieces(auth) {
@@ -87,13 +87,14 @@
     return pieces;
   }
   // "..., so neither aligned with the From domain shop.example."
+  const upFirst = (x) => x.charAt(0).toUpperCase() + x.slice(1);
   function failClause(pieces, from) {
     const un = pieces.filter(x => x.unaligned).length;
     const t = joinList(pieces.map(x => x.t));
     const p = joinList(pieces.map(x => x.p));
-    if (un && un === pieces.length) return { t: t + ', but ' + (un === 1 ? 'it does not align' : 'neither aligns') + ' with the From domain ' + from + ' (RFC5322.From).', p: p + ', but ' + (un === 1 ? 'that is not ' : 'neither of those is ') + from + ', the domain in the From address.' };
+    if (un && un === pieces.length) return { t: t + ', but ' + (un === 1 ? 'it does not align' : 'neither aligns') + ' with the From domain ' + from + ' (RFC5322.From).', p: p + '. ' + (un === 1 ? 'That is not ' : 'Neither of those is ') + from + ', the domain in the From address.' };
     if (un) return { t: t + ', and nothing that passed aligns with the From domain ' + from + ' (RFC5322.From).', p: p + '. Nothing that checked out matches ' + from + ', the domain in the From address.' };
-    return { t: t + ', so no identifier passed for the From domain ' + from + ' (RFC5322.From).', p: p + ', so nothing proved the mail came from ' + from + '.' };
+    return { t: t + ', so no identifier passed for the From domain ' + from + ' (RFC5322.From).', p: p + '. Nothing proved the mail came from ' + from + '.' };
   }
   function passPieces(auth) {
     const out = [];
@@ -375,7 +376,7 @@
     const result = dm.reported ? dm.result : auth.computed.result;
     const computedOnly = !dm.reported;
     const lead = computedOnly ? receiver + ' recorded no DMARC result; worked out from the identifiers, DMARC ' : 'DMARC at ' + receiver + ' ';
-    const plainLead = computedOnly ? 'The receiving system did not record the sender check, but working it out from what it did record, this message ' : 'This message ';
+    const plainLead = computedOnly ? 'The receiving system did not record the sender check, so this page worked it out. This message ' : 'This message ';
 
     if (dm.disagreement) out.details.push(say(dm.disagreement.state, dm.disagreement.technical, dm.disagreement.plain, dm.disagreement.src));
     for (const g of decoded.filters) if (g.outcome) out.details.push(say(LEVEL_STATE[g.outcome.level], g.name + ', ' + g.outcome.key + ' ' + g.outcome.raw + ': ' + g.outcome.technical, g.name + ': ' + g.outcome.plain, g.outcome.src));
@@ -385,7 +386,7 @@
       const pp = passPieces(auth);
       if (pp.length) {
         const cl = passClause(pp, fd);
-        const head = say(computedOnly ? 'caveat' : 'pass', lead + (computedOnly ? 'passes' : 'passed') + ' because ' + cl.t, plainLead + 'passed the sender check (DMARC): ' + cl.p, uniq(pp.flatMap(x => x.src).concat(from.src)));
+        const head = say(computedOnly ? 'caveat' : 'pass', lead + (computedOnly ? 'passes' : 'passed') + ' because ' + cl.t, plainLead + 'passed the sender check (DMARC). ' + upFirst(cl.p), uniq(pp.flatMap(x => x.src).concat(from.src)));
         const dkimCarries = auth.dkim.some(k => k.result === 'pass' && k.relaxed), spfCarries = auth.spf.result === 'pass' && auth.spf.relaxed;
         const lasts = dkimCarries && spfCarries ? 'For ' + fd + ', both SPF and DKIM carry the pass, so it survives a forward that breaks SPF.' : dkimCarries ? 'For ' + fd + ', aligned DKIM carries the pass, and it survives forwarding as long as nothing alters the signed headers or body.' : 'For ' + fd + ', only SPF carries the pass. A forward or a mailing list breaks it, because SPF checks whichever server hands the message over; aligned DKIM would keep it.';
         const cause = say('pass', lasts + (computedOnly ? ' Worked out here; the receiver recorded no DMARC result.' : '') + (fw.yes ? ' The message was forwarded by ' + joinList(fw.by) + ' and still passed.' : ''), 'A message passes when it is signed by, or sent for, the domain in its From address, and this one was.', allSrc);
@@ -472,7 +473,7 @@
       return finish('fail', say('fail', lead + 'failed at ' + receiver + ' even though ' + joinList(pp.map(x => x.t)) + ' aligns with the From domain ' + fd + '.', plainLead + 'failed the sender check (DMARC), though it was signed for ' + fd + '. The receiving system judged it differently from this page.', uniq(pp.flatMap(x => x.src).concat(dm.src))),
         say('caveat', d.technical, d.plain, d.src));
     }
-    const head = say('fail', lead + (computedOnly ? 'fails' : 'failed') + ' because ' + fcl.t, plainLead + (computedOnly ? 'fails' : 'failed') + ' the sender check (DMARC) because ' + fcl.p, uniq(fp.flatMap(x => x.src).concat(from.src, dm.src)));
+    const head = say('fail', lead + (computedOnly ? 'fails' : 'failed') + ' because ' + fcl.t, plainLead + (computedOnly ? 'fails' : 'failed') + ' the sender check (DMARC). ' + upFirst(fcl.p), uniq(fp.flatMap(x => x.src).concat(from.src, dm.src)));
     return finish('fail', head, fw.yes && fw.preResult === 'fail'
       ? say('fail', 'The message was already failing before the forward: ' + fw.writer + ' recorded ' + (preText(fw) || 'no passing result') + '. ' + (auth.spf.result === 'pass' && !auth.spf.relaxed && auth.spf.domain ? 'SPF now passes only for the forwarder\'s domain ' + auth.spf.domain + ', which does not count for ' + fd + '.' : 'Nothing after the forward aligns with ' + fd + ' either.'), 'The message failed the check before it was ever forwarded, so the problem is with the sender, not the forward.', uniq(fw.aarSrc.concat(auth.spf.src)))
       : causeOfFail(auth, fd, receiver, svc));

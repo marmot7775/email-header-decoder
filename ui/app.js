@@ -77,11 +77,12 @@
     const dkims = rows.filter(x => x.kind === 'dkim' && !x.absent).sort((a, b) => RANK[a.state] - RANK[b.state]);
     const dk = dkims[0];
     const out = [];
+    const hopWord = (n) => n + (plain ? ' handoff' : ' hop') + (n === 1 ? '' : 's');
     out.push({ k: 'SPF', q: 'Was the sending server allowed?', state: idState(spf), v: idWord(spf), d: spf && !spf.absent ? (plain ? 'checked ' : '') + spf.domain : '', jump: 'alignment' });
     out.push({ k: 'DKIM', q: 'Was it signed by the sender?', state: idState(dk), v: dk ? idWord(dk) : 'No signature', d: dk ? (plain ? 'signed by ' : 'd=') + dk.domain + (dkims.length > 1 ? ' and ' + (dkims.length - 1) + ' more' : '') : '', jump: 'alignment' });
     const d = R.auth.dmarc, c = R.auth.computed;
     if (d.reported) {
-      const pol = d.policy.p ? (plain ? 'policy: ' : 'p=') + d.policy.p : d.policy.action ? (plain ? 'Microsoft action: ' : 'action=') + d.policy.action : '';
+      const pol = d.policy.p ? (plain ? ({ none: 'failures: watch only', quarantine: 'failures go to spam', reject: 'failures refused' }[d.policy.p] || 'setting: ' + d.policy.p) : 'p=' + d.policy.p) : d.policy.action && !plain ? 'action=' + d.policy.action : '';
       const mismatch = c.result !== 'none' && c.result !== d.result ? 'computed here: ' + c.result : '';
       out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: mismatch && d.state === 'pass' ? 'caveat' : d.state, v: plain ? ({ pass: 'Passed', fail: 'Failed', none: 'No DMARC setting' }[d.result] || cap(d.result)) : cap(d.result), d: [pol, mismatch].filter(Boolean).join(', '), jump: 'auth' });
     } else if (c.result === 'none') out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: 'unknown', v: 'Not reported', d: '', jump: 'auth' });
@@ -103,8 +104,8 @@
     const ch = R.chain;
     if (ch.totalSec !== null && ch.totalSec >= 0) {
       const b = band(ch.totalSec);
-      out.push({ k: 'Delivery', q: 'How long did it take?', state: b === 'fail' ? 'fail' : b === 'warn' ? 'caveat' : 'pass', v: fmtDur(ch.totalSec), d: ch.count + ' hop' + (ch.count === 1 ? '' : 's') + (ch.trust.operator ? ', received by ' + ch.trust.operator : ''), jump: 'path' });
-    } else out.push({ k: 'Delivery', q: 'How long did it take?', state: 'unknown', v: 'Unknown', d: ch.count + ' hop' + (ch.count === 1 ? '' : 's'), jump: 'path' });
+      out.push({ k: 'Delivery', q: 'How long did it take?', state: b === 'fail' ? 'fail' : b === 'warn' ? 'caveat' : 'pass', v: fmtDur(ch.totalSec), d: hopWord(ch.count) + (ch.trust.operator ? ', received by ' + ch.trust.operator : ''), jump: 'path' });
+    } else out.push({ k: 'Delivery', q: 'How long did it take?', state: 'unknown', v: 'Unknown', d: hopWord(ch.count), jump: 'path' });
     return out;
   }
   function tileHtml(t) {
@@ -469,7 +470,7 @@
     const parts = [R.fields.length + ' field' + (R.fields.length === 1 ? '' : 's'), c.count + ' hop' + (c.count === 1 ? '' : 's')];
     if (c.totalSec !== null && c.totalSec >= 0) parts.push('transit ' + fmtDur(c.totalSec));
     if (c.originIp && !c.trust.originPrivate) parts.push('origin ' + c.originIp);
-    if (voice === 'plain') $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read ' + R.fields.length + ' header' + (R.fields.length === 1 ? '' : 's') + ' and ' + c.count + ' hop' + (c.count === 1 ? '' : 's') + '.';
+    if (voice === 'plain') $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read ' + R.fields.length + ' header' + (R.fields.length === 1 ? '' : 's') + ' and ' + c.count + ' handoff' + (c.count === 1 ? '' : 's') + ' between servers.';
     else $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + (R.input.repairedLines === 1 ? ' line had lost its indentation and was rejoined.' : ' lines had lost their indentation and were rejoined.') : '');
     renderFinding();
     renderFilters();

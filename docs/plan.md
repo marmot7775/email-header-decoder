@@ -210,3 +210,7 @@ Decisions
             may use a listed term in brackets after its plain
             explanation, such as (Return-Path) and (SPF), so the
             reader learns the word their email service uses.
+2026-10-28  The switch reads Summary and Technical. Simple read as
+            talking down. Simple headlines split into the result,
+            then the reason, so long sentences fell from 13 to four.
+            SPF neutral, permerror, and temperror get everyday words.

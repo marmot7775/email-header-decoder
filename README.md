@@ -12,8 +12,9 @@ Live at https://headers.dns-audit.com, part of
 
 - **The finding comes first.** One sentence names the cause, then
   the fix follows as steps. A pass says there's nothing to fix.
-- **Two voices.** Simple is written for a business owner. Technical
-  uses the protocol's own terms for a deliverability practitioner.
+- **Two views.** Summary gives the point and the fix in everyday
+  words and names each term it uses. Technical uses the protocol's
+  own terms for a deliverability practitioner.
 - **Two DMARC results.** The page shows the receiver's result and
   one it works out from the identifiers, with the reason when they
   disagree.

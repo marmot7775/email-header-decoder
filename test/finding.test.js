@@ -24,7 +24,7 @@ test('status fail: a sending service\'s own domains, in the one sentence the pro
   const f = run('esp-unaligned.txt').finding;
   assert.equal(f.status, 'fail');
   assert.equal(f.headline.technical, 'DMARC at mx.google.com failed because DKIM d=mailer.example s=m1 passed and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), but neither aligns with the From domain shop.example (RFC5322.From).');
-  assert.match(f.headline.plain, /signed by mailer\.example and it came from a server that bounce\.mailer\.example allows, but neither of those is shop\.example/);
+  assert.match(f.headline.plain, /signed by mailer\.example and it came from a server that bounce\.mailer\.example allows\. Neither of those is shop\.example/);
   assert.match(f.cause.technical, /not shop\.example/);
   assert.match(f.consequence.technical, /p=quarantine.*sent this message to spam \(dis=QUARANTINE\)/);
   // No platform is known, so the fix does not name one.
