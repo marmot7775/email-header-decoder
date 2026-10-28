@@ -100,6 +100,10 @@ ui/og-card.png    The share card, 1200 by 630.
 test/             node:test suite over analyze() with synthetic
                   fixtures and hostile input. Fixtures are under
                   test/fixtures.
+scripts/sentences.js  Writes docs/sentences.md, every string the
+                  finding and the filter decode can show, by case.
+                  npm run sentences; commit the file with any
+                  wording change.
 wrangler.jsonc    Cloudflare static hosting: dist/ on
                   headers.dns-audit.com, workers.dev off.
 README.md         The public face of the repo, with the Beta note.

@@ -178,6 +178,10 @@
     return group('google', 'Google', items, byGoogle ? say('unknown', 'Gmail writes no spam, Promotions or inbox placement decision into headers. Where the message landed is visible only in the mailbox.', 'Gmail does not record in the headers whether it put the message in spam.', []) : null, null);
   }
 
+  // Rspamd actions, from its documentation. The action is what the
+  // filter did; the result line carries the score and reject threshold.
+  const RSPAMD_ACTIONS = { 'no action': ['pass', 'No action: the message is not spam.', 'Rspamd decided this is not spam.'], greylist: ['warn', 'Greylisted: delivery was delayed once.', 'Rspamd delayed the message once as a test.'], 'add header': ['fail', 'Marked as spam with a header.', 'Rspamd marked this as spam.'], 'rewrite subject': ['fail', 'Marked as spam in the subject line.', 'Rspamd marked this as spam in its subject.'], 'soft reject': ['warn', 'Temporarily refused.', 'Rspamd asked the sender to try again later.'], reject: ['fail', 'Rejected as spam.', 'Rspamd refused this as spam.'] };
+
   // Gateways and on-host filters. Each is shown only when its headers are.
   function decodeGateways(fields) {
     const out = [];
@@ -268,10 +272,7 @@
     const rs = first(fields, 'x-spamd-result'), ra = first(fields, 'x-rspamd-action');
     if (rs || ra) {
       const items = [];
-      // Rspamd actions, from its documentation. The action is what the
-      // filter did; the result line carries the score and reject threshold.
-      const ACTIONS = { 'no action': ['pass', 'No action: the message is not spam.', 'Rspamd decided this is not spam.'], greylist: ['warn', 'Greylisted: delivery was delayed once.', 'Rspamd delayed the message once as a test.'], 'add header': ['fail', 'Marked as spam with a header.', 'Rspamd marked this as spam.'], 'rewrite subject': ['fail', 'Marked as spam in the subject line.', 'Rspamd marked this as spam in its subject.'], 'soft reject': ['warn', 'Temporarily refused.', 'Rspamd asked the sender to try again later.'], reject: ['fail', 'Rejected as spam.', 'Rspamd refused this as spam.'] };
-      if (ra) { const a = ACTIONS[ra.value.trim().toLowerCase()]; items.push(a ? item('X-Rspamd-Action', ra.value.trim(), a[0], a[1], a[2], [ra.index]) : notListed('X-Rspamd-Action', ra.value.trim(), 'Rspamd', [ra.index])); }
+      if (ra) { const a = RSPAMD_ACTIONS[ra.value.trim().toLowerCase()]; items.push(a ? item('X-Rspamd-Action', ra.value.trim(), a[0], a[1], a[2], [ra.index]) : notListed('X-Rspamd-Action', ra.value.trim(), 'Rspamd', [ra.index])); }
       if (rs) {
         const d = /default:\s*(True|False)\s*\[(-?[\d.]+)\s*\/\s*(-?[\d.]+)\]/i.exec(rs.value);
         if (!d) items.push(notListed('X-Spamd-Result', rs.value.trim().slice(0, 60), 'Rspamd', [rs.index]));
@@ -437,7 +438,7 @@
     return { filters, platform: detectPlatform(fields, message, auth, chain), list: listItems(fields, message, auth), notes };
   }
 
-  HA.providers = { decodeAll, decodeMicrosoft, decodeGateways, decodeGoogle, detectPlatform, listItems, compauthMeaning, PLATFORMS };
+  HA.providers = { decodeAll, decodeMicrosoft, decodeGateways, decodeGoogle, detectPlatform, listItems, compauthMeaning, PLATFORMS, TABLES: { MS_SFV, MS_CAT, MS_SFTY, MS_DIR, COMPAUTH, RSPAMD_ACTIONS } };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.providers;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

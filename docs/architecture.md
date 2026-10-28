@@ -72,6 +72,13 @@ build.js         Inlines src and ui into dist/index.html (full
                  share card.
 test/            node:test suite over analyze() with synthetic
                  fixtures and hostile input. Run: node --test test/
+scripts/sentences.js  The sentence inventory: drives finding.js
+                 through every status and cause with synthetic
+                 headers built in the script, adds every filter code
+                 meaning, and writes docs/sentences.md. Run: npm run
+                 sentences. A test fails when the file is stale, a
+                 case throws, a sentence breaks the copy rules, or
+                 two cases share a cause.
 
 Rules that keep it honest
 No DNS, no signature verification, no guessing. Every sentence is

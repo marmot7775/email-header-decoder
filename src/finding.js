@@ -290,7 +290,7 @@
     const finish = (status, headline, cause) => {
       out.status = status;
       out.state = status === 'pass' && dm.disagreement ? 'caveat' : STATE_OF[status];
-      out.headline = headline; out.cause = cause;
+      out.headline = headline; out.cause = withCompauth(cause, auth.compauth);
       out.consequence = consequenceOf(status, dm, fd, receiver, from.org);
       out.fixes = fixesOf(status, c);
       out.limits = from.defined && auth.primary >= 0 ? limitsOf(c) : [];
@@ -304,7 +304,7 @@
       const fdoms = message.from ? message.from.domains || [] : [];
       const T = { 'two-from': ['the message carries ' + numWord(message.fromCount) + ' From fields', 'the message names more than one sender'], 'multi-domain': ['the From field names addresses in ' + numWord(fdoms.length) + ' domains (' + joinList(fdoms) + ')', 'the sender line names addresses at more than one domain'], 'no-from': ['there is no usable From address', 'the sender\'s address is missing'] }[from.why];
       return finish('unknown', say(from.why === 'no-from' ? 'unknown' : 'fail', 'DMARC cannot be judged because ' + T[0] + ', so there is no single author domain to align with.', 'This page cannot check who sent the message, because ' + T[1] + '.', from.src),
-        say('unknown', 'DMARC checks one author domain. ' + (dm.reported ? receiver + ' still reported dmarc=' + dm.result + (dm.headerFrom ? ' for header.from=' + dm.headerFrom : '') + ', but which address it judged is not in the headers.' : 'Nothing is computed from any of the addresses.'), dm.reported ? 'The receiving system recorded a result, but the headers do not say which sender it checked.' : 'Without one clear sender there is nothing to check.', from.src.concat(dm.src)));
+        say('unknown', (from.why === 'no-from' ? 'DMARC aligns SPF and DKIM with the author domain, and without one there is nothing to align with. ' : 'DMARC checks one author domain. ') + (dm.reported ? receiver + ' still reported dmarc=' + dm.result + (dm.headerFrom ? ' for header.from=' + dm.headerFrom : '') + ', but which address it judged is not in the headers.' : 'Nothing is computed from any of the addresses.'), dm.reported ? 'The receiving system recorded a result, but the headers do not say which sender it checked.' : 'Without one clear sender there is nothing to check.', from.src.concat(dm.src)));
     }
     if (auth.primary < 0) {
       c.why = !chain.count ? 'no-received' : 'no-results';
@@ -355,11 +355,11 @@
 
     if (result === 'none' || result === 'bestguesspass') {
       const comp = auth.computed;
-      const would = comp.result === 'pass' ? 'pass, because ' + passClause(passPieces(auth), fd).t.replace(/\.$/, '') : 'fail, because ' + failClause(failPieces(auth), fd).t.replace(/\.$/, '');
+      const would = comp.result === 'pass' ? 'pass, because ' + passClause(passPieces(auth), fd).t : 'fail, because ' + failClause(failPieces(auth), fd).t;
       const head = result === 'bestguesspass'
         ? say('caveat', 'DMARC did not apply: ' + receiver + ' reported dmarc=bestguesspass, meaning ' + fd + ' has no DMARC record but the message would pass if it had one.', fd + ' has no DMARC policy, so the sender check did not apply; the message would pass it if the domain had one.', dm.src)
-        : say('caveat', 'DMARC did not apply because ' + receiver + ' found no DMARC record for ' + fd + '; with one, this message would ' + would + '.', fd + ' has no DMARC policy, so the sender check did not apply. With one, this message would ' + (comp.result === 'pass' ? 'pass.' : 'fail.'), allSrc);
-      return finish('none', head, say('caveat', 'Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals. Anyone can put ' + fd + ' in a From address without failing a policy.', 'Without a policy, nothing stops others from sending mail that claims to be from ' + fd + '.', dm.src));
+        : say('caveat', 'DMARC did not apply because ' + receiver + ' found no DMARC record for ' + fd + '; with one, this message would ' + comp.result + '.', fd + ' has no DMARC policy, so the sender check did not apply. With one, this message would ' + (comp.result === 'pass' ? 'pass.' : 'fail.'), allSrc);
+      return finish('none', head, say('caveat', 'Without a DMARC record nothing ties SPF and DKIM to the From domain, so a receiver judges the message on its own signals, and anyone can put ' + fd + ' in a From address without failing a policy. With a record this message would ' + would, 'Without a policy, nothing stops others from sending mail that claims to be from ' + fd + '. ' + (comp.result === 'pass' ? 'This message itself is set up to pass once there is one.' : 'This message itself would not pass if one were added.'), allSrc));
     }
 
     if (result === 'permerror' || result === 'temperror') {
@@ -421,22 +421,47 @@
       : causeOfFail(auth, fd, receiver, svc));
   }
 
+  // Microsoft's composite authentication is its own stated reason, so the
+  // cause quotes it when the receiver wrote one.
+  function withCompauth(cause, c) {
+    if (!cause || !c) return cause;
+    const m = HA.providers.compauthMeaning(c.reason);
+    const t = 'Microsoft recorded compauth=' + c.result + (c.reason ? ' reason=' + c.reason : '') + (m ? ', meaning ' + m + '.' : c.reason ? ', a code not in its published table.' : '.');
+    return say(cause.state, cause.technical + ' ' + t, cause.plain + ' Microsoft\'s combined sender check came out ' + c.result + '.', uniq(cause.src.concat(c.src)));
+  }
+
   // The mechanism behind a failure, in a sentence or two.
   function causeOfFail(auth, fd, receiver, svc) {
     const src = uniq(auth.dkim.flatMap(k => k.src).concat(auth.spf.src));
     const passedElsewhere = auth.dkim.filter(k => k.result === 'pass' && !k.relaxed).map(k => k.domain).concat(auth.spf.result === 'pass' && !auth.spf.relaxed && auth.spf.domain ? [auth.spf.domain] : []);
     const failedSig = auth.dkim.find(k => k.result === 'fail');
-    const spfFailed = ['fail', 'softfail'].includes(auth.spf.result);
-    if (passedElsewhere.length && !failedSig && !spfFailed) {
+    const dkimErr = auth.dkim.find(k => k.result && !['pass', 'fail'].includes(k.result));
+    const spf = auth.spf;
+    const spfFailed = ['fail', 'softfail'].includes(spf.result);
+    const spfErr = ['none', 'neutral', 'permerror', 'temperror'].includes(spf.result) && spf.domain;
+    if (passedElsewhere.length && !failedSig && !dkimErr && !spfFailed && !spfErr) {
       const own = svc.t === 'the sending service' ? 'the sending service\'s own' : svc.t + '\'s own';
       return say('fail', 'The checks passed, but for ' + joinList(Array.from(new Set(passedElsewhere))) + ', ' + (passedElsewhere.length === 1 ? 'a domain' : 'domains') + ' that ' + (passedElsewhere.length === 1 ? 'is' : 'are') + ' not ' + fd + '. That is what happens when ' + own + ' domain signs and bounces the mail. DMARC counts a pass only on the From domain or, in relaxed mode, its organizational domain.', 'The service sending this mail is using its own domain instead of ' + fd + ', so the checks pass for the service but not for the sender.', src);
     }
     const parts = [];
+    const ip = spf.ip ? ', ' + spf.ip + ',' : '';
     if (!auth.dkim.length) parts.push('There is no DKIM signature, so DMARC rests on SPF alone.');
+    const elsewhere = auth.dkim.filter(k => k.result === 'pass' && !k.relaxed).map(k => k.domain);
+    if (elsewhere.length) parts.push('DKIM passed only for ' + joinList(elsewhere) + ', which is not ' + fd + '.');
     if (failedSig) parts.push('The DKIM signature from ' + failedSig.domain + ' did not verify at ' + receiver + (failedSig.comments && failedSig.comments[0] ? ' (' + failedSig.comments[0] + ')' : '') + ': something changed the signed part of the message after signing, or the key in DNS does not match.');
-    if (spfFailed) parts.push('The server that handed the message over' + (auth.spf.ip ? ', ' + auth.spf.ip + ',' : '') + ' is not authorized by the SPF record of ' + auth.spf.domain + ', as ' + receiver + ' reported.');
+    if (dkimErr) parts.push({ permerror: 'The DKIM signature from ' + dkimErr.domain + ' could not be checked at ' + receiver + ' (dkim=permerror): the key at ' + (dkimErr.selector || '<selector>') + '._domainkey.' + dkimErr.domain + ' is missing or unreadable, or the signature itself is malformed.', temperror: 'The DKIM signature from ' + dkimErr.domain + ' could not be checked at ' + receiver + ' (dkim=temperror): a temporary DNS error kept it from fetching the key.' }[dkimErr.result] || 'DKIM for ' + dkimErr.domain + ' returned ' + dkimErr.result + ' at ' + receiver + ', which is not a pass.');
+    if (spf.result === 'fail') parts.push('The server that handed the message over' + ip + ' is not authorized by the SPF record of ' + spf.domain + ', as ' + receiver + ' reported.');
+    if (spf.result === 'softfail') parts.push('The SPF record of ' + spf.domain + ' does not authorize the server that handed the message over' + ip + ' and asks receivers to treat it as suspicious rather than fail it outright (softfail), as ' + receiver + ' reported.');
+    if (spfErr) parts.push({ none: spf.domain + ' publishes no SPF record, so SPF could not pass.', neutral: 'The SPF record of ' + spf.domain + ' makes no statement about the server that handed the message over (neutral), so SPF did not pass.', permerror: 'The SPF record of ' + spf.domain + ' could not be evaluated (permerror): it has a syntax error or needs more than 10 DNS lookups.', temperror: 'A temporary DNS error kept ' + receiver + ' from evaluating the SPF record of ' + spf.domain + ' (temperror).' }[spf.result]);
+    if (spf.result === 'pass' && !spf.relaxed && spf.domain) parts.push('SPF passed only for ' + (/helo/i.test(spf.identity) ? 'the server name ' : '') + spf.domain + ', which is not ' + fd + '.');
     if (!parts.length) parts.push('Neither SPF nor DKIM produced a pass on a domain that aligns with ' + fd + '.');
-    return say('fail', parts.join(' '), failedSig ? 'The message was changed after it was signed, or the signature does not match the sender\'s published key.' : spfFailed ? 'The server that sent this is not on the sender\'s list of approved servers.' : 'Nothing in the message proves it came from ' + fd + '.', src);
+    const plain = failedSig ? 'The message was changed after it was signed, or the signature does not match the sender\'s published key.'
+      : dkimErr ? 'The signature on the message could not be checked, and nothing else proves it came from ' + fd + '.'
+        : spfFailed ? 'The server that sent this is not on the sender\'s list of approved servers.'
+          : spf.result === 'none' && spfErr ? 'The sender\'s domain publishes no list of approved servers, and nothing else proves the mail came from ' + fd + '.'
+            : spfErr ? 'The sender\'s list of approved servers could not be read, and nothing else proves the mail came from ' + fd + '.'
+              : 'Nothing in the message proves it came from ' + fd + '.';
+    return say('fail', parts.join(' '), plain, src);
   }
 
   HA.finding = { build, forwardOf, joinList };
