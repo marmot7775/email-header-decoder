@@ -102,6 +102,33 @@ test('the receiver\'s own ARC seal is not a forward', () => {
   assert.equal(f.forwarded.yes, false);
 });
 
+test('mailing list: a list that re-sent the message under its own domain is named as the cause, with its server\'s record quoted', () => {
+  const r = run('mailing-list-original-ar.txt');
+  const f = r.finding;
+  assert.equal(f.status, 'fail');
+  assert.match(f.headline.technical, /came through the mailing list club\.lists\.example, which changed it, breaking the DKIM signature from author\.example, and sent it on as lists\.example/);
+  assert.match(f.cause.technical, /Before the list, mx\.lists\.example recorded .*dmarc=pass \(author\.example\) in its Authentication-Results-Original field/);
+  assert.match(f.cause.technical, /list tag \[club\]/);
+  assert.ok(f.fixes.some(x => /^Nothing to change at author\.example/.test(x.technical)));
+  assert.ok(f.fixes.some(x => /in Mailman, set DMARC mitigation/.test(x.technical)));
+  assert.ok(f.fixes.every(x => !/domain authentication|Return-Path/.test(x.technical)));
+});
+
+test('mailing list without a record from before the list says it cannot show the earlier result', () => {
+  const f = HA.analyze(fixture('mailing-list-original-ar.txt').replace(/Authentication-Results-Original:[^]*?header\.from=author\.example\n/, '')).finding;
+  assert.match(f.cause.technical, /^No record from before the list is in the headers/);
+  assert.ok(f.fixes.some(x => /^Nothing to change at author\.example on the strength of this message/.test(x.technical)));
+});
+
+test('the same header block pasted twice reads as one message', () => {
+  const t = fixture('mailing-list-original-ar.txt');
+  const r = HA.analyze(t + t);
+  assert.equal(r.message.fromCount, 1);
+  assert.equal(r.fields.length, HA.analyze(t).fields.length);
+  assert.equal(r.finding.status, 'fail');
+  assert.ok(r.input.notes.some(n => /pasted twice/.test(n.plain)));
+});
+
 test('status none: no DMARC record, with what the message would do under one', () => {
   const f = run('dmarc-none.txt').finding;
   assert.equal(f.status, 'none');

@@ -79,6 +79,7 @@ const CASES = [
   ['fail with DKIM temperror', rcv({ ar: 'dkim=temperror (key query timeout) header.d=shop.example header.s=s1; ' + ESP_SPF + '; ' + REJECT, sigs: [['shop.example', 's1']] })],
   ['fail computed, no DMARC result reported', rcv({ ar: 'dkim=pass header.d=mailer.example header.s=m1; spf=none smtp.mailfrom=orders@shop.example', sigs: [['mailer.example', 'm1']] })],
   ['fail through a mailing list', rcv({ ar: 'dkim=fail header.d=shop.example header.s=s1; spf=pass smtp.mailfrom=owner@list.example; ' + REJECT, sigs: [['shop.example', 's1']], extra: ['List-Id: <club.list.example>'] })],
+  ['fail through a mailing list that kept its record', rcv({ ar: 'dkim=fail header.d=shop.example header.s=s1; spf=pass smtp.mailfrom=owner@list.example; ' + REJECT, sigs: [['shop.example', 's1']], extra: ['List-Id: <club.list.example>', 'Authentication-Results-Original: mx.list.example; dkim=pass header.d=shop.example header.s=s1; spf=pass smtp.mailfrom=news@shop.example; dmarc=pass header.from=shop.example'] })],
   ['fail with the receiver judging differently', rcv({ ar: 'dkim=pass header.d=shop.example header.s=s1; ' + REJECT, sigs: [['shop.example', 's1']] })],
   ['strict alignment suspected', rcv({ ar: 'dkim=pass header.d=mail.shop.example header.s=s1; ' + ESP_SPF + '; ' + REJECT, sigs: [['mail.shop.example', 's1']] })],
   ['dmarc none, would pass', rcv({ ar: 'dkim=pass header.d=shop.example header.s=s1; ' + ESP_SPF + '; dmarc=none header.from=shop.example', sigs: [['shop.example', 's1']] })],

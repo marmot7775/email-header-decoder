@@ -160,7 +160,11 @@ button { font: inherit; cursor: pointer; }
 .card.finding.s-caveat { border-top-color: var(--caveat); }
 .card.finding.s-fail { border-top-color: var(--fail); }
 .card.finding.s-unknown { border-top-color: var(--unknown); }
-.finding .headline { font-size: var(--font-xl); line-height: 1.4; }
+.finding .headline { font-size: var(--font-md); line-height: 1.5; }
+.finding .fhead { background: var(--unknown-bg); border-left: 4px solid var(--unknown); border-radius: 8px; padding: 14px 16px; }
+.finding.s-pass .fhead { background: var(--pass-bg); border-left-color: var(--pass); }
+.finding.s-caveat .fhead { background: var(--caveat-bg); border-left-color: var(--caveat); }
+.finding.s-fail .fhead { background: var(--fail-bg); border-left-color: var(--fail); }
 .finding .tech-line { margin: 0; font-family: var(--font-mono); font-size: var(--font-xs); color: var(--muted); line-height: 1.6; max-width: 90ch; overflow-wrap: anywhere; }
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 16px 0 4px; }
 @media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -183,6 +187,9 @@ button { font: inherit; cursor: pointer; }
 .steps .txt { overflow-wrap: anywhere; }
 .more { margin-top: 14px; border-top: 1px solid var(--border); }
 .more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--font-sm); color: var(--primary); }
+.analysis > summary { cursor: pointer; min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 0 16px; font-weight: 600; color: var(--primary); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.analysis > summary .count { color: var(--text-2); font-weight: 400; font-size: var(--font-sm); }
+.analysis-body { display: grid; gap: 16px; margin-top: 16px; min-width: 0; }
 .more > summary .count { color: var(--text-2); font-weight: 400; }
 .toolbar .tools { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .btn.small { min-height: 44px; padding: 6px 12px; }
@@ -449,12 +456,17 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       </span>
     </div>
     <section class="card finding" id="finding" aria-labelledby="h-finding"></section>
+    <details class="analysis" id="analysis">
+      <summary>Full analysis <span class="count">message, alignment, authentication, path, filter headers, raw headers</span></summary>
+      <div class="analysis-body">
     <section class="card" id="message" aria-labelledby="h-message"></section>
     <section class="card" id="alignment" aria-labelledby="h-alignment"></section>
     <section class="card" id="auth" aria-labelledby="h-auth"></section>
     <section class="card" id="path" aria-labelledby="h-path"></section>
     <section class="card" id="filters" aria-labelledby="h-filters"></section>
     <section class="card" id="raw"></section>
+      </div>
+    </details>
   </div>
   <p class="sr-only" id="live" aria-live="polite"></p>
 

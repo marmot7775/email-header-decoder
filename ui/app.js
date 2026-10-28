@@ -425,6 +425,7 @@
     document.querySelectorAll('.prov.on, .src.on').forEach(el => el.classList.remove('on'));
     document.querySelectorAll('#rawbox .f').forEach(el => el.classList.toggle('hl', lit.includes(+el.dataset.field)));
     if (!lit.length) { $('live').textContent = 'Highlight cleared.'; return; }
+    $('analysis').open = true;
     const det = $('raw-details');
     det.open = true;
     const filter = $('raw-filter');
@@ -437,7 +438,7 @@
 
   document.addEventListener('click', (e) => {
     const jump = e.target.closest('[data-jump]');
-    if (jump && R) { $(jump.dataset.jump).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); return; }
+    if (jump && R) { if ($('analysis').contains($(jump.dataset.jump))) $('analysis').open = true; $(jump.dataset.jump).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); return; }
     const el = e.target.closest('[data-src]');
     if (!el || !R) return;
     if (el.closest('summary')) e.preventDefault(); // a source button inside a group row should not also toggle it
@@ -461,7 +462,7 @@
     const parts = [R.fields.length + ' field' + (R.fields.length === 1 ? '' : 's'), c.count + ' hop' + (c.count === 1 ? '' : 's')];
     if (c.totalSec !== null && c.totalSec >= 0) parts.push('transit ' + fmtDur(c.totalSec));
     if (c.originIp && !c.trust.originPrivate) parts.push('origin ' + c.originIp);
-    $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + ' line' + (R.input.repairedLines === 1 ? '' : 's') + ' had lost their indentation and were rejoined.' : '');
+    $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + (R.input.repairedLines === 1 ? ' line had lost its indentation and was rejoined.' : ' lines had lost their indentation and were rejoined.') : '');
     renderFinding();
     renderFilters();
     renderMessage();

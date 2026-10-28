@@ -102,7 +102,8 @@
   }
 
   // Per identifier, the longer statement the details list carries.
-  function rowSentence(r, from, forwarded) {
+  function rowSentence(r, from, via) {
+    const forwarded = via === 'forward';
     const note = r.comments && r.comments[0] && r.comments[0].length <= 80 ? ' (' + r.comments[0] + ')' : '';
     if (r.kind === 'dkim') {
       const d = r.domain || 'an unnamed domain';
@@ -112,7 +113,7 @@
       if (r.result === 'pass') return r.relaxed
         ? say('pass', 'DKIM passed for d=' + d + sel + ', which aligns with ' + from + (r.relaxedOnly ? ' in relaxed mode only.' : '.'), 'The message was signed by ' + d + ', which belongs to the sender.', r.src)
         : say('caveat', 'DKIM passed for d=' + d + sel + ', which does not align with ' + from + '. A pass on another domain does not count for DMARC.', 'The message was signed, but by ' + d + ', not by the sender\'s own domain.', r.src);
-      if (r.result === 'fail') return say('fail', 'DKIM failed for d=' + d + sel + note + '.' + (forwarded ? ' The message was forwarded, and forwarders often change it enough to break the signature.' : ' Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.'), 'The signature from ' + d + ' did not check out' + (forwarded ? ', most likely because the forward changed the message.' : '.'), r.src);
+      if (r.result === 'fail') return say('fail', 'DKIM failed for d=' + d + sel + note + '.' + (forwarded ? ' The message was forwarded, and forwarders often change it enough to break the signature.' : via === 'list' ? ' The message came through a mailing list, and lists change it enough to break the signature.' : ' Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.'), 'The signature from ' + d + ' did not check out' + (forwarded ? ', most likely because the forward changed the message.' : via === 'list' ? ', because the mailing list changed the message.' : '.'), r.src);
       return say(r.state, 'DKIM returned ' + r.result + ' for d=' + d + sel + note + '.', 'The signature from ' + d + ' could not be checked.', r.src);
     }
     if (r.absent) return say('unknown', 'No SPF domain: there is no smtp.mailfrom, Received-SPF envelope-from or Return-Path to read it from.', 'The headers do not say which domain the sending server was checked against.', r.src);
@@ -151,6 +152,29 @@
     }));
   }
 
+  // Mailing lists, from List-Id. A list that tags the subject or adds a
+  // footer breaks the author's DKIM and sends the message on from its own
+  // domain. Mailman and others keep what the list's server recorded on
+  // arrival in Authentication-Results-Original (or X-Original-
+  // Authentication-Results); it is quoted, never relied on.
+  function listOf(ctx) {
+    const { decoded, auth, message } = ctx;
+    const fields = ctx.fields || [];
+    const lid = decoded.list.find(i => i.key === 'List-Id');
+    if (!lid) return { yes: false, take: false };
+    const m = /<([^>]+)>/.exec(lid.raw);
+    const id = (m ? m[1] : lid.raw).trim().toLowerCase();
+    const org = HA.psl.orgDomain(id) || id;
+    const ofList = (d) => !!d && HA.psl.orgDomain(d) === org;
+    const resent = auth.dkim.some(k => k.result === 'pass' && !k.relaxed && ofList(k.domain)) || (auth.spf.result === 'pass' && !auth.spf.relaxed && ofList(auth.spf.domain));
+    const orig = fields.find(f => f.lower === 'authentication-results-original' || f.lower === 'x-original-authentication-results');
+    const ar = orig ? HA.auth.parseAuthResults(orig.value) : null;
+    const pre = ar ? ar.results.filter(x => ['spf', 'dkim', 'dmarc'].includes(x.method)) : [];
+    const dmPre = pre.find(x => x.method === 'dmarc');
+    const tag = /^\s*(?:(?:re|fwd?|aw)\s*:\s*)*(\[[^\]]+\])/i.exec(message.subject ? message.subject.value : '');
+    return { yes: true, id, org, resent, broken: auth.dkim.filter(k => k.result === 'fail' && !ofList(k.domain)), writer: (ar && ar.authserv) || 'the list\'s server', origName: orig ? orig.name : '', pre, preResult: dmPre ? dmPre.result : '', preSrc: orig ? [orig.index] : [], tag: tag ? tag[1] : '', mailman: fields.some(f => f.lower === 'x-mailman-version'), src: lid.src };
+  }
+
   // What the DMARC policy meant for this message, as far as the receiver
   // quoted it. Microsoft's oreject and pct.* are named, not interpreted:
   // auth.js keeps their disposition empty for the reason given there.
@@ -173,7 +197,7 @@
         'pct.reject': 'Microsoft recorded action=pct.reject: the policy is reject with pct below 100, and this message was picked to be delivered anyway.',
       };
       const t = M[a] || 'Microsoft recorded action=' + a + ', which is not in its published list, so it is shown as written.';
-      const plain = { quarantine: 'Microsoft put the message in junk or quarantine because of the sender\'s policy.', oreject: 'The sender\'s policy says to refuse forged mail. Microsoft kept the message but treated it as suspicious instead.', 'pct.quarantine': 'The sender\'s policy only applies to part of its mail, and this message happened to be let through.', 'pct.reject': 'The sender\'s policy only applies to part of its mail, and this message happened to be let through.' }[a] || (fails ? 'Microsoft did not act on the sender\'s policy for this message.' : 'The message passed, so the sender\'s policy did not come into play.');
+      const plain = { quarantine: 'Microsoft put the message in junk or quarantine because of the sender\'s policy.', oreject: 'The sender\'s policy says to refuse forged mail. Microsoft kept the message but treated it as suspicious instead.', 'pct.quarantine': 'The sender\'s policy only applies to part of its mail, and this message happened to be let through.', 'pct.reject': 'The sender\'s policy only applies to part of its mail, and this message happened to be let through.' }[a] || (fails ? 'Microsoft took no action over the failure, so it did not send the message to junk for this reason.' : 'The message passed, so the sender\'s policy did not come into play.');
       return say(fails ? (a === 'none' || /^pct/.test(a) ? 'caveat' : 'fail') : 'pass', t, plain, src);
     }
     if (!pol.p) return say('unknown', receiver + ' did not quote the DMARC policy of ' + from + ', so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.', 'The headers do not say what the sender\'s domain asks mail systems to do with forged mail.', src);
@@ -206,6 +230,12 @@
     if (status === 'forwarded') {
       add('caveat', 'Nothing at the sender fixes a forward. If the forward is yours, have the final mailbox trust the forwarder\'s ARC seal: Gmail weighs ARC on its own; Microsoft 365 honors it only for sealers an admin adds as trusted ARC sealers in the Defender portal.', 'The sender did nothing wrong. If you set up this forward, ask whoever runs the receiving mailbox to trust the forwarding service (' + fw.by[fw.by.length - 1] + '). In Microsoft 365 an administrator adds it as a trusted ARC sealer.', fw.src);
       add('caveat', 'If the forward is not yours, authentication worked as designed. Judge the sender by a copy delivered straight to the mailbox.', 'If you did not set up this forward, there is nothing to change. Ask for a copy sent straight to you to check the sender.', fw.src);
+      return f;
+    }
+    if (ctx.list && ctx.list.take) {
+      const L = ctx.list, ok = L.preResult === 'pass';
+      add('caveat', 'Nothing to change at ' + from + (ok ? ': its mail passed before the list.' : ' on the strength of this message.') + ' Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list\'s ARC seal.', 'If you sent this, your setup is not the problem' + (ok ? '' : ' as far as these headers show') + '. Mailing lists that change messages break these checks; it is a known side effect.', L.preSrc.concat(L.src));
+      add('caveat', 'If you run ' + L.id + ': ' + (L.mailman ? 'in Mailman, set DMARC mitigation to replace the From address with the list\'s own for every post, not only for domains with p=quarantine or p=reject' : 'have the list rewrite the From address to its own') + '; or stop tagging the subject and adding a footer; or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.', 'If you run the list: have it send under its own address (it can keep the sender\'s name), or stop it adding a subject tag and a footer.', L.src);
       return f;
     }
     // A forwarder claims a pass the receiver did not confirm: the failure
@@ -285,7 +315,11 @@
     const svc = serviceOf(decoded.platform);
     const dm = auth.dmarc;
     const fw = forwardOf(auth, chain, from);
-    const c = Object.assign({}, ctx, { receiver, svc, fw, dm });
+    const list = listOf(ctx);
+    // The list is blamed only when it re-sent the mail under its own domain
+    // and its server did not record a failure before the list.
+    list.take = list.yes && list.resent && !fw.yes && list.preResult !== 'fail';
+    const c = Object.assign({}, ctx, { receiver, svc, fw, dm, list });
     const out = { status: 'unknown', state: 'unknown', headline: null, cause: null, consequence: null, details: [], fixes: [], flags: [], limits: [], forwarded: { yes: fw.yes, by: fw.by, preForward: fw.yes ? { writer: fw.writer, result: fw.preResult, derived: !!fw.derived, text: preText(fw), src: fw.aarSrc } : null, src: fw.src } };
     const finish = (status, headline, cause) => {
       out.status = status;
@@ -323,8 +357,9 @@
         say('unknown', 'The field is there, but it lists no method this page reads' + (primary.none ? ' (it reports none).' : '.'), 'There is nothing in the record to go on.', primary.src));
     }
 
-    for (const k of auth.dkim) out.details.push(rowSentence(k, fd, fw.yes));
-    out.details.push(rowSentence(auth.spf, fd, fw.yes));
+    const via = fw.yes ? 'forward' : list.take ? 'list' : '';
+    for (const k of auth.dkim) out.details.push(rowSentence(k, fd, via));
+    out.details.push(rowSentence(auth.spf, fd, via));
     const allSrc = uniq(dm.src.concat(auth.computed.src));
 
     // Reported result first; computed only when the receiver wrote none.
@@ -400,6 +435,17 @@
       } else if (fw.preResult === 'pass') {
         out.details.push(say('caveat', 'The forwarder\'s record says ' + preSay + ', but ' + (!fw.intact ? 'the ARC chain is broken' : fw.receiverArc === 'fail' ? receiver + ' reported arc=fail' : receiver + ' did not report arc=pass, and this page does not verify ARC seals') + ', so that record is not relied on and the failure is not blamed on the forward.', 'The forwarder claims the message passed before it was forwarded, but its record does not hold up, so this page does not rely on it.', fw.src.concat(auth.arcResult ? auth.arcResult.src : [])));
       }
+    } else if (list.take) {
+      const bd = Array.from(new Set(list.broken.map(k => k.domain)));
+      const head = say('caveat', 'DMARC failed because the message came through the mailing list ' + list.id + ', which ' + (bd.length ? 'changed it, breaking the DKIM signature' + (bd.length > 1 ? 's' : '') + ' from ' + joinList(bd) + ', and ' : '') + 'sent it on as ' + list.org + ', which does not align with the From domain ' + fd + '.',
+        'This message failed the sender check (DMARC) because it came through the mailing list ' + list.id + '. The list ' + (bd.length ? 'changed the message, which broke the sender\'s signature, and ' : '') + 'sent it on under its own domain, ' + list.org + ', not ' + fd + '.', uniq(list.src.concat(list.broken.flatMap(k => k.src), auth.spf.src)));
+      const how = list.tag ? ' The subject carries the list tag ' + list.tag + ', one such change; a footer added to the body is another.' : ' Lists break signatures by tagging the subject or adding a footer.';
+      const howPlain = list.tag ? ', for example by adding ' + list.tag + ' to the subject.' : ', for example by adding a footer.';
+      const cause = list.pre.length
+        ? say('caveat', 'Before the list, ' + list.writer + ' recorded ' + preText(list) + ' in its ' + list.origName + ' field. The list\'s own server wrote that record and this page cannot verify it' + (list.preResult === 'pass' ? ', but it shows the message passed on arrival.' : '.') + how,
+          list.preResult === 'pass' ? 'Before the list, the list\'s own server recorded that the message passed. The sender\'s setup looks fine; the list broke the checks by changing the message' + howPlain : 'The list\'s own server kept a record of the checks before the list, but it does not show a clear pass. The list changed the message' + howPlain, uniq(list.preSrc.concat(list.src)))
+        : say('caveat', 'No record from before the list is in the headers, so this page cannot show that the message passed before the list changed it.' + how, 'The headers carry no record of how the message looked before the list, so this page cannot confirm the sender\'s own setup. Lists break these checks by changing the message' + howPlain, list.src);
+      return finish('fail', head, cause);
     } else if (listId) {
       out.details.push(say('caveat', 'List-Id ' + listId.raw + ' shows the message came through a mailing list, and lists often change the subject or body. With no ARC record there is no result from before the list to compare with.', 'The message came through a mailing list, which can break these checks. The headers carry no record of how it looked before the list.', listId.src));
     }
@@ -427,7 +473,7 @@
     if (!cause || !c) return cause;
     const m = HA.providers.compauthMeaning(c.reason);
     const t = 'Microsoft recorded compauth=' + c.result + (c.reason ? ' reason=' + c.reason : '') + (m ? ', meaning ' + m + '.' : c.reason ? ', a code not in its published table.' : '.');
-    return say(cause.state, cause.technical + ' ' + t, cause.plain + ' Microsoft\'s combined sender check came out ' + c.result + '.', uniq(cause.src.concat(c.src)));
+    return say(cause.state, cause.technical + ' ' + t, cause.plain + ({ fail: ' Microsoft\'s own sender check failed it too.', pass: ' Microsoft\'s own sender check passed it anyway.', softpass: ' Microsoft\'s own sender check gave it a soft pass.' }[c.result] || ''), uniq(cause.src.concat(c.src)));
   }
 
   // The mechanism behind a failure, in a sentence or two.

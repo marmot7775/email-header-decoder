@@ -54,8 +54,13 @@ is handed out only after that. Status as of 2026-10-25.
    and test/sentences.test.js fails on a stale file, a throwing
    case, a dash as punctuation, the word verdict, a double space,
    or two cases with the same cause. Commit 12dc5c8: the
-   HELO only and forwarded causes reworded. Still to do: real headers
-   from Neil and the copy pass they drive.
+   HELO only and forwarded causes reworded.
+   First real headers 2026-10-28 (an IETF mailing list message in
+   Outlook, pasted twice): the page called it a two From forgery.
+   Fixed: a doubled paste reads once, mailing list mail gets its own
+   finding, the full analysis starts closed, the box opens empty.
+   Still to do: more real headers from Neil (one with a large font
+   choked the page) and the copy pass they drive.
 
 Decisions
 
@@ -136,3 +141,26 @@ Decisions
 2026-10-27  providers.js exports its code tables (TABLES), so the
             inventory lists every code the page knows and drives
             each one through the real decode.
+2026-10-28  The paste box opens empty; the sample buttons stay.
+            Neil found headers in the box he had to delete first.
+2026-10-28  A header block pasted twice, one copy straight after the
+            other, is read once with a note. Outlook pastes can
+            double, and two From fields read as a forgery.
+2026-10-28  Mailing list mail. When List-Id is present and a pass is
+            on the list's own organizational domain, the finding
+            blames the list, not the sender, unless the list's
+            server recorded a failure before the list.
+            Authentication-Results-Original or X-Original-
+            Authentication-Results is quoted as that record but never
+            relied on: the list's server wrote it. Fixes go to the
+            list operator (Mailman DMARC mitigation named when
+            X-Mailman-Version is present), never domain
+            authentication at the sender.
+2026-10-28  Everything under the finding (message, alignment,
+            authentication, path, filter headers, raw headers) sits
+            in one Full analysis section that starts closed. A tile
+            or source link opens it. The first real paste ran to
+            nearly 6,000 pixels and read as noise.
+2026-10-28  The plain voice drops Microsoft compauth when it adds
+            nothing (none, or a code with no plain meaning). The
+            technical voice still quotes it.

@@ -95,7 +95,7 @@
     const chain = HA.received.buildChain(fields);
     const { auth, alignment } = HA.auth.buildAuth(fields, chain, message);
     const decoded = HA.providers.decodeAll(fields, message, auth, chain);
-    const finding = parsed.blockFound ? HA.finding.build({ message, chain, auth, alignment, decoded }) : null;
+    const finding = parsed.blockFound ? HA.finding.build({ message, chain, auth, alignment, decoded, fields }) : null;
     const flags = flagsOf(text, parsed, message, chain, auth);
     if (finding && finding.status === 'forwarded') flags.push('forwarded');
     return {
