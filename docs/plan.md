@@ -46,7 +46,14 @@ is handed out only after that. Status as of 2026-10-25.
    Published 2026-10-25: public repo marmot7775/email-header-decoder,
    live at headers.dns-audit.com (Workers static assets from dist/,
    wrangler.jsonc, workers.dev off). Nav link on dns-audit.com live
-   2026-10-28 (dns-audit #234, 52dbbf5). Still to do: real headers
+   2026-10-28 (dns-audit #234, 52dbbf5).
+   Sentence inventory 2026-10-27, commit 986d7de:
+   scripts/sentences.js drives finding.js through 51 synthetic
+   cases (every status and cause) and every filter code meaning,
+   and writes docs/sentences.md; npm run sentences regenerates it
+   and test/sentences.test.js fails on a stale file, a throwing
+   case, a dash as punctuation, the word verdict, a double space,
+   or two cases with the same cause. Still to do: real headers
    from Neil and the copy pass they drive.
 
 Decisions
@@ -106,3 +113,23 @@ Decisions
             table. Microsoft documents no rule IDs.
 2026-10-27  The Message-ID domain is info only, never a warning.
             Sending platforms routinely use their own domain.
+2026-10-27  Sentence inventory. Cases are built from synthetic
+            headers in the script, not fixtures, all with the same
+            domains so a duplicate cause is a real one. Two causes
+            count as the same only when both the technical and the
+            plain sentence match. Each case lists headline, cause,
+            policy, details, fixes, and flags in both voices; limits
+            are left out, as the prompt did not list them.
+2026-10-27  Causes made distinct where cases collided. causeOfFail
+            now names SPF none, neutral, permerror, and temperror,
+            DKIM permerror and temperror, and softfail apart from
+            fail. The no DMARC record headline keeps would pass or
+            would fail, and the reason moves to the cause. A cause
+            quotes Microsoft compauth and its meaning when the
+            receiver wrote one, since it is Microsoft's own reason.
+            No From reads apart from a From naming two domains.
+2026-10-27  package.json added for npm run sentences, with test and
+            build scripts beside it. Still no dependencies.
+2026-10-27  providers.js exports its code tables (TABLES), so the
+            inventory lists every code the page knows and drives
+            each one through the real decode.
