@@ -164,3 +164,11 @@ Decisions
 2026-10-28  The plain voice drops Microsoft compauth when it adds
             nothing (none, or a code with no plain meaning). The
             technical voice still quotes it.
+2026-10-28  Plain view no longer repeats the headline in technical
+            wording under it, and hides the raw line tags in the
+            finding (the evidence fold and Full analysis keep them).
+            Tiles say Passed or Passed for another domain, and the
+            top line is just the header and hop count. Technical view
+            is unchanged. Copy report still carries both headlines.
+            Reverses the 2026-10-25 rule that the technical headline
+            shows either way: on a real message it read as an echo.

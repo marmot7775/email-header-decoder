@@ -46,8 +46,8 @@ First release
    Microsoft, Google, Proofpoint, Mimecast, Cisco, Barracuda,
    SpamAssassin, and Rspamd.
 8. Raw headers collapsed under everything, searchable.
-9. Plain and technical wording, plain first. The technical
-   headline shows under the plain one either way.
+9. Plain and technical wording, plain first. The switch changes
+   every sentence; Copy report carries both headlines.
 10. Copy report: the finding, the tiles, and the fixes as plain
     text for a ticket or a client email.
 11. One line on the page: nothing you paste leaves your browser.

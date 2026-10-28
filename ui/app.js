@@ -70,17 +70,18 @@
   // result; none of them decides anything the finding does not.
   function tiles() {
     const rows = R.alignment.rows;
-    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? 'Pass, aligned' : x.state === 'caveat' ? 'Pass, not aligned' : x.result ? cap(x.result) : 'Not reported';
+    const plain = voice === 'plain';
+    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? (plain ? 'Passed' : 'Pass, aligned') : x.state === 'caveat' ? (plain ? 'Passed for another domain' : 'Pass, not aligned') : x.result ? cap(x.result) : 'Not reported';
     const idState = (x) => !x || x.absent ? 'unknown' : x.state;
     const spf = rows.find(x => x.kind === 'spf');
     const dkims = rows.filter(x => x.kind === 'dkim' && !x.absent).sort((a, b) => RANK[a.state] - RANK[b.state]);
     const dk = dkims[0];
     const out = [];
-    out.push({ k: 'SPF', q: 'Was the sending server allowed?', state: idState(spf), v: idWord(spf), d: spf && !spf.absent ? spf.domain : '', jump: 'alignment' });
-    out.push({ k: 'DKIM', q: 'Was it signed by the sender?', state: idState(dk), v: dk ? idWord(dk) : 'No signature', d: dk ? 'd=' + dk.domain + (dkims.length > 1 ? ' and ' + (dkims.length - 1) + ' more' : '') : '', jump: 'alignment' });
+    out.push({ k: 'SPF', q: 'Was the sending server allowed?', state: idState(spf), v: idWord(spf), d: spf && !spf.absent ? (plain ? 'checked ' : '') + spf.domain : '', jump: 'alignment' });
+    out.push({ k: 'DKIM', q: 'Was it signed by the sender?', state: idState(dk), v: dk ? idWord(dk) : 'No signature', d: dk ? (plain ? 'signed by ' : 'd=') + dk.domain + (dkims.length > 1 ? ' and ' + (dkims.length - 1) + ' more' : '') : '', jump: 'alignment' });
     const d = R.auth.dmarc, c = R.auth.computed;
     if (d.reported) {
-      const pol = d.policy.p ? 'p=' + d.policy.p : d.policy.action ? 'action=' + d.policy.action : '';
+      const pol = d.policy.p ? (plain ? 'policy: ' : 'p=') + d.policy.p : d.policy.action ? (plain ? 'Microsoft action: ' : 'action=') + d.policy.action : '';
       const mismatch = c.result !== 'none' && c.result !== d.result ? 'computed here: ' + c.result : '';
       out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: mismatch && d.state === 'pass' ? 'caveat' : d.state, v: cap(d.result), d: [pol, mismatch].filter(Boolean).join(', '), jump: 'auth' });
     } else if (c.result === 'none') out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: 'unknown', v: 'Not reported', d: '', jump: 'auth' });
@@ -119,7 +120,7 @@
     $('finding').className = 'card finding s-' + f.state;
     let h = '<h2 id="h-finding">Finding</h2><div class="fhead">' + chip(f.state, STATUS_WORD[f.status]) +
       '<p class="headline">' + esc(f.headline[voice]) + srcBtn(f.headline.src) + '</p>' +
-      (voice === 'plain' && f.headline.technical !== f.headline.plain ? '<p class="tech-line">' + esc(f.headline.technical) + '</p>' : '') + '</div>';
+      '</div>';
     h += '<div class="tiles">' + tiles().map(tileHtml).join('') + '</div>';
     h += para(f.cause) + para(f.consequence);
     if (f.fixes.length) h += '<h3>What to do</h3><ol class="steps">' + f.fixes.map(x => '<li><span class="txt">' + esc(x[voice]) + srcBtn(x.src) + '</span></li>').join('') + '</ol>';
@@ -449,6 +450,7 @@
 
   function setVoice(v) {
     voice = v;
+    document.body.dataset.voice = v;
     document.querySelectorAll('[data-voice]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.voice === v)));
     if (R) renderAll();
   }
@@ -462,7 +464,8 @@
     const parts = [R.fields.length + ' field' + (R.fields.length === 1 ? '' : 's'), c.count + ' hop' + (c.count === 1 ? '' : 's')];
     if (c.totalSec !== null && c.totalSec >= 0) parts.push('transit ' + fmtDur(c.totalSec));
     if (c.originIp && !c.trust.originPrivate) parts.push('origin ' + c.originIp);
-    $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + (R.input.repairedLines === 1 ? ' line had lost its indentation and was rejoined.' : ' lines had lost their indentation and were rejoined.') : '');
+    if (voice === 'plain') $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read ' + R.fields.length + ' header' + (R.fields.length === 1 ? '' : 's') + ' and ' + c.count + ' hop' + (c.count === 1 ? '' : 's') + '.';
+    else $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + (R.input.repairedLines === 1 ? ' line had lost its indentation and was rejoined.' : ' lines had lost their indentation and were rejoined.') : '');
     renderFinding();
     renderFilters();
     renderMessage();
