@@ -36,11 +36,10 @@ Live at https://headers.dns-audit.com, part of
 
 ## Privacy
 
-Everything runs in your browser. There is no server, no analytics,
-and no storage, and the page makes no network requests. Its
-Content Security Policy has no `connect-src`, so the browser blocks
-requests the page makes. You can save the page and use it with
-the network off.
+After each read the page sends dns-audit.com one usage note with the
+overall result (pass, fail, and so on), so its maker can see the tool
+is used. The [privacy page](https://dns-audit.com/privacy) lists what
+the note holds.
 
 ## Limits
 

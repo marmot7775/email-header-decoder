@@ -91,7 +91,6 @@ header.top { display: grid; gap: 8px; }
 header.top h1 { font-size: var(--font-3xl); font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.2; text-wrap: balance; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 header.top .lede { margin: 0; color: var(--text-2); max-width: 60ch; font-size: var(--font-md); }
 .beta { display: inline-flex; align-items: center; font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--caveat); border: 1px solid var(--caveat-border); background: var(--caveat-bg); border-radius: 999px; padding: 3px 9px; line-height: 1.2; }
-.policy summary svg { width: 16px; height: 16px; margin-right: 6px; flex: none; color: var(--pass); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; min-width: 0; }
 .card > h2 { font-size: var(--font-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
@@ -237,11 +236,6 @@ button { font: inherit; cursor: pointer; }
 .bar i.d-fail { background: var(--delay-fail); }
 .hop.slowest .route { font-weight: 600; }
 .tag { display: inline-flex; align-items: center; font-size: var(--font-xs); font-weight: 600; padding: 2px 6px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); color: var(--text-2); }
-.policy { font-size: var(--font-sm); color: var(--text-2); }
-.policy summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.policy .panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--raised); padding: 12px 14px; max-width: 62ch; }
-.policy .panel p { margin: 0 0 8px; }
-.policy .panel code { font-family: var(--font-mono); font-size: var(--font-xs); overflow-wrap: anywhere; }
 .delay .val { font-family: var(--font-mono); font-size: var(--font-sm); font-variant-numeric: tabular-nums; min-width: 5.5em; text-align: right; }
 .slow-word { font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--caveat); }
 .hop.group > .body > details > summary { list-style: none; cursor: pointer; display: grid; gap: 6px; }
@@ -413,13 +407,6 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
   <header class="top">
     <h1>Email Header Decoder <span class="beta">Beta</span></h1>
     <p class="lede">Paste the headers of any email and read, in one sentence, why it passed or failed SPF, DKIM, and DMARC, and what to fix.</p>
-    <details class="policy">
-      <summary><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.1c0 3.4 2.3 6.4 5.5 7.4 3.2-1 5.5-4 5.5-7.4V3.2L8 1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m5.6 8 1.7 1.7 3.2-3.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Nothing you paste leaves your browser. Read how.</summary>
-      <div class="panel">
-        <p>This page has no server behind it. The headers you paste are read by code running on this page, in your browser, and are never sent, stored, or logged anywhere.</p>
-        <p>It makes no network requests at all: no fonts, no analytics, no DNS lookups. Its Content Security Policy has no connect-src, so the browser itself blocks requests the page makes.</p>
-      </div>
-    </details>
   </header>
 
   <section class="card input" id="input-panel" aria-label="Paste headers">
@@ -490,9 +477,8 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
     <div class="faq">
       <details><summary>Why did a forwarded message fail DMARC?</summary><p>A forward sends the message on from the forwarder's server, so SPF checks the forwarder's address instead of the original sender's. If the forwarder also changes the message, for example by adding a footer, the DKIM signature no longer matches. With both gone, DMARC fails even though the sender did nothing wrong. When the forwarder adds ARC headers, this page reads the results recorded before the forward and says so.</p></details>
       <details><summary>How does it read the headers?</summary><p>It reads them as the receiving servers wrote them. Dates follow RFC 5322, and a time zone it can't trust is read as UTC and marked. Encryption is taken from what each server recorded. DMARC finds a domain's parent with a DNS lookup (RFC 9989), which this page can't make, so it uses a short built-in list and marks any guess. ARC records are checked for structure, but their seals aren't verified.</p></details>
-      <details><summary>Does anything I paste leave my browser?</summary><p>No. The page has no server behind it and makes no network requests. Its Content Security Policy blocks requests the page makes, so your headers stay on your machine.</p></details>
       <details><summary>Why are there two DMARC results?</summary><p>The receiving server writes its DMARC result into the Authentication-Results header. This page also works the result out from the SPF and DKIM results and the domains involved. When the two differ, the page names the reason, such as a rule of the receiver's own that overrode the result.</p></details>
-      <details><summary>Why doesn't it verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups, so nothing about your message leaves the page.</p></details>
+      <details><summary>Why doesn't it verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups of its own.</p></details>
       <details><summary>What does aligned mean?</summary><p>DMARC passes only when SPF or DKIM passes for a domain that matches the domain in the From address. A pass for some other domain, such as a mailing platform's own, isn't aligned, and it doesn't count toward DMARC.</p></details>
     </div>
   </section>
