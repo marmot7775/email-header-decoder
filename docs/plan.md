@@ -53,7 +53,8 @@ is handed out only after that. Status as of 2026-10-25.
    and writes docs/sentences.md; npm run sentences regenerates it
    and test/sentences.test.js fails on a stale file, a throwing
    case, a dash as punctuation, the word verdict, a double space,
-   or two cases with the same cause. Still to do: real headers
+   or two cases with the same cause. Commit 12dc5c8: the
+   HELO only and forwarded causes reworded. Still to do: real headers
    from Neil and the copy pass they drive.
 
 Decisions
