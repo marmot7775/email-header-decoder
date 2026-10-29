@@ -340,6 +340,12 @@
       const dd = m ? P.domainOf(m[0]) : '';
       if (dd && fa.domain && HA.psl.orgDomain(dd) !== HA.psl.orgDomain(fa.domain)) fl.push(say('fail', 'The display name shows an address at ' + dd + ', while the real From domain is ' + fa.domain + '. That is a common impersonation layout.', 'The name shown for the sender contains an address at ' + dd + ', but the message comes from ' + fa.domain + '. Forged mail often does this.', fa.src));
     }
+    // Look-alike letters (mathematical bold, fullwidth) that NFKC folds to
+    // plain ASCII. IDNA rejects them, so no domain in DNS is spelled so.
+    if (fa && fa.domain && /[^\x00-\x7f]/.test(fa.domain)) {
+      const folded = fa.domain.normalize('NFKC').toLowerCase();
+      if (folded !== fa.domain && /^[\x00-\x7f]+$/.test(folded)) fl.push(Object.assign(say('fail', 'The From domain ' + fa.domain + ' is written in look-alike characters that read as ' + folded + '. IDNA (RFC 5892) does not allow them, so no registered domain is spelled that way.', 'The sender\'s address uses special characters made to look like ' + folded + '. No real address can be spelled that way, so this message is forged.', fa.src), { lookalike: true }));
+    }
     const untrustedPass = auth.all.filter(r => r.untrusted && r.entries.some(e => e.method === 'dmarc' && e.result === 'pass'));
     if (untrustedPass.length && status !== 'pass') fl.push(say('caveat', 'An Authentication-Results field the receiver did not write claims dmarc=pass. It is ignored here: the sender or a hop before the receiver could have written it.', 'One set of results in the headers claims the message passed, but the receiving system did not write it, so it is ignored.', untrustedPass.flatMap(r => r.src)));
     for (const it of decoded.list) if (it.key === 'Reply-To' && it.level === 'warn') fl.push(say('caveat', it.technical, it.plain, it.src));
@@ -375,6 +381,9 @@
       out.fixes = fixesOf(status, c);
       out.limits = from.defined && auth.primary >= 0 ? limitsOf(c) : [];
       out.flags = flagsOf(Object.assign({ status }, c));
+      // A From domain that cannot exist has no owner to fix anything.
+      const fake = out.flags.find(x => x.lookalike);
+      if (fake) out.fixes = [say('fail', 'Treat the message as phishing: the From domain cannot be registered, so nobody owns it to set up DMARC. Report it to your mail provider and do not act on its links or requests.', 'Treat this as a scam. The sender\'s address is fake, so there is nothing to set up. Report it as phishing and don\'t click its links or reply.', fake.src)];
       return out;
     };
 

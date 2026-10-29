@@ -57,7 +57,12 @@
     while (start > 0 && lines[start - 1].trim() !== '' && (isFieldStart(lines[start - 1]) || /^[ \t]/.test(lines[start - 1]))) start--;
     let end = lines.length;
     for (let i = start; i < lines.length; i++) {
-      if (lines[i].trim() === '') { end = i; break; }
+      if (lines[i].trim() !== '') continue;
+      // A line of spaces between two fields is a broken fold, not the end:
+      // Exchange keeps every field after it. Only an empty line, or spaces
+      // followed by something that is not a field, ends the block.
+      if (lines[i] !== '' && i + 1 < lines.length && isFieldStart(lines[i + 1])) continue;
+      end = i; break;
     }
     // Without a strong anchor, the block has to hold at least one field real mail carries.
     if (weak && !lines.slice(start, end).some(l => { const m = isFieldStart(l); return m && KNOWN.has(m[1].toLowerCase()); })) return null;
@@ -247,6 +252,9 @@
         out.push(mkAddress(m[1].trim(), display));
       } else {
         const b = stripComments(box).trim();
+        // A quoted string alone is a display name split off by a stray
+        // comma ("Promotions@bauhaus.example", <x@y.example>), not an address.
+        if (/^"(?:[^"\\]|\\.)*"$/.test(b)) continue;
         if (b.includes('@')) out.push(mkAddress(b, ''));
         else if (b === '<>' || b === '') out.push(mkAddress('', ''));
       }
@@ -274,7 +282,7 @@
   function mkAddress(addr, display) {
     addr = addr.replace(/^mailto:/i, '');
     const at = addr.lastIndexOf('@');
-    const domain = at >= 0 ? addr.slice(at + 1).replace(/^\[|\]$/g, '').toLowerCase() : '';
+    const domain = at >= 0 ? addr.slice(at + 1).replace(/^\[|\]$/g, '').toLowerCase().replace(/\.$/, '') : '';
     const local = at >= 0 ? addr.slice(0, at) : addr;
     return { address: addr, display: display || '', name: display || '', domain, local, localPart: local, empty: addr === '' };
   }

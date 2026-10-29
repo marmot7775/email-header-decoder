@@ -171,6 +171,11 @@ wins, quoting the seal's record as unverified. A subject tag counts
 as the list's only when it names the list; an author's [PATCH v2]
 is not one.
 
+A From domain in look-alike letters that NFKC folds to ASCII
+(mathematical bold, fullwidth) is flagged as forged: IDNA rejects
+those characters, so no registered domain is spelled that way. A
+quoted display name split off by a stray comma is not an address.
+
 A filter header below the receiver's first Received stamp is
 marked before custody. Microsoft's own fields count as the
 receiver's when Microsoft received.
@@ -226,6 +231,14 @@ light both work. No horizontal scroll at 375px.
   receiver wrote above its stamp when it sealed the message, with
   a note saying so (2026-10-29, from kernel.org and sourceware.org
   list mail).
+- Proton is the one named exception: its exported messages carry its
+  Authentication-Results fields under the whole Received block, so
+  fields with its authserv-id count wherever they sit, with a note
+  saying a sender could write fields there too (2026-10-29).
+- Exchange Online writes Authentication-Results as RFC 2047 encoded
+  words when header.from holds non-ASCII text; it is decoded first.
+- A line of spaces between two fields does not end the header block
+  (Exchange keeps the fields after it); an empty line does.
 - Received-SPF counts only when it sits above the last sender-side
   Received field, and is the SPF source only when the primary set
   has no spf= result.

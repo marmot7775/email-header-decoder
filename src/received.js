@@ -39,6 +39,7 @@
     Google: ['google.com', 'gmail.com', 'googlemail.com', '1e100.net'],
     Apple: ['icloud.com', 'me.com', 'mac.com', 'apple.com'],
     Yahoo: ['yahoo.com', 'yahoodns.net', 'yahoo.net', 'aol.com'],
+    Proton: ['protonmail.ch', 'protonmail.com', 'proton.me', 'pm.me'],
   };
   const OPERATOR_OF = {};
   for (const [name, list] of Object.entries(OPERATORS)) for (const d of list) OPERATOR_OF[d] = name;
