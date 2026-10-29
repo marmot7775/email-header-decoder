@@ -38,7 +38,10 @@ Every sentence is `{ state, technical, plain, src }`: state is
 pass, caveat, fail or unknown, and src lists the field indexes it
 came from.
 
-No web fonts, no CDN, no external images. Inline SVG for icons.
+No CDN and no external images. Inline SVG for icons. The only
+fonts are dns-audit.com's DM Sans and JetBrains Mono (latin,
+ui/fonts, SIL OFL), which build.js embeds as data: URIs, so no
+font is fetched (Neil, 2026-10-28: match the main site's font).
 No color carries meaning alone. Touch targets are 44px; inline
 source line chips are 24px, the WCAG 2.2 AA minimum. Works at
 375px with no horizontal scroll.
@@ -102,6 +105,9 @@ build.js          Builds dist/index.html (full document with a
                   and the share card for the static host. dist is
                   gitignored.
 ui/og-card.png    The share card, 1200 by 630.
+ui/fonts/         DM Sans and JetBrains Mono, latin woff2 copied
+                  from dns-audit.com, with their OFL licenses.
+                  build.js embeds them; nothing fetches them.
 test/             node:test suite over analyze() with synthetic
                   fixtures and hostile input. Fixtures are under
                   test/fixtures.
@@ -165,6 +171,15 @@ relay name alone. A fix names the platform only at high
 confidence. Platform matches are on label boundaries, not
 substrings.
 
+X-Microsoft-Antispam-Mailbox-Delivery is shown as written. Its
+dest field alone gets a reading, I as the Inbox and J as the Junk
+Email folder, and both voices say Microsoft does not document it
+(Neil, 2026-10-29). Other values and fields get none.
+
+The site bar matches dns-audit.com's nav (Home, Articles, About,
+Header Decoder) and has its theme switch. The switch lasts for
+the visit only, since the page keeps no storage.
+
 SCL: Microsoft documents -1, 0, 1, 5, 6, and 9. Show 2 to 4 raw;
 7 and 8 are a warning. BCL comes from X-Forefront-Antispam-Report
 when present, else X-Microsoft-Antispam.
@@ -175,7 +190,7 @@ mailbox provider.
 RFC 8058 one-click passes only when a passing DKIM signature
 lists both List-Unsubscribe fields in h=.
 
-Palette uses dns-audit.com's tokens with system fonts. Dark and
+Palette and type use dns-audit.com's tokens and fonts. Dark and
 light both work. No horizontal scroll at 375px.
 
 ### Settled by the step 2 check

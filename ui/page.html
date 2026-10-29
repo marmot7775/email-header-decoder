@@ -4,7 +4,9 @@
 /* Layout: one reading column, phone first. Finding, filter headers,
    message, alignment, authentication, path, raw headers. Palette and type are
    dns-audit.com's own tokens (static/style.css), dark first like the site.
-   No web fonts: the page makes no requests, so the stacks are system ones. */
+   Type is the site's too: DM Sans and JetBrains Mono, embedded by build.js
+   as data: URIs in place of the FONTS marker, so no font is fetched. */
+/* FONTS */
 :root {
   color-scheme: dark;
   --bg: #0b1220;
@@ -29,8 +31,8 @@
   --fail: #f0767a; --fail-bg: rgba(229, 72, 77, 0.10); --fail-border: rgba(229, 72, 77, 0.28);
   --unknown: #a3b0c4; --unknown-bg: rgba(152, 165, 185, 0.10); --unknown-border: rgba(152, 165, 185, 0.28);
   --hl: rgba(91, 141, 239, 0.20);
-  --font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
   --info: var(--primary); --info-bg: var(--primary-subtle); --info-border: var(--primary-border);
   /* Delay bands, in one place. The thresholds that pick a band live in
      DELAY_BANDS in ui/app.js; tune both against real mail. */
@@ -86,6 +88,20 @@ main.wrap { padding-block: 28px 48px; }
 .site-bar nav a { color: var(--text-2); text-decoration: none; font-size: var(--font-sm); font-weight: 500; padding: 0 8px; min-height: 44px; display: inline-flex; align-items: center; border-radius: var(--radius); }
 .site-bar nav a:hover { color: var(--text); background: var(--surface-hover); }
 .site-bar nav a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--primary); border-radius: 0; }
+.site-bar nav { align-items: center; }
+/* The theme switch, drawn like dns-audit.com's. It sets data-theme on <html>
+   for this visit only: the page keeps no storage, so a reload follows the
+   system setting again. */
+.theme-toggle { background: none; border: 0; border-radius: var(--radius); color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; margin-left: 4px; }
+.theme-toggle:hover { color: var(--text); background: var(--surface-hover); }
+.theme-toggle svg { width: 18px; height: 18px; }
+.theme-toggle .moon { display: none; }
+:root[data-theme="light"] .theme-toggle .sun { display: none; }
+:root[data-theme="light"] .theme-toggle .moon { display: inline; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .theme-toggle .sun { display: none; }
+  :root:not([data-theme="dark"]) .theme-toggle .moon { display: inline; }
+}
 
 header.top { display: grid; gap: 8px; }
 header.top h1 { font-size: var(--font-3xl); font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.2; text-wrap: balance; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
@@ -277,16 +293,32 @@ details.raw > summary .count { font-weight: 400; color: var(--text-2); font-size
 @media (max-width: 560px) { .how { grid-template-columns: 1fr; gap: 2px; } .how dd { margin-bottom: 10px; } }
 .faq { display: grid; gap: 0; border-top: 1px solid var(--border); max-width: 76ch; }
 .faq details { border-bottom: 1px solid var(--border); }
-.faq summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; padding: 8px 0; }
-.faq p { margin: 0 0 14px; color: var(--text-2); }
+.faq summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 4px; list-style: none; border-radius: var(--radius-sm); }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary:hover { color: var(--primary); }
+.faq summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* A chevron on the right says each question opens; it turns when open. */
+.faq summary::after { content: ''; flex: 0 0 auto; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 0.15s ease; color: var(--muted); }
+.faq details[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+.faq p { margin: 0 4px 16px; color: var(--text-2); }
+@media (prefers-reduced-motion: reduce) { .faq summary::after { transition: none; } }
 
-/* Site footer, like dns-audit.com's */
+/* Site footer, laid out like dns-audit.com's: name and links, then a
+   quieter line with the credit and the beta note. */
 .site-foot { border-top: 1px solid var(--border); background: var(--raised); color: var(--text-2); font-size: var(--font-sm); }
-.site-foot-in { max-width: var(--max-width); margin: 0 auto; padding-block: 24px calc(32px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; }
-.site-foot p { margin: 0; max-width: 76ch; }
-.site-foot a { color: var(--primary); font-weight: 500; text-underline-offset: 3px; }
-.site-foot .beta { margin-right: 6px; }
-.foot-links { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.site-foot-in { max-width: var(--max-width); margin: 0 auto; padding-block: 24px calc(24px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 16px; }
+.foot-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 24px; }
+.foot-brand { display: grid; gap: 2px; }
+.foot-name { color: var(--text); font-size: var(--font-md); font-weight: 500; letter-spacing: -0.01em; }
+.foot-desc { color: var(--muted); }
+.foot-links { display: flex; flex-wrap: wrap; gap: 0 20px; margin-inline: -4px; }
+.foot-links a { color: var(--primary); font-weight: 500; text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; padding: 0 4px; }
+.foot-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.foot-meta { border-top: 1px solid var(--border); padding-top: 14px; font-size: var(--font-xs); color: var(--muted); }
+.foot-meta p { margin: 0; max-width: 76ch; line-height: 1.6; }
+.foot-meta a { color: var(--text-2); font-weight: 500; text-underline-offset: 3px; }
+.foot-meta .beta { margin-right: 6px; vertical-align: 1px; }
+.foot-meta a[href^="mailto:"] { white-space: nowrap; }
 
 /* Sub-headings inside a card */
 .card h3 { font-size: var(--font-sm); font-weight: 600; margin: 18px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
@@ -395,11 +427,12 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
 <header class="site-bar">
   <div class="site-bar-in">
     <a class="logo" href="https://dns-audit.com/"><span>dns<span class="accent">-audit</span>.com</span></a>
-    <nav aria-label="dns-audit.com">
-      <a href="https://dns-audit.com/">DNS audit</a>
-      <a href="./" aria-current="page">Header Decoder</a>
+    <nav aria-label="Main navigation">
+      <a href="https://dns-audit.com/">Home</a>
       <a href="https://dns-audit.com/articles/">Articles</a>
       <a href="https://dns-audit.com/about">About</a>
+      <a href="./" aria-current="page">Header Decoder</a>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch theme" title="Switch theme"><svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg><svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
     </nav>
   </div>
 </header>
@@ -487,9 +520,21 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
 
 <footer class="site-foot">
   <div class="site-foot-in">
-    <p class="beta-note"><span class="beta">Beta</span> Did it read a message wrong? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a>.</p>
-    <p>Built by <a href="https://dns-audit.com/about">Neil Anuskiewicz</a>, an email deliverability and DNS consultant.</p>
-    <p class="foot-links"><a href="https://dns-audit.com/">dns-audit.com</a><a href="https://dns-audit.com/articles/">Articles</a><a href="https://www.linkedin.com/in/neilanuskiewicz/" rel="noopener">LinkedIn</a><a href="https://github.com/marmot7775/email-header-decoder" rel="noopener">Source on GitHub</a></p>
+    <div class="foot-row">
+      <div class="foot-brand">
+        <span class="foot-name">Email Header Decoder</span>
+        <span class="foot-desc">A free, open source tool from dns-audit.com</span>
+      </div>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="https://dns-audit.com/">dns-audit.com</a>
+        <a href="https://dns-audit.com/articles/">Articles</a>
+        <a href="https://www.linkedin.com/in/neilanuskiewicz/" rel="noopener">LinkedIn</a>
+        <a href="https://github.com/marmot7775/email-header-decoder" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+    <div class="foot-meta">
+      <p class="beta-note"><span class="beta">Beta</span> Built by <a href="https://dns-audit.com/about">Neil Anuskiewicz</a>, an email deliverability and DNS consultant. Did it read a message wrong? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a>.</p>
+    </div>
   </div>
 </footer>
 <!-- SCRIPTS -->

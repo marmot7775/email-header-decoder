@@ -78,6 +78,23 @@ test('Microsoft: X-Microsoft-Antispam-Mailbox-Delivery is shown as written, with
   assert.equal(r.fields[it.src[0]].lower, 'x-microsoft-antispam-mailbox-delivery');
 });
 
+test('Microsoft: Mailbox-Delivery dest:J is read as the Junk Email folder, marked as not documented by Microsoft', () => {
+  const ms = group(run('m365-filter-codes.txt'), 'microsoft');
+  const d = get(ms, 'dest');
+  assert.equal(d.raw, 'J');
+  assert.equal(d.level, 'warn');
+  assert.match(d.technical, /Junk Email folder/);
+  assert.match(d.technical, /does not document/);
+  assert.match(d.plain, /strong hint, not a fact/);
+});
+
+test('Microsoft: a dest value other than I or J gets no reading', () => {
+  const r = HA.analyze('Received: from a.example by b.protection.outlook.com; Fri, 23 Oct 2026 15:00:05 +0000\nFrom: a@a.example\nX-Microsoft-Antispam-Mailbox-Delivery: ucf:0;dest:C;\n');
+  const ms = group(r, 'microsoft');
+  assert.ok(ms);
+  assert.equal(ms.items.find(i => i.key === 'dest'), undefined);
+});
+
 test('Google: X-Google-DKIM-Signature explained, spam markers shown raw, and the missing spam decision stated', () => {
   const r = run('google-markers.txt');
   const g = group(r, 'google');

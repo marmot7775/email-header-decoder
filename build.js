@@ -22,7 +22,7 @@ const SRC = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'providers.js', 'fi
 // Fixtures shown as samples on the page. Synthetic only; never real headers.
 const SAMPLES = { gmail: 'gmail-show-original.txt', esp: 'esp-unaligned.txt', forwarded: 'forwarded.txt', exchange: 'exchange-online-inbound.txt', arc: 'arc-forwarded-i2.txt', twodkim: 'two-dkim.txt' };
 // script-src names the sha256 of the inline script, so no other script runs.
-const cspFor = (script) => "default-src 'none'; script-src 'sha256-" + crypto.createHash('sha256').update(script, 'utf8').digest('base64') + "'; style-src 'unsafe-inline'; img-src data:; connect-src " + USAGE_ORIGIN + "; form-action 'none'; base-uri 'none'";
+const cspFor = (script) => "default-src 'none'; script-src 'sha256-" + crypto.createHash('sha256').update(script, 'utf8').digest('base64') + "'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src " + USAGE_ORIGIN + "; form-action 'none'; base-uri 'none'";
 // Links the page may carry. A link sends nothing until someone follows it;
 // the CSP still blocks every request the page itself could make.
 const LINKS = /https?:\/\/(?!datatracker\.ietf\.org|www\.rfc-editor\.org|dns-audit\.com|www\.linkedin\.com\/in\/neilanuskiewicz|github\.com\/marmot7775)/;
@@ -32,6 +32,11 @@ const DESCRIPTION = 'This free email header analyzer shows in one sentence why a
 const ICON = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#2f5fcc"/><path d="M7 10h18v12H7z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="m7 10 9 7 9-7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>');
 
 function read(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
+// dns-audit.com's two typefaces, latin subset, embedded so the page fetches
+// no font. Both are variable fonts, so one file covers every weight used.
+// Licenses: ui/fonts/DMSans-OFL.txt and ui/fonts/JetBrainsMono-OFL.txt.
+const FONTS = [['DM Sans', 'dm-sans-normal-latin.woff2'], ['JetBrains Mono', 'jetbrains-mono-latin.woff2']];
+const fontFaces = () => FONTS.map(([family, file]) => "@font-face { font-family: '" + family + "'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(data:font/woff2;base64," + fs.readFileSync(path.join(ROOT, 'ui/fonts', file)).toString('base64') + ") format('woff2'); }").join('\n');
 const attr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 const text = (html) => html.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 
@@ -117,7 +122,7 @@ const ROBOTS = 'User-agent: *\nAllow: /\n\nSitemap: ' + SITE + 'sitemap.xml\n';
 const sitemap = (day) => '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>' + SITE + '</loc><lastmod>' + day + '</lastmod></url>\n</urlset>\n';
 
 function build() {
-  const page = read('ui/page.html');
+  const page = read('ui/page.html').replace('/* FONTS */', fontFaces);
   if (LINKS.test(page)) throw new Error('ui/page.html references an external URL outside the allowed links');
   const samples = {};
   for (const [k, f] of Object.entries(SAMPLES)) samples[k] = read('test/fixtures/' + f);
