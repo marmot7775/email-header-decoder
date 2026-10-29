@@ -35,7 +35,8 @@ src/auth.js      Authentication-Results per RFC 8601 (Google form
                  result side by side.
 src/providers.js Decodes filter results (Microsoft SCL, BCL, CAT,
                  SFV, IPV, SFS, PCL, AuthAs, AuthSource,
-                 compauth; Google; Proofpoint; Mimecast; Cisco; Barracuda;
+                 compauth, with Mailbox-Delivery shown as written; Google;
+                 Proofpoint; Mimecast; Cisco; Barracuda;
                  SpamAssassin; Rspamd) into plain statements with a
                  level, fingerprints the sending platform from
                  headers, DKIM d=, Return-Path and first relay, and

@@ -137,6 +137,10 @@ Decisions
             result. When the finding blames a forward, the tiles say
             failed after the forward and passed before it, from the
             first ARC set.
+2026-10-25  X-Microsoft-Antispam-Mailbox-Delivery is shown in the
+            Microsoft group as written. Microsoft does not document
+            it, so dest, ucf, jmr, OFR, and RF get no meaning, the
+            same rule as X-Gm-Spam.
 2026-10-25  Audit fixes. A forward is blamed only when the receiver
             reported arc=pass or Microsoft compauth reason 130; the
             page does not verify seals, and a sender can write an i=1

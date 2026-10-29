@@ -111,7 +111,8 @@
     const authAs = first(fields, 'x-ms-exchange-organization-authas');
     const authSrc = first(fields, 'x-ms-exchange-organization-authsource');
     const pclF = first(fields, 'x-ms-exchange-organization-pcl');
-    if (!ff && !xma && !scl && !authAs && !authSrc && !pclF && !auth.compauth) return null;
+    const mbd = first(fields, 'x-microsoft-antispam-mailbox-delivery');
+    if (!ff && !xma && !scl && !authAs && !authSrc && !pclF && !mbd && !auth.compauth) return null;
     const items = [];
     let kv = {};
     if (ff) {
@@ -154,6 +155,7 @@
       items.push(known ? item('AuthAs', v, 'info', known[0], known[1], [authAs.index]) : notListed('AuthAs', v, 'Microsoft', [authAs.index]));
     }
     if (authSrc && authSrc.value.trim()) items.push(item('AuthSource', authSrc.value.trim(), 'info', 'The server that evaluated authentication for the organization.', 'The Microsoft server that checked who sent this.', [authSrc.index]));
+    if (mbd) items.push(item(mbd.name, mbd.value.trim(), 'info', mbd.name + ' is a mailbox delivery marker Microsoft does not document, so its value is shown as written.', 'Microsoft added a delivery marker it does not explain publicly.', [mbd.index]));
     if (auth.compauth) items.push(compauthItem(auth.compauth));
     const catItem = items.find(i => i.key === 'CAT');
     // Notes that hold for every CAT, SCL and BCL value, said once on the card.

@@ -67,6 +67,17 @@ test('Microsoft: X-MS-Exchange-Organization-SCL alone is decoded', () => {
   assert.match(it.technical, /high confidence spam/);
 });
 
+test('Microsoft: X-Microsoft-Antispam-Mailbox-Delivery is shown as written, with no meaning attached', () => {
+  const r = run('m365-filter-codes.txt');
+  const ms = group(r, 'microsoft');
+  const it = get(ms, 'X-Microsoft-Antispam-Mailbox-Delivery');
+  assert.equal(it.raw, 'ucf:0;jmr:0;auth:0;dest:J;ENG:(910005)(944506478)(944626604)(920097)(930097);');
+  assert.equal(it.level, 'info');
+  assert.match(it.technical, /Microsoft does not document/);
+  assert.doesNotMatch(it.technical + it.plain, /[Jj]unk/);
+  assert.equal(r.fields[it.src[0]].lower, 'x-microsoft-antispam-mailbox-delivery');
+});
+
 test('Google: X-Google-DKIM-Signature explained, spam markers shown raw, and the missing spam decision stated', () => {
   const r = run('google-markers.txt');
   const g = group(r, 'google');
