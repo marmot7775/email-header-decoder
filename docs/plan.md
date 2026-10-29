@@ -277,3 +277,11 @@ Decisions
             and so is the forwarded already failing detail when the
             cause says it. compauth none reads as skipped for 3xx and
             bypassed for 4xx and 9xx. 8xx keeps fail in the inventory.
+2026-10-29  Polish pass to match dns-audit.com: DM Sans and JetBrains
+            Mono embedded as data: URIs (font-src data:), the site's
+            nav labels and theme switch (no storage, so it lasts the
+            visit), FAQ questions with a chevron that turns when
+            open, and a two-row footer like the site's.
+2026-10-29  Mailbox-Delivery dest:I and dest:J are read as the Inbox
+            and the Junk Email folder, labelled as not documented by
+            Microsoft. Any other dest value gets no reading.

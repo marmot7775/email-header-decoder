@@ -156,6 +156,12 @@
     }
     if (authSrc && authSrc.value.trim()) items.push(item('AuthSource', authSrc.value.trim(), 'info', 'The server that evaluated authentication for the organization.', 'The Microsoft server that checked who sent this.', [authSrc.index]));
     if (mbd) items.push(item(mbd.name, mbd.value.trim(), 'info', mbd.name + ' is a mailbox delivery marker Microsoft does not document, so its value is shown as written.', 'Microsoft added a delivery marker it does not explain publicly.', [mbd.index]));
+    // dest is the one Mailbox-Delivery field read here, and only for I and
+    // J. Microsoft documents neither; the reading is what practitioners see
+    // in mailboxes, and both sentences say so (Neil, 2026-10-29).
+    const dest = mbd && (/(?:^|;)\s*dest:([^;]*)/i.exec(mbd.value) || [])[1];
+    const DEST = { J: ['warn', 'the Junk Email folder'], I: ['info', 'the Inbox'] }[String(dest || '').trim().toUpperCase()];
+    if (DEST) items.push(item('dest', dest.trim(), DEST[0], 'dest:' + dest.trim() + ' is read as ' + DEST[1] + '. Microsoft does not document this field. The reading comes from what practitioners see in mailboxes.', 'Microsoft\'s delivery marker points to ' + DEST[1] + '. Microsoft doesn\'t explain this marker publicly, so read it as a strong hint, not a fact.', [mbd.index]));
     if (auth.compauth) items.push(compauthItem(auth.compauth));
     const catItem = items.find(i => i.key === 'CAT');
     // Notes that hold for every CAT, SCL and BCL value, said once on the card.

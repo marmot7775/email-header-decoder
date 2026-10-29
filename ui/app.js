@@ -546,6 +546,19 @@
     if (scroll) $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
 
+  // Theme switch: sets data-theme on <html> for this visit. Nothing is
+  // stored, so a reload follows the system setting again.
+  const toggle = $('theme-toggle');
+  if (toggle) {
+    const root = document.documentElement;
+    const light = matchMedia('(prefers-color-scheme: light)');
+    const isDark = () => root.dataset.theme ? root.dataset.theme === 'dark' : !light.matches;
+    const relabel = () => { const next = isDark() ? 'light' : 'dark'; toggle.setAttribute('aria-label', 'Switch to ' + next + ' theme'); toggle.title = 'Switch to ' + next + ' theme'; };
+    relabel();
+    toggle.addEventListener('click', () => { root.dataset.theme = isDark() ? 'light' : 'dark'; relabel(); });
+    if (light.addEventListener) light.addEventListener('change', relabel);
+  }
+
   $('go').addEventListener('click', () => run(true));
   $('copy-report').addEventListener('click', () => {
     if (!R || !R.input.blockFound) return;
