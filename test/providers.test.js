@@ -31,7 +31,7 @@ test('Microsoft: SCL, BCL, CAT, SFV, IPV, CIP and DIR decoded from X-Forefront-A
   assert.equal(ms.items.filter(i => /SCL/.test(i.key)).length, 1);
   const ca = get(ms, 'compauth');
   assert.equal(ca.raw, 'fail reason=000');
-  assert.match(ca.technical, /explicit authentication failed/);
+  assert.match(ca.technical, /^Explicit authentication failed/);
   assert.equal(ms.outcome.key, 'CAT');
 });
 
@@ -55,7 +55,7 @@ test('Microsoft: codes outside the published tables are shown raw with no guess'
   assert.equal(org.raw, '3');
   assert.equal(org.level, 'info');
   assert.match(org.technical, /no published meaning/);
-  assert.match(get(ms, 'compauth').technical, /passed explicit or implicit authentication \(code 123 has no entry of its own\)/);
+  assert.match(get(ms, 'compauth').technical, /^Passed explicit or implicit authentication \(code 123 has no entry of its own\)/);
   assert.equal(HA.providers.compauthMeaning('xyz'), '');
 });
 
@@ -197,7 +197,7 @@ test('list headers: RFC 8058 one-click must be signed by a passing DKIM signatur
   const missing = HA.analyze(fixture('platform-sendgrid.txt').replace(/List-Unsubscribe-Post:[^\n]*\n/, '')).decoded.list;
   assert.equal(missing.find(i => i.key === 'List-Unsubscribe-Post').raw, 'missing');
   const mailtoOnly = HA.analyze(fixture('platform-sendgrid.txt').replace('<https://u2210.ct.sendgrid.net/unsub/602>, ', '')).decoded.list;
-  assert.match(mailtoOnly.find(i => i.key === 'List-Unsubscribe-Post').technical, /needs an https address/);
+  assert.match(mailtoOnly.find(i => i.key === 'List-Unsubscribe-Post').technical, /has no https URI, which RFC 8058 requires/);
   assert.equal(ok.find(i => i.key === 'Feedback-ID').raw, '2210:club:sendgrid');
 });
 
@@ -218,5 +218,35 @@ test('every decoded item has a level, the raw value, both readers, and valid sou
       assert.ok(it.src.length, name + ' ' + it.key);
       for (const i of it.src) assert.ok(r.fields[i], name + ' ' + it.key);
     }
+  }
+});
+
+test('Microsoft: PCL, AuthSource, and SFS', () => {
+  const ms = group(run('m365-filter-codes.txt'), 'microsoft');
+  const pcl = get(ms, 'PCL');
+  assert.equal(pcl.raw, '5');
+  assert.equal(pcl.level, 'warn');
+  assert.match(pcl.technical, /Suspicious/);
+  assert.equal(get(ms, 'AuthSource').raw, 'SN1PR01MB0606.namprd01.prod.outlook.com');
+  const sfs = get(ms, 'SFS');
+  assert.equal(sfs.raw, '(13230040)');
+  assert.match(sfs.technical, /is not in Microsoft's published table, so it is shown as written/);
+});
+
+test('list headers: Message-ID domain, same and different organization', () => {
+  const same = run('m365-filter-codes.txt').decoded.list.find(i => i.key === 'Message-ID');
+  assert.equal(same.raw, 'deals.example');
+  assert.match(same.technical, /the same organization as deals\.example/);
+  const other = run('esp-unaligned.txt').decoded.list.find(i => i.key === 'Message-ID');
+  assert.equal(other.raw, 'mailer.example');
+  assert.match(other.technical, /a different organization from shop\.example/);
+});
+
+test('Microsoft: a compauth pass code never renders with the word fail', () => {
+  const codes = Object.keys(HA.providers.TABLES.COMPAUTH).concat(['123', '599', '701', '799']).filter(k => /^[157]/.test(k));
+  for (const k of codes) {
+    const ms = HA.providers.decodeMicrosoft([], { compauth: { result: 'pass', reason: k, src: [] } });
+    const it = ms.items.find(i => i.key === 'compauth');
+    assert.ok(!/\bfail/i.test(it.technical + ' ' + it.plain), k + ': ' + it.technical + ' ' + it.plain);
   }
 });

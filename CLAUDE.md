@@ -13,9 +13,14 @@ two tests check for it on purpose.
 
 ## Hard rules
 
-Everything runs in the visitor's browser. No server, no network
-calls, no storage, no analytics. Pasted headers never leave the
-machine, and the page says so in one line.
+Everything runs in the visitor's browser. No storage, no analytics
+scripts. Pasted headers are never sent anywhere, but the page no
+longer advertises that (Neil, 2026-10-28: not a selling point; he
+wants usage logs). The one network call is the usage note (Neil,
+2026-10-28: he wants to see the tool is used): after each new read,
+ui/app.js posts the finding status only to
+https://dns-audit.com/api/usage, the CSP's only connect-src. Never
+add header text, addresses, or domains to it.
 
 Standalone repo, not a dns-audit.com feature. Hosting comes in
 step 4 as a static site; the droplet never serves it.
@@ -100,6 +105,10 @@ ui/og-card.png    The share card, 1200 by 630.
 test/             node:test suite over analyze() with synthetic
                   fixtures and hostile input. Fixtures are under
                   test/fixtures.
+scripts/sentences.js  Writes docs/sentences.md, every string the
+                  finding and the filter decode can show, by case.
+                  npm run sentences; commit the file with any
+                  wording change.
 wrangler.jsonc    Cloudflare static hosting: dist/ on
                   headers.dns-audit.com, workers.dev off.
 README.md         The public face of the repo, with the Beta note.
@@ -140,8 +149,11 @@ and the headline says why it passed.
 
 Blame moves to a forward only when the earliest forwarder's
 ARC-Authentication-Results show an aligned pass, the chain holds
-together, and the receiver did not report arc=fail. An ARC set
-the final receiver sealed itself is not a forward.
+together, and the receiver reported arc=pass (or Microsoft
+compauth reason 130). This page does not verify seals, so a sender
+can write an ARC set; without the receiver's word it is not a
+forward. An ARC set the final receiver sealed itself is not a
+forward.
 
 A filter header below the receiver's first Received stamp is
 marked before custody. Microsoft's own fields count as the
@@ -198,8 +210,63 @@ light both work. No horizontal scroll at 375px.
 
 ## Copy
 
-Plain words in complete sentences, technical wording beside them
-where a code needs it. No em dashes anywhere, in code comments and
+Every sentence has two voices, `plain` and `technical` in code, and
+the page shows both in one output with no switch (since
+2026-10-28). The finding speaks plainly; Technical details under it
+and the Full analysis carry the technical wording. These notes call
+the plain voice Simple. Simple must never talk down: it names real
+terms in brackets and keeps sentences short, not childish.
+
+Simple is for the owner of a small business: someone who sells
+coffee, knows what their website address is, and may have heard
+the word DMARC from their email service. Each Simple sentence says
+what happened, whether it matters, and what to do or whom to ask.
+Short sentences, no semicolons, nothing they would have to look
+up. Name the receiver (Gmail, Microsoft) and the sending service
+when known. Fixed words, used the same way everywhere:
+
+- DMARC: the sender check (DMARC), then DMARC.
+- DKIM: the digital signature, signed by.
+- SPF: the list of servers allowed to send for a domain.
+- Return-Path, MAIL FROM: the hidden return address.
+- p=: the domain's DMARC setting; none is watch only,
+  quarantine is send failures to spam, reject is refuse failures.
+- DNS record: a DNS setting for the domain, at the company that
+  hosts its DNS (often where the domain was bought).
+- TLS: encrypted. A Received hop: a handoff between servers.
+
+Never in Simple: aligned, alignment, bounce, Return-Path,
+envelope, HELO, EHLO, selector, d=, s=, header (one named
+header; the headers, meaning the pasted text, is fine), field, authserv,
+ARC, seal, compauth, SCL, BCL, PCL, organizational domain, relay,
+hop, TLS, RFC, policy. A test enforces the list, and no
+semicolons, over every fixture and every case in
+docs/sentences.md. Contractions in Simple are applied in one place,
+P.contract in parse.js, so write Simple strings either way.
+A listed word may appear in Simple in brackets right after the
+plain words that explain it, as in the sender check (DMARC) or the
+hidden return address (Return-Path), so a reader learns the term
+their email service uses. The test ignores bracketed text.
+
+Technical is for a deliverability practitioner. Lead with the word
+practitioners say, then the RFC identifier in brackets: the
+Return-Path domain (RFC5321.MailFrom), the From domain
+(RFC5322.From). Use the protocol's own terms exactly: RFC5322.From, RFC5321.MailFrom, the HELO
+identity, DKIM d=, s= and i=, relaxed and strict alignment (adkim,
+aspf), the organizational domain, p=, sp=, pct=, Gmail's dis=,
+Microsoft's action= and compauth reason, ARC i= and cv=, the
+authserv-id. Quote result tokens verbatim. Cite the RFC section
+when it settles a point (RFC 7208, 6376, 8617, 8058; DMARC is RFC
+9989 for the protocol, which obsoletes RFC 7489). Say what the
+headers cannot show. Technical carries more detail than Simple,
+never less.
+
+Both voices follow Neil's house style (the neil-voice skill):
+complete sentences under 25 words with varied length, contractions,
+the reader addressed as you where the advice is theirs, AP numbers
+(one to nine in words), Oxford comma, no dashes or quotation marks
+as punctuation, no filler words (very, really, just, quite,
+actually, basically), and none of the banned buzzwords. No em dashes anywhere, in code comments and
 UI text included, and no hyphens as punctuation. No exclamation
 marks, no emoji, no intensifiers. Oxford comma. Identifiers
 verbatim in monospace. Say a thing once.

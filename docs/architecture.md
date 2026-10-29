@@ -1,8 +1,10 @@
 Email Header Decoder, architecture
 
 Shape
-One static page. No server, no network calls, no storage. Pasted
-headers are parsed in the visitor's browser and never leave it.
+One static page. No server of its own and no storage. Pasted
+headers are parsed in the visitor's browser and never leave it. The
+one network call is a usage note with the finding status only, to
+dns-audit.com/api/usage.
 The same files run under Node for tests. This is the plan for the
 product, not a prototype shortcut: a header analyzer has no reason
 to send mail headers anywhere.
@@ -32,12 +34,14 @@ src/auth.js      Authentication-Results per RFC 8601 (Google form
                  Produces reported results and a computed DMARC
                  result side by side.
 src/providers.js Decodes filter results (Microsoft SCL, BCL, CAT,
-                 SFV, IPV, compauth, with Mailbox-Delivery shown
-                 as written; Google; Proofpoint; Mimecast; Cisco; Barracuda;
+                 SFV, IPV, SFS, PCL, AuthAs, AuthSource,
+                 compauth, with Mailbox-Delivery shown as written; Google;
+                 Proofpoint; Mimecast; Cisco; Barracuda;
                  SpamAssassin; Rspamd) into plain statements with a
                  level, fingerprints the sending platform from
                  headers, DKIM d=, Return-Path and first relay, and
-                 reads list and sending headers (RFC 8058 one-click).
+                 reads list and sending headers (RFC 8058 one-click,
+                 Message-ID domain).
                  Unknown codes are shown raw, never guessed.
 src/finding.js   The finding, the one sentence result. Reads
                  everything above and writes status, headline,
@@ -45,20 +49,24 @@ src/finding.js   The finding, the one sentence result. Reads
                  and limits. Forwarded mail is
                  recognised from ARC and the pre-forward results are
                  quoted, so the failure is blamed on the forward
-                 when that is what happened.
+                 when the receiver vouched for the ARC seals.
 src/analyze.js   analyze(text) returns one plain result object.
                  The page renders it; the tests assert on it.
 
 ui/page.html     Markup and tokens. The dns-audit.com site bar,
-                 the paste box, then the results: finding (with
-                 the four check tiles), message, alignment,
+                 the paste box, then the results: finding (headline,
+                 what to do, the four check tiles, why, what the
+                 DMARC setting did, evidence), message, alignment,
                  authentication, path, filter headers, raw headers
                  collapsed. Below the tool, static text for readers
                  and search engines: what it reads, how to copy the
                  headers, and the FAQ. Then the site footer.
 ui/app.js        Rendering only. No parsing logic lives here. The
                  tiles and the copied report read values already
-                 in the result; they decide nothing new.
+                 in the result; they decide nothing new. The raw
+                 header list is drawn when opened, 200 fields at a
+                 time, and a field over 2,000 characters shows
+                 clipped with a button to show all of it.
 ui/og-card.png   The share card, 1200 by 630.
 build.js         Inlines src and ui into dist/index.html (full
                  document: head with CSP, title, description,
@@ -71,6 +79,13 @@ build.js         Inlines src and ui into dist/index.html (full
                  share card.
 test/            node:test suite over analyze() with synthetic
                  fixtures and hostile input. Run: node --test test/
+scripts/sentences.js  The sentence inventory: drives finding.js
+                 through every status and cause with synthetic
+                 headers built in the script, adds every filter code
+                 meaning, and writes docs/sentences.md. Run: npm run
+                 sentences. A test fails when the file is stale, a
+                 case throws, a sentence breaks the copy rules, or
+                 two cases share a cause.
 
 Rules that keep it honest
 No DNS, no signature verification, no guessing. Every sentence is

@@ -1,0 +1,9 @@
+{
+  "name": "email-header-decoder",
+  "private": true,
+  "scripts": {
+    "sentences": "node scripts/sentences.js",
+    "test": "node --test test/",
+    "build": "node build.js"
+  }
+}

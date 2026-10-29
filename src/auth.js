@@ -26,7 +26,8 @@
     return parts;
   }
 
-  const PROP_RE = /([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s;]+)/g;
+  // The lookbehind starts a name only at the start of a run, so a long run with no = is scanned once, not once per character.
+  const PROP_RE = /(?<![A-Za-z0-9_-])([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s;]+)/g;
   // The identifiers the page shows for every method (RFC 8601 2.7).
   const IDS = ['header.d', 'header.i', 'header.s', 'header.b', 'smtp.mailfrom', 'smtp.helo', 'header.from'];
 
@@ -97,7 +98,7 @@
 
   function parseDkimSignature(value) {
     const { tags } = P.parseTagList(value);
-    const sig = { v: tags.v || '', d: (tags.d || '').toLowerCase(), s: tags.s || '', i: tags.i || '', a: tags.a || '', c: tags.c || 'simple/simple', bh: tags.bh || '', h: (tags.h || '').toLowerCase(), t: int(tags.t), x: int(tags.x), l: int(tags.l), b: tags.b || '', bPrefix: (tags.b || '').slice(0, 8) };
+    const sig = { v: tags.v || '', d: (tags.d || '').toLowerCase(), s: tags.s || '', i: tags.i || '', a: tags.a || '', c: tags.c || 'simple/simple', bh: tags.bh || '', h: (tags.h || '').toLowerCase(), t: int(tags.t), x: int(tags.x), l: int(tags.l), b: tags.b || '' };
     sig.signedHeaders = sig.h.split(':').map(s => s.trim()).filter(Boolean);
     sig.partialBody = sig.l !== null;
     // expired is set against the arrival time in buildAuth; null means unknown.
@@ -110,14 +111,12 @@
     return sig;
   }
 
-  const sameHost = (a, b) => !!a && !!b && a.toLowerCase().replace(/\.$/, '') === b.toLowerCase().replace(/\.$/, '');
-
   // Which hop wrote a header that names a host: a by host with that exact
   // name, else a hop whose receiving side belongs to the same operator.
   // Returns the latest such hop, since results are stamped on arrival.
   function hopForHost(host, chain) {
     if (!host || !chain.count) return { hopIdx: -1, matchedBy: '' };
-    for (let i = chain.count - 1; i >= 0; i--) if (sameHost(chain.hops[i].byHost, host)) return { hopIdx: i, matchedBy: 'host' };
+    for (let i = chain.count - 1; i >= 0; i--) if (HA.received.sameHost(chain.hops[i].byHost, host)) return { hopIdx: i, matchedBy: 'host' };
     const op = HA.received.operatorOf(host);
     if (op) for (let i = chain.count - 1; i >= 0; i--) if (chain.trust.sides[i] === op) return { hopIdx: i, matchedBy: 'operator' };
     return { hopIdx: -1, matchedBy: '' };
@@ -278,13 +277,18 @@
     const primaryRule = !primary ? '' : primary.authserv ? 'operator' : 'exchange-online';
     // The receiver's own fields. iCloud writes one field per method, so
     // results are gathered from all of them, the first per method winning.
-    const reportSet = all.filter(r => !r.untrusted);
+    // Beside the primary, a field counts only above the receiver's first
+    // Received stamp: one below it was in the message before custody, and
+    // the sender could have written it with the receiver's authserv-id.
+    const b = chain.trust.boundaryIdx;
+    const custodyTop = b >= 0 ? chain.hops[b].src[0] : -1;
+    const reportSet = all.filter(r => r.primary || (!r.untrusted && r.index < custodyTop));
     const reported = (method) => { for (const r of reportSet) { const es = r.entries.filter(e => e.method === method); if (es.length) return es; } return []; };
 
     // Received-SPF counts when the receiver wrote it: above the Received
-    // field of the last hop before the receiver took custody.
-    const b = chain.trust.boundaryIdx;
-    const senderTop = b > 0 ? chain.hops[b - 1].src[0] : Infinity;
+    // field of the last hop before the receiver took custody, or, with no
+    // hop before the receiver, above the receiver's own first stamp.
+    const senderTop = b > 0 ? chain.hops[b - 1].src[0] : custodyTop;
     const rspfFields = fields.filter(f => f.lower === 'received-spf');
     const receivedSpf = rspfFields.map(f => Object.assign(parseReceivedSpf(f.value), { src: [f.index], trusted: b >= 0 && f.index < senderTop }));
     const dkimFields = fields.filter(f => f.lower === 'dkim-signature');
@@ -333,10 +337,13 @@
     // DKIM: every result the receiver reported, matched to a signature by
     // header.d, and by header.s or header.b when two signatures share d=.
     // Two candidates and neither tag is ambiguous, and the page says so
-    // instead of picking one. Signatures it reported nothing for follow.
+    // instead of picking one. A result with only header.i is matched by
+    // header.b or header.s; i= can be a subdomain of d=, so it never stands
+    // in for d= when a signature matched. Signatures it reported nothing
+    // for follow.
     const used = new Set();
     const dkim = reported('dkim').map(e => {
-      let d = P.domainOf(e.ids['header.d'] || e.ids['header.i'] || '');
+      let d = P.domainOf(e.ids['header.d'] || '');
       if (d === 'none') d = '';
       const s = e.ids['header.s'] || '';
       const bTag = (e.ids['header.b'] || '').replace(/\s+/g, '');
@@ -349,7 +356,8 @@
       else if (d && sameD.length > 1) candidates = sameD;
       if (sig) used.add(sig);
       for (const c of candidates) used.add(c);
-      if (!d && sig) d = sig.d;
+      if (sig) d = sig.d;
+      else if (!d) { d = P.domainOf(e.ids['header.i'] || ''); if (d === 'none') d = ''; }
       const ambiguous = candidates.length > 1;
       return Object.assign(alignRow('dkim', d, e.result, from), { selector: s || (sig ? sig.s : ''), reason: e.reason, comments: e.comments, signature: sig ? signatures.indexOf(sig) : -1, matchedBy, ambiguous, candidates: candidates.map(c => signatures.indexOf(c)),
         src: (sig ? [sig.src[0]] : candidates.map(c => c.src[0])).concat(e.src).sort((a, b) => a - b), absent: !d });
@@ -421,7 +429,7 @@
       // computed pass
       if (otherFrom) return { reason: 'org-domain', state: 'caveat', technical: 'The receiver evaluated header.from=' + dmarc.headerFrom + ', not ' + from.domain + ', so it checked a different author domain.', plain: 'The receiving system checked a different sender domain than the one shown here.', src };
       if (approx || rows.some(r => r.relaxedOnly)) return { reason: 'org-domain', state: 'caveat', technical: 'The pass here rests on relaxed alignment through the organizational domain ' + from.org + '. The receiver found a different organizational domain' + (approx ? ' (this page\'s suffix list does not cover this name, so its answer is an approximation)' : '') + '.', plain: 'The receiving system drew the line around the sender\'s organization differently from this page.', src };
-      return { reason: 'local-policy', state: 'caveat', technical: 'The identifiers align and the receiver reported them as passing, yet it reported dmarc=fail. A local policy, or a result it did not write into these headers, is the likely reason.', plain: 'The checks line up, but the receiving system marked the message as failing anyway, probably because of its own rules.', src };
+      return { reason: 'local-policy', state: 'caveat', technical: 'The identifiers align and the receiver reported them as passing, yet it reported dmarc=fail. A local policy, or a result it did not write into these headers, is the likely reason.', plain: 'The checks line up, but the receiving system marked the message as failing, most likely under a rule of its own.', src };
     }
     // reported pass, computed fail
     const preForward = arc.present && arc.instances[0] && arc.instances[0].preForward.some(x => x.method === 'dmarc' && x.result === 'pass');
@@ -444,7 +452,7 @@
     }
     // Always beside the result: the page cannot see the alignment mode.
     const modeNote = computed.result === 'none' ? null : say('unknown', 'Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.',
-      'This page assumes the usual, looser domain match. The sender\'s policy can demand an exact match, and that setting is not in the headers.', computed.src);
+      'This page assumes the usual, looser domain match. A domain\'s DMARC setting can demand an exact match, and the headers don\'t show that setting.', computed.src);
     return { from, rows, notes, modeNote };
   }
 
@@ -477,9 +485,14 @@
     }
     const arc = auth.arc;
     for (const p of arc.problems) n.push(say('fail', p.text, 'The forwarding record on this message is broken or incomplete, so the results it carries cannot be relied on.', p.src));
+    // Gmail and others seal mail on arrival; a set from the receiver's own
+    // organization is its record, not a forward.
+    const rec = auth.primary >= 0 ? auth.all[auth.primary] : null;
+    const rcvOrg = rec && rec.authserv ? HA.psl.orgDomain(rec.authserv) : '';
+    const ownSeal = !!rcvOrg && arc.instances.every(s => s.sealer.domain && HA.psl.orgDomain(s.sealer.domain) === rcvOrg);
     if (arc.state === 'pass') {
       n.push(say('pass', 'ARC chain of ' + arc.instances.length + ' set' + (arc.instances.length === 1 ? '' : 's') + ' is intact: instances 1 to ' + arc.instances.length + ', cv=none at i=1' + (arc.instances.length > 1 ? ', cv=pass after' : '') + '. Sealed by ' + arc.instances.map(s => s.sealer.domain || '(unnamed)').join(', then ') + '. Seals are not verified here.',
-        'The message carries a complete forwarding record from ' + arc.instances.map(s => s.sealer.domain || 'an unnamed system').join(' and ') + '.', arc.instances.flatMap(s => s.src)));
+        ownSeal ? 'The receiving system (' + rcvOrg + ') added its own record of the checks when the message arrived. That is not a forward.' : 'The message carries a complete forwarding record from ' + arc.instances.map(s => s.sealer.domain || 'an unnamed system').join(' and ') + '.', arc.instances.flatMap(s => s.src)));
     }
     for (const sig of auth.signatures) for (const t of sig.notes) n.push(say('caveat', 'DKIM-Signature d=' + sig.d + ': ' + t, 'One of the message\'s signatures is set up in a weak or unusual way.', sig.src));
     const c = auth.computed;

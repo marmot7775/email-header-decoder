@@ -144,7 +144,7 @@ test('trust line: a forged Received naming the receiver before an outside hop do
   assert.equal(c.trust.boundaryIdx, 2);
   assert.equal(c.trust.originIp, '198.51.100.13');
   const n = c.notes.find(x => /Trust line/.test(x.technical));
-  assert.match(n.technical, /2 Received fields before it were written by the sender's side and can be forged/);
+  assert.match(n.technical, /two Received fields before it were written by the sender's side and can be forged/);
 });
 
 test('trust line: mail from inside the receiver\'s own network has no outside origin', () => {

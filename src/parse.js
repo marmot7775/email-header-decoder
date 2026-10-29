@@ -27,12 +27,15 @@
     return String(text || '')
       .replace(/^﻿/, '')
       .replace(/\r\n?/g, '\n')
-      .replace(/ /g, ' ');
+      .replace(/ /g, ' ')
+      // Rich text copied from Outlook or a web page carries soft hyphens and zero width characters inside names.
+      .replace(/[\u00ad\u200b-\u200d\u2060]/g, '');
   }
 
   function isFieldStart(line) {
     const m = FIELD_START.exec(line);
-    return m && PLAUSIBLE_NAME.test(m[1]) ? m : null;
+    // A URL (https://...) is text, not a field named https.
+    return m && PLAUSIBLE_NAME.test(m[1]) && !line.slice(m[1].length + 1).startsWith('//') ? m : null;
   }
 
   // Find the header block inside whatever was pasted: a bare header
@@ -72,8 +75,19 @@
   // A sentence the page shows. Every one carries a state (pass, caveat,
   // fail, unknown), a technical wording, a plain wording for a reader
   // who is not technical, and the indexes of the fields it came from.
+  // Simple wording uses contractions (house style). Technical keeps the
+  // long forms, since it can quote a receiver's own words.
+  const CONTRACT = { 'is not': "isn't", 'are not': "aren't", 'was not': "wasn't", 'were not': "weren't", 'do not': "don't", 'does not': "doesn't", 'did not': "didn't", 'could not': "couldn't", 'would not': "wouldn't", 'should not': "shouldn't", 'has not': "hasn't", 'have not': "haven't", 'will not': "won't", 'cannot': "can't" };
+  function contract(text) {
+    if (typeof text !== 'string') return text;
+    return text.replace(/\b(is|are|was|were|do|does|did|could|would|should|has|have|will) not\b|\bcannot\b/gi, (m) => {
+      const c = CONTRACT[m.toLowerCase()];
+      return m[0] === m[0].toUpperCase() ? c[0].toUpperCase() + c.slice(1) : c;
+    }).replace(/\b(it|that|there|here) is (?=[a-z])/gi, "$1's ");
+  }
+
   function sentence(state, technical, plain, src) {
-    return { state, technical, plain, src: (src || []).filter(i => i !== null && i !== undefined) };
+    return { state, technical, plain: contract(plain), src: (src || []).filter(i => i !== null && i !== undefined) };
   }
 
   // Build fields. Continuation lines start with WSP (RFC 5322 folding).
@@ -89,7 +103,7 @@
     const block = locateHeaderBlock(lines);
     const notes = [];
     if (!block) {
-      notes.push(sentence('unknown', 'No header block found: no line in the paste has the form Name: value with a field real mail carries.', 'This looks like the text of an email, not its headers. Copy the message source instead; the box below the paste area says where to find it.', []));
+      notes.push(sentence('unknown', 'No header block found: no line in the paste has the form Name: value with a field real mail carries.', 'This looks like the text of an email, not its headers. Copy the message source instead. The box below the paste area says where to find it.', []));
       return { fields: [], notes, block: null, format: 'none', bodyPresent: false, blockFound: false, repairedLines: 0 };
     }
     const fields = [];
@@ -102,22 +116,46 @@
       if (continuation && current) {
         current.rawLines.push(line);
         current.lastLine = i;
-        current.valueSoFar += line.trim();
         if (!/^[ \t]/.test(line)) { current.looseFold = true; repaired++; }
         continue;
       }
       if (continuation) continue; // garbage before the first field
-      current = { name: m[1], rawLines: [line], firstLine: i, lastLine: i, looseFold: false, valueSoFar: m[2].trim() };
+      current = { name: m[1], rawLines: [line], firstLine: i, lastLine: i, looseFold: false };
       fields.push(current);
+    }
+    // The same block pasted more than once (Outlook text and all, three
+    // times, or a second copy cut short): read one copy. Fields match by
+    // name and first line, so text pasted between copies, which the loop
+    // above folds into the field before it, does not hide a repeat. At
+    // each position the copy with the fewest lines is kept, which drops
+    // that folded-in text.
+    const key = (f) => f.name.toLowerCase() + ':' + f.rawLines[0].slice(f.name.length + 1).trim();
+    let copies = 1;
+    for (let k = 2; k <= fields.length - 2; k++) {
+      if (key(fields[k]) !== key(fields[0])) continue;
+      let j = k;
+      while (j < fields.length && key(fields[j]) === key(fields[j % k])) j++;
+      if (j < fields.length) continue;
+      copies = Math.ceil(fields.length / k);
+      const keep = [];
+      for (let i = 0; i < k; i++) {
+        let best = fields[i];
+        for (let m = i + k; m < fields.length; m += k) if (fields[m].rawLines.length < best.rawLines.length) best = fields[m];
+        keep.push(best);
+      }
+      fields.length = 0; fields.push(...keep);
+      repaired = keep.reduce((n, f) => n + (f.looseFold ? f.rawLines.slice(1).filter(l => !/^[ \t]/.test(l)).length : 0), 0);
+      break;
     }
     const out = fields.map((f, index) => {
       const first = f.rawLines[0].slice(f.name.length + 1);
       const rest = f.rawLines.slice(1);
       // Unfold: join folded lines with a single space, collapse runs of WSP.
       const value = [first].concat(rest).map(s => s.replace(/^[ \t]+/, '')).join(' ').replace(/[ \t]+/g, ' ').trim();
-      if (f.looseFold) notes.push(sentence('caveat', 'Lines under ' + f.name + ' had lost their leading whitespace and were rejoined as one field.', 'Some lines lost their indentation when they were copied, so they were joined back to the header they belong to.', [index]));
+      if (f.looseFold) notes.push(sentence('caveat', 'Lines under ' + f.name + ' had lost their leading whitespace and were rejoined as one field.', 'Some lines lost their indentation when they were copied, so they were joined back to the line they belong to.', [index]));
       return { index, name: f.name, lower: f.name.toLowerCase(), value, decoded: NO_DECODE.has(f.name.toLowerCase()) ? value : decodeWords(value), raw: f.rawLines.join('\n'), lines: [f.firstLine, f.lastLine], looseFold: f.looseFold };
     });
+    if (copies > 1) notes.unshift(sentence('caveat', 'The header block appears ' + (copies === 2 ? 'twice' : copies + ' times') + ' in the paste. One copy was read.', 'The headers were pasted ' + (copies === 2 ? 'twice' : copies + ' times') + '. Only one copy was read.', []));
     const bodyPresent = block.end < lines.length && lines.slice(block.end + 1).some(l => l.trim() !== '');
     return { fields: out, notes, block: [block.start, block.end - 1], format: detectFormat(lines, block, bodyPresent), bodyPresent, blockFound: out.length > 0, repairedLines: repaired };
   }
@@ -309,7 +347,7 @@
     return { tags, order };
   }
 
-  HA.parse = { parseHeaders, sentence, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
+  HA.parse = { parseHeaders, sentence, contract, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.parse;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

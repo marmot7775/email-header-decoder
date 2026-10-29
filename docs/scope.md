@@ -45,12 +45,14 @@ First release
 7. Provider decode in one place regardless of who wrote it:
    Microsoft, Google, Proofpoint, Mimecast, Cisco, Barracuda,
    SpamAssassin, and Rspamd.
-8. Raw headers collapsed under everything, searchable.
-9. Plain and technical wording, plain first. The technical
-   headline shows under the plain one either way.
+8. Raw headers collapsed under everything, searchable, drawn 200
+   fields at a time with long fields clipped until expanded.
+9. Plain and technical wording, plain first. The switch changes
+   every sentence; Copy report carries both headlines.
 10. Copy report: the finding, the tiles, and the fixes as plain
     text for a ticket or a client email.
-11. One line on the page: nothing you paste leaves your browser.
+11. (Dropped 2026-10-28.) A line on the page saying nothing you
+    paste leaves your browser; Neil does not want it advertised.
 12. Static text below the tool for readers and search engines:
     what it reads, how to copy headers in Gmail, Outlook, classic
     Outlook, and Apple Mail, and an FAQ. The JSON-LD FAQ is built

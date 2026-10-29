@@ -16,15 +16,15 @@ test('status pass: the headline names the aligned identifiers and the From domai
   const f = run('gmail-show-original.txt').finding;
   assert.equal(f.status, 'pass');
   assert.equal(f.state, 'pass');
-  assert.equal(f.headline.technical, 'DMARC passed because DKIM signed as sender.example and SPF checked sender.example, both aligned with the From domain sender.example.');
+  assert.equal(f.headline.technical, 'DMARC at mx.google.com passed because DKIM d=sender.example s=mail2026 passed and SPF passed for the Return-Path domain sender.example (RFC5321.MailFrom), and both align with the From domain sender.example (RFC5322.From).');
   assert.match(f.consequence.technical, /p=quarantine.*did not come into play/);
 });
 
 test('status fail: a sending service\'s own domains, in the one sentence the prompt describes', () => {
   const f = run('esp-unaligned.txt').finding;
   assert.equal(f.status, 'fail');
-  assert.equal(f.headline.technical, 'DMARC failed because DKIM signed as mailer.example and SPF checked bounce.mailer.example, so neither aligned with the From domain shop.example.');
-  assert.match(f.headline.plain, /signed by mailer\.example.*bounce address was at bounce\.mailer\.example.*neither belongs to shop\.example/);
+  assert.equal(f.headline.technical, 'DMARC at mx.google.com failed because DKIM d=mailer.example s=m1 passed and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), but neither aligns with the From domain shop.example (RFC5322.From).');
+  assert.match(f.headline.plain, /signed by mailer\.example and it came from a server that bounce\.mailer\.example allows\. Neither of those is shop\.example/);
   assert.match(f.cause.technical, /not shop\.example/);
   assert.match(f.consequence.technical, /p=quarantine.*sent this message to spam \(dis=QUARANTINE\)/);
   // No platform is known, so the fix does not name one.
@@ -32,15 +32,16 @@ test('status fail: a sending service\'s own domains, in the one sentence the pro
   assert.ok(f.fixes.every(x => !/SendGrid|Mailgun/.test(x.technical)));
 });
 
-test('status forwarded: the failure is blamed on the forward and the pre-forward results are quoted', () => {
-  const r = run('forwarded.txt');
+test('status forwarded: the failure is blamed on the forward when the receiver vouched for the ARC seals', () => {
+  // forwarded.txt carries compauth reason=000 and no arc=; reason 130 is Microsoft's ARC override.
+  const r = HA.analyze(fixture('forwarded.txt').replace('compauth=fail reason=000', 'compauth=fail reason=130'));
   const f = r.finding;
   assert.equal(f.status, 'forwarded');
   assert.equal(f.state, 'caveat');
   assert.equal(f.forwarded.yes, true);
   assert.deepEqual(f.forwarded.by, ['relay.example']);
   assert.equal(f.forwarded.preForward.result, 'pass');
-  assert.match(f.headline.technical, /^DMARC failed because the message was forwarded by relay\.example: before the forward, relay\.example recorded spf=pass \(bounce\.newsletter\.example\.net\), dkim=pass \(newsletter\.example\.net\), and dmarc=pass \(newsletter\.example\.net\)/);
+  assert.match(f.headline.technical, /^DMARC at .+? failed because the message was forwarded by relay\.example: before the forward, relay\.example recorded spf=pass \(bounce\.newsletter\.example\.net\), dkim=pass \(newsletter\.example\.net\), and dmarc=pass \(newsletter\.example\.net\)/);
   assert.match(f.cause.technical, /^The failure belongs to the forward, not to the sender\./);
   assert.ok(f.fixes.some(x => /trusted ARC sealers/.test(x.technical)));
   assert.match(f.consequence.technical, /action=oreject/);
@@ -49,13 +50,32 @@ test('status forwarded: the failure is blamed on the forward and the pre-forward
   assert.equal(r.fields[f.forwarded.preForward.src[0]].lower, 'arc-authentication-results');
 });
 
+test('a forward the receiver did not vouch for is not blamed: seals are not verified here', () => {
+  const r = run('forwarded.txt');
+  const f = r.finding;
+  assert.equal(f.status, 'fail');
+  assert.equal(f.forwarded.yes, true);
+  assert.notEqual(f.forwarded.blamed, true);
+  assert.ok(f.details.some(x => /did not report arc=pass, and this page does not verify ARC seals/.test(x.technical)));
+  assert.ok(f.fixes.some(x => /copy delivered straight to the mailbox/.test(x.technical)));
+  // SPF here checked the forwarder's server, so no SPF record fix.
+  assert.ok(f.fixes.every(x => !/SPF record of/.test(x.technical) && !/trusted ARC sealers/.test(x.technical)));
+});
+
+test('a sender written i=1 ARC set does not turn a direct spoof into a forward', () => {
+  const f = run('arc-self-sealed-spoof.txt').finding;
+  assert.equal(f.status, 'fail');
+  assert.notEqual(f.forwarded.blamed, true);
+  assert.ok(sentences(f).every(x => !/trust the forwarding service|trusted ARC sealer/.test(x.technical + x.plain)));
+});
+
 test('status forwarded through two forwarders: the earliest forwarder\'s record is the one quoted', () => {
   const f = run('arc-forwarded-i2.txt').finding;
   assert.equal(f.status, 'forwarded');
   assert.deepEqual(f.forwarded.by, ['list.example', 'forward.example']);
   assert.equal(f.forwarded.preForward.writer, 'mx.list.example');
   assert.match(f.headline.technical, /before the forward, mx\.list\.example recorded .*dmarc=pass \(author\.example\)/);
-  assert.match(f.cause.technical, /the DKIM signature from author\.example, because the forward changed the message/);
+  assert.match(f.cause.technical, /broke the DKIM signature from author\.example by changing the message/);
 });
 
 test('forwarded mail that already failed before the forward stays a sender failure', () => {
@@ -64,7 +84,8 @@ test('forwarded mail that already failed before the forward stays a sender failu
   assert.equal(f.forwarded.yes, true);
   assert.equal(f.forwarded.preForward.result, 'fail');
   assert.match(f.cause.technical, /^The message was already failing before the forward: mx\.forward\.example recorded spf=fail/);
-  assert.ok(f.details.some(x => /^The forward is not the cause/.test(x.technical) && x.state === 'fail'));
+  // The cause says it, so no detail repeats it.
+  assert.ok(f.details.every(x => !/^The forward is not the cause/.test(x.technical)));
   assert.ok(f.fixes.some(x => /Look at the sender, not the forward/.test(x.technical)));
   // The forwarder's own bounce domain is no reason to suggest a custom Return-Path.
   assert.ok(f.fixes.every(x => !/Return-Path/.test(x.technical)));
@@ -80,6 +101,54 @@ test('the receiver\'s own ARC seal is not a forward', () => {
   const f = run('two-dkim.txt').finding;
   assert.equal(f.status, 'pass');
   assert.equal(f.forwarded.yes, false);
+  const notes = run('gmail-show-original.txt').auth.notes;
+  assert.ok(notes.some(n => /added its own record of the checks when the message arrived\. That isn.t a forward\./.test(n.plain)));
+  assert.ok(notes.every(n => !/forwarding record/.test(n.plain)));
+});
+
+test('mailing list: a list that re-sent the message under its own domain is named as the cause, with its server\'s record quoted', () => {
+  const r = run('mailing-list-original-ar.txt');
+  const f = r.finding;
+  assert.equal(f.status, 'fail');
+  assert.match(f.headline.technical, /came through the mailing list club\.lists\.example, which changed it, breaking the DKIM signature from author\.example, and sent it on as lists\.example/);
+  assert.match(f.cause.technical, /Before the list, mx\.lists\.example recorded .*dmarc=pass \(author\.example\) in its Authentication-Results-Original field/);
+  assert.match(f.cause.technical, /list tag \[club\]/);
+  assert.ok(f.fixes.some(x => /^Nothing to change at author\.example/.test(x.technical)));
+  assert.ok(f.fixes.some(x => /in Mailman, set DMARC mitigation/.test(x.technical)));
+  assert.ok(f.fixes.every(x => !/domain authentication|Return-Path/.test(x.technical)));
+});
+
+test('mailing list without a record from before the list says it cannot show the earlier result', () => {
+  const f = HA.analyze(fixture('mailing-list-original-ar.txt').replace(/Authentication-Results-Original:[^]*?header\.from=author\.example\n/, '')).finding;
+  assert.match(f.cause.technical, /^No record from before the list is in the headers/);
+  assert.ok(f.fixes.some(x => /^Nothing to change at author\.example on the strength of this message/.test(x.technical)));
+});
+
+test('the same header block pasted twice reads as one message', () => {
+  const t = fixture('mailing-list-original-ar.txt');
+  const r = HA.analyze(t + t);
+  assert.equal(r.message.fromCount, 1);
+  assert.equal(r.fields.length, HA.analyze(t).fields.length);
+  assert.equal(r.finding.status, 'fail');
+  assert.ok(r.input.notes.some(n => /pasted twice/.test(n.plain)));
+});
+
+test('a paste repeated with text between, three times, or cut short still reads as one message', () => {
+  const t = fixture('mailing-list-original-ar.txt');
+  // Outlook's reading pane text above the headers, once without a blank
+  // line (it folds into the field before it) and once with one (the
+  // second copy then reads as a body and is ignored).
+  const pre = '[club] Re: Meeting notes\nPat Author <pat@author.example>\nSee you Tuesday.\nhttps://lists.example/club\n';
+  const preBlank = '[club] Re: Meeting notes\n\nSee you Tuesday.\n';
+  const one = HA.analyze(t);
+  const cut = t.split('\n').slice(0, 20).join('\n');
+  for (const [name, text, copies] of [['text between', pre + t + pre + t, 'twice'], ['text with a blank line between', preBlank + t + preBlank + t, ''], ['three times', t + t + t, '3 times'], ['cut short', t + cut, 'twice']]) {
+    const r = HA.analyze(text);
+    assert.equal(r.message.fromCount, 1, name);
+    assert.equal(r.fields.length, one.fields.length, name);
+    assert.equal(r.finding.headline.technical, one.finding.headline.technical, name);
+    if (copies) assert.ok(r.input.notes.some(n => n.plain.includes('pasted ' + copies)), name);
+  }
 });
 
 test('status none: no DMARC record, with what the message would do under one', () => {
@@ -116,7 +185,7 @@ test('reported pass with nothing aligned explains the pass instead of repeating 
   const f = run('dmarc-pass-unaligned.txt').finding;
   assert.equal(f.status, 'pass');
   assert.equal(f.state, 'caveat');
-  assert.match(f.headline.technical, /^DMARC passed at mx\.receiver\.example only because/);
+  assert.match(f.headline.technical, /^DMARC passed at mx\.receiver\.example for a reason these headers do not show/);
 });
 
 test('relaxed-only alignment reported as fail points at strict mode and says the record is not in the headers', () => {
@@ -204,4 +273,43 @@ test('every finding has a known status, sentences in both voices with valid sour
 test('the result with a finding stays JSON-safe', () => {
   const r = run('arc-forwarded-i2.txt');
   assert.deepEqual(JSON.parse(JSON.stringify(r)), r);
+});
+
+test('no usable From address: status unknown, not a crash', () => {
+  const base = fixture('no-from.txt');
+  for (const text of [base, base.replace('To:', 'From: Alex Rivera\nTo:'), base.replace('To:', 'From:\nTo:')]) {
+    const f = HA.analyze(text).finding;
+    assert.equal(f.status, 'unknown');
+    assert.match(f.headline.technical, /no usable From address/);
+  }
+});
+
+test('a subdomain From quotes the organizational domain\'s sp=, not p=', () => {
+  const c = run('dmarc-subdomain-sp.txt').finding.consequence;
+  assert.match(c.technical, /^shop\.example publishes sp=none for subdomains such as news\.shop\.example, which asks for no action/);
+  assert.ok(!/p=reject/.test(c.technical));
+  assert.match(c.plain, /asks for no action/);
+});
+
+test('every fixture pasted twice gives the same finding as one paste', () => {
+  for (const name of FIXTURES) {
+    const t = fixture(name);
+    const one = HA.analyze(t).finding, two = HA.analyze(t.trimEnd() + '\n' + t).finding;
+    assert.equal(two && two.headline.technical, one && one.headline.technical, name);
+  }
+});
+
+// The Simple voice word list in CLAUDE.md, over every sentence the
+// page can show for every fixture.
+const { SIMPLE_BANNED } = require('./simple-words.js');
+test('Simple wording uses none of the technical words', () => {
+  const bad = [];
+  for (const name of FIXTURES) {
+    const r = HA.analyze(fixture(name));
+    const f = r.finding;
+    const all = [].concat(f ? [f.headline, f.cause, f.consequence].concat(f.details, f.fixes, f.flags, f.limits) : [], r.input.notes, r.message.notes || [], r.decoded.notes || [], (r.decoded.filters || []).flatMap(g => g.items || []), r.decoded.list || [], r.decoded.platform && r.decoded.platform.statement ? [r.decoded.platform.statement] : [], r.chain.notes || [], r.auth.notes || []).filter(Boolean);
+    // Microsoft's own setting name is quoted so an admin can find it.
+    for (const x of all) if (x.plain && (SIMPLE_BANNED.test(x.plain.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')) || x.plain.includes(';'))) bad.push(name + ': ' + x.plain);
+  }
+  assert.deepEqual(Array.from(new Set(bad)).slice(0, 40), []);
 });

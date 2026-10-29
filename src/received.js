@@ -182,9 +182,11 @@
     return neg + two(Math.floor(s / 86400), 'd', Math.floor((s % 86400) / 3600), 'h');
   }
 
+  // AP style: one through nine in words.
+  const numWord = (n) => n >= 0 && n < 10 ? ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'][n] : String(n);
   function plainDur(sec) {
     const s = Math.abs(sec);
-    const unit = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+    const unit = (n, w) => numWord(n) + ' ' + w + (n === 1 ? '' : 's');
     if (s < 60) return unit(s, 'second');
     if (s < 3600) return unit(Math.floor(s / 60), 'minute') + (s % 60 ? ' ' + unit(s % 60, 'second') : '');
     if (s < 86400) return unit(Math.floor(s / 3600), 'hour') + (Math.floor((s % 3600) / 60) ? ' ' + unit(Math.floor((s % 3600) / 60), 'minute') : '');
@@ -239,7 +241,7 @@
     // apart from the observed one because the sender's side can write it.
     const xo = fields.find(f => f.lower === 'x-originating-ip' || f.lower === 'x-sender-ip');
     const statedOriginIp = xo ? { ip: findIp(xo.value) || xo.value.replace(/[\[\]]/g, '').trim(), name: xo.name, src: [xo.index] } : null;
-    const chain = { hops, groups, totalSec, slowestIdx, slowestSec, clockSkew: skew, originIp: trust.originIp, originHost: trust.originHelo, statedOriginIp, trust, count: hops.length, notes: [] };
+    const chain = { hops, groups, totalSec, slowestIdx, slowestSec, clockSkew: skew, originIp: trust.originIp, statedOriginIp, trust, count: hops.length, notes: [] };
     chain.notes = chainNotes(chain);
     return chain;
   }
@@ -288,8 +290,8 @@
       notes.push(say('unknown', 'No trust line: the final Received field names no receiving host this page can tie to an operator, so it cannot say which stamps the receiver wrote.', 'It is not clear which delivery stamps the receiving mail system wrote, so treat all of them with care.', [c.hops[c.count - 1].src[0]]));
     } else {
       const before = t.boundaryIdx;
-      const tail = before ? ' The ' + (before === 1 ? 'Received field' : before + ' Received fields') + ' before it ' + (before === 1 ? 'was' : 'were') + ' written by the sender\'s side and can be forged.' : '';
-      const plainTail = before ? ' The ' + (before === 1 ? 'stamp' : before + ' stamps') + ' before that came from the sender\'s side and could be made up.' : '';
+      const tail = before ? ' The ' + (before === 1 ? 'Received field' : numWord(before) + ' Received fields') + ' before it ' + (before === 1 ? 'was' : 'were') + ' written by the sender\'s side and can be forged.' : '';
+      const plainTail = before ? ' The ' + (before === 1 ? 'stamp' : numWord(before) + ' stamps') + ' before that came from the sender\'s side and could be made up.' : '';
       if (t.originPrivate) {
         notes.push(say('caveat', 'Trust line at hop ' + (before + 1) + ': ' + t.operator + ' took custody from ' + (t.originIp ? 'private address ' + t.originIp : 'a local handoff') + ', so the message started inside ' + t.operator + '\'s own network and there is no outside origin address.' + tail,
           'The message started inside the receiving organization\'s own mail system, so there is no outside sending address to show.' + plainTail, t.src));
@@ -308,7 +310,7 @@
       const caveat = c.clockSkew || c.hops.some(h => h.time !== null && !h.tzKnown);
       notes.push(say(caveat ? 'caveat' : 'pass',
         'End to end: ' + fmtDur(c.totalSec) + ' across ' + c.count + ' hop' + (c.count === 1 ? '' : 's') + ', from the first Received stamp to the last' + (caveat ? '. Some stamps disagree or lack a zone, so treat it as approximate.' : '.'),
-        'The message took ' + plainDur(c.totalSec) + ' to arrive' + (caveat ? ', roughly; some server clocks disagree.' : '.'), allSrc));
+        'The message took ' + plainDur(c.totalSec) + ' to arrive' + (caveat ? ', roughly. Some server clocks disagree.' : '.'), allSrc));
     } else if (c.totalSec !== null) {
       notes.push(say('caveat', 'Transit time cannot be measured: the last Received stamp is ' + fmtDur(-c.totalSec) + ' earlier than the first, so the servers\' clocks disagree.', 'The delivery stamps disagree about the time, so it is not possible to say how long the message took.', allSrc));
     } else {
@@ -324,13 +326,16 @@
         'The longest wait was ' + plainDur(h.delaySec) + ', ' + where + '.' + (long ? ' A wait that long usually means a server held the message back on purpose.' : ''),
         [p.src[0], h.src[0]]));
     }
+    const noTz = c.hops.filter(h => h.time !== null && !h.tzKnown);
+    if (noTz.length) {
+      const n = noTz.length, which = noTz.map(h => h.index + 1);
+      notes.push(say('caveat', (n === 1 ? 'Hop ' + which[0] + ' has' : 'Hops ' + which.slice(0, -1).join(', ') + ' and ' + which[n - 1] + ' have') + ' no usable time zone (-0000, a military letter, a nonstandard name, or none), so ' + (n === 1 ? 'it is' : 'they are') + ' read as UTC and delays may be off by hours.',
+        (n === 1 ? 'One server' : numWord(n).replace(/^./, (x) => x.toUpperCase()) + ' servers') + ' did not say which time zone ' + (n === 1 ? 'it was' : 'they were') + ' in, so the timing could be off by hours.', noTz.flatMap(h => h.src)));
+    }
     for (const h of c.hops) {
       if (h.skew) {
         const p = c.hops[h.prevDated];
         notes.push(say('caveat', 'Hop ' + (h.index + 1) + ' is stamped ' + fmtDur(-h.delaySec) + ' earlier than hop ' + (p.index + 1) + ' before it, so the two servers\' clocks disagree. Delays around it are unreliable.', 'Two servers disagree about the time, so the timing around this step is not reliable.', [p.src[0], h.src[0]]));
-      }
-      if (h.time !== null && !h.tzKnown) {
-        notes.push(say('caveat', 'Hop ' + (h.index + 1) + ' has no usable time zone (-0000, a military letter, a nonstandard name, or none), so it is read as UTC and its delay may be off by hours.', 'One server did not say which time zone it was in, so its timing could be off by hours.', h.src));
       }
       if (h.time === null) {
         notes.push(say('unknown', 'Hop ' + (h.index + 1) + ' has no readable date' + (h.dateText ? ' ("' + h.dateText.slice(0, 60) + '")' : '') + ', so its delay is not shown.', 'One delivery stamp has no readable time.', h.src));
@@ -344,7 +349,7 @@
     return notes;
   }
 
-  HA.received = { parseReceived, buildChain, findIp, isPrivateIp, isIpLiteral, operatorOf, fmtDur, plainDur };
+  HA.received = { parseReceived, buildChain, findIp, isPrivateIp, isIpLiteral, operatorOf, sameHost, fmtDur, plainDur };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.received;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

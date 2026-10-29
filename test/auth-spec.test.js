@@ -297,3 +297,51 @@ test('item 8: two From fields leave alignment undefined and compute nothing from
     assert.equal(x.word, 'No single From domain');
   }
 });
+
+// Audit fixes, 2026-10-25
+
+test('an A-R with the receiver\'s authserv-id below its first Received stamp fills no method', () => {
+  // ar-injected-above.txt with the injected field moved under the receiver's
+  // custody Received, written as mx.google.com, and the real dmarc= removed.
+  const lines = fixture('ar-injected-above.txt').split('\n');
+  const fake = lines.splice(0, 4).join('\n').replace('mail.sender.example;', 'mx.google.com;').replace('dmarc=pass', 'dmarc=pass header.from=sender.example;\n       arc=pass').replace('header.from=sender.example header.from', 'header.from');
+  const text = lines.join('\n').replace(';\n       dmarc=fail (p=REJECT sp=QUARANTINE dis=QUARANTINE) header.from=sender.example', '').replace('DKIM-Signature:', fake + '\nDKIM-Signature:');
+  const a = HA.analyze(text).auth;
+  assert.equal(a.all.length, 2);
+  assert.equal(a.all[1].authserv, 'mx.google.com');
+  assert.equal(a.all[0].primary, true);
+  assert.equal(a.dmarc.reported, false);
+  assert.equal(a.arcResult, null);
+  assert.equal(a.dkim[0].result, 'fail');
+  assert.equal(a.computed.result, 'fail');
+});
+
+test('iCloud\'s per method A-R fields above its custody Received still fill every method', () => {
+  const a = run('icloud.txt').auth;
+  assert.equal(a.dmarc.result, 'pass');
+  assert.equal(a.dkim[0].result, 'pass');
+  assert.equal(a.spf.result, 'pass');
+  assert.equal(a.arcResult.result, 'none');
+  assert.deepEqual(a.receivedSpf.map(x => x.trusted), [true]);
+});
+
+test('with no sender side hop, a Received-SPF below the receiver\'s own stamp is not trusted', () => {
+  const r = run('received-spf-direct-spoof.txt');
+  assert.equal(r.chain.trust.boundaryIdx, 0);
+  assert.deepEqual(r.auth.receivedSpf.map(x => x.trusted), [false]);
+  assert.notEqual(r.auth.spf.result, 'pass');
+  assert.notEqual(r.auth.spf.domain, 'bank.example');
+  assert.equal(r.auth.computed.result, 'fail');
+});
+
+test('a DKIM result with only header.i is matched by header.b and takes d= from the signature', () => {
+  const a = run('dkim-header-i-only.txt').auth;
+  assert.equal(a.dkim.length, 1);
+  const k = a.dkim[0];
+  assert.equal(k.domain, 'shop.example');
+  assert.equal(k.signature, 0);
+  assert.equal(k.matchedBy, 'header.b');
+  assert.equal(k.strict, true);
+  assert.equal(a.computed.differ, false);
+  assert.deepEqual(a.computed.tags, []);
+});

@@ -8,51 +8,56 @@ Live at https://headers.dns-audit.com, part of
 
 ![Email Header Decoder](ui/og-card.png)
 
-## What it does that a header table does not
+## What it does that a header table doesn't
 
-- **The finding first.** One sentence naming the cause, in plain
-  words with the technical line under it, then the fix as steps.
-- **Two DMARC results.** The receiver's, and one worked out on the
-  page from the identifiers, with the reason when they disagree.
-- **Forwards read correctly.** The ARC chain shows what passed
-  before a forward, so a message the sender set up correctly is not
-  blamed on the sender.
-- **Trust, not just parsing.** Authentication-Results fields a
+- **The finding comes first.** One sentence names the cause, then
+  the fix follows as steps. A pass says there's nothing to fix.
+- **One output, two depths.** The finding is in everyday words and
+  names each term it uses. Technical details under it give the same
+  finding in the protocol's own terms, with the raw lines it came
+  from. Nobody has to pick a mode.
+- **Two DMARC results.** The page shows the receiver's result and
+  one it works out from the identifiers, with the reason when they
+  disagree.
+- **Forwards and mailing lists read correctly.** The ARC chain shows
+  what passed before a forward, so a message the sender set up
+  correctly isn't blamed on the sender.
+- **Trust comes before parsing.** Authentication-Results fields a
   sender could have written are shown but never used. The hop
   timeline marks where the receiver took custody.
-- **Filter headers decoded** for Microsoft 365, Google, Proofpoint,
-  Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd, with the raw
-  value beside each one.
-- **Every sentence points at its source.** Select a line reference
-  and the raw header lines it came from light up.
-- **It says what headers cannot show** instead of guessing.
+- **Filter headers are decoded** for Microsoft 365, Google,
+  Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd,
+  with the raw value beside each one.
+- **Evidence points at its source.** In Technical details, select a
+  line reference and the raw header lines it came from light up.
+- **It says what headers can't show** instead of guessing.
 - **Copy report** gives a plain text summary for a ticket or a
   client email.
 
 ## Privacy
 
-Everything runs in your browser. There is no server, no analytics,
-and no storage, and the page makes no network requests. Its
-Content Security Policy has no `connect-src`, so the browser blocks
-any attempt to send data out. You can save the page and use it with
-the network off.
+After each read the page sends dns-audit.com one usage note with the
+overall result (pass, fail, and so on), so its maker can see the tool
+is used. The [privacy page](https://dns-audit.com/privacy) lists what
+the note holds.
 
 ## Limits
 
-No DNS lookups and no signature verification: the page reads the
-results the receiving server recorded at delivery. The
+The page makes no DNS lookups and verifies no signatures. It reads
+the results the receiving server recorded at delivery. The
 organizational domain comes from a short built-in suffix list.
 ARC seals are checked for structure, not verified.
 
-Not yet: DKIM key lookup, bounce and SMTP code decoding, comparing
-two messages. Shareable result links are left out on purpose; they
-would need a server.
+It doesn't yet look up DKIM keys, decode bounces and SMTP codes, or
+compare two messages. Shareable result links are left out on
+purpose, because they would need a server.
 
 ## Beta
 
-So far it is tested against synthetic headers built from the RFCs
-and vendor documentation, so it will get some real messages wrong. If it reads one wrong, email dns@dns-audit.com with what it
-said and what it should have said, or open an issue. Please
+It's tested against synthetic headers built from the RFCs and
+vendor documentation, and against a growing set of real messages.
+It will still get some real mail wrong. If it reads one wrong, open
+an issue with what it said and what it should have said. Please
 describe the problem rather than attaching someone else's headers.
 
 ## Run it
@@ -63,8 +68,8 @@ Node 18 or later, no dependencies.
     node build.js          build dist/
 
 `dist/index.html` is the whole tool in one file and opens from
-disk. The fixtures in `test/fixtures` are synthetic; no real mail is
-committed.
+disk. The fixtures in `test/fixtures` are synthetic, and no real
+mail is committed.
 
 ## Author
 

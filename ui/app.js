@@ -19,13 +19,14 @@
   // Filter items carry a level; each maps to a chip class and its word.
   const LEVELS = { pass: ['pass', 'Pass'], info: ['info', 'Info'], warn: ['caveat', 'Warn'], fail: ['fail', 'Fail'] };
   const STATUS_WORD = { pass: 'Passed', fail: 'Failed', forwarded: 'Broken by a forward', none: 'No DMARC policy', error: 'DMARC error', unknown: 'Cannot judge' };
-  const FORMATS = { 'gmail-original': 'a Gmail Show original copy', 'outlook-headers': 'Outlook Internet headers', eml: 'a full message (.eml)', bare: 'a header block' };
 
   let R = null;
   let sample = '';
   // Plain first: the headline has to make sense to the person who owns the
   // domain. The technical line sits under it either way. Nothing is stored.
-  let voice = 'plain';
+  // One output: the finding speaks plainly, the details and Full analysis
+  // carry the technical wording.
+  const voice = 'technical';
 
   // State chip: symbol and word carry the state, color repeats it.
   function chip(state, label) {
@@ -53,9 +54,9 @@
     return '<button type="button" class="prov"' + srcAttr(src) + ' title="Show the raw lines this came from">' + html + '</button>';
   }
 
-  function says(list) {
+  function says(list, v) {
     if (!list || !list.length) return '';
-    return '<ul class="says">' + list.map(s => '<li class="say">' + chip(s.state) + '<span class="txt">' + esc(s[voice]) + srcBtn(s.src) + '</span></li>').join('') + '</ul>';
+    return '<ul class="says">' + list.map(s => '<li class="say">' + chip(s.state) + '<span class="txt">' + esc(s[v || voice]) + srcBtn(s.src) + '</span></li>').join('') + '</ul>';
   }
 
   function fmtUtc(ms) {
@@ -70,19 +71,21 @@
   // result; none of them decides anything the finding does not.
   function tiles() {
     const rows = R.alignment.rows;
-    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? 'Pass, aligned' : x.state === 'caveat' ? 'Pass, not aligned' : x.result ? cap(x.result) : 'Not reported';
+    const plain = true;
+    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? (plain ? 'Passed' : 'Pass, aligned') : x.state === 'caveat' ? (plain ? 'Passed for another domain' : 'Pass, not aligned') : x.result ? (plain && x.result === 'fail' ? 'Failed' : cap(x.result)) : 'Not reported';
     const idState = (x) => !x || x.absent ? 'unknown' : x.state;
     const spf = rows.find(x => x.kind === 'spf');
     const dkims = rows.filter(x => x.kind === 'dkim' && !x.absent).sort((a, b) => RANK[a.state] - RANK[b.state]);
     const dk = dkims[0];
     const out = [];
-    out.push({ k: 'SPF', q: 'Was the sending server allowed?', state: idState(spf), v: idWord(spf), d: spf && !spf.absent ? spf.domain : '', jump: 'alignment' });
-    out.push({ k: 'DKIM', q: 'Was it signed by the sender?', state: idState(dk), v: dk ? idWord(dk) : 'No signature', d: dk ? 'd=' + dk.domain + (dkims.length > 1 ? ' and ' + (dkims.length - 1) + ' more' : '') : '', jump: 'alignment' });
+    const hopWord = (n) => n + (plain ? ' handoff' : ' hop') + (n === 1 ? '' : 's');
+    out.push({ k: 'SPF', q: 'Was the sending server allowed?', state: idState(spf), v: idWord(spf), d: spf && !spf.absent ? (plain ? 'checked ' : '') + spf.domain : '', jump: 'alignment' });
+    out.push({ k: 'DKIM', q: 'Was it signed by the sender?', state: idState(dk), v: dk ? idWord(dk) : 'No signature', d: dk ? (plain ? 'signed by ' : 'd=') + dk.domain + (dkims.length > 1 ? ' and ' + (dkims.length - 1) + ' more' : '') : '', jump: 'alignment' });
     const d = R.auth.dmarc, c = R.auth.computed;
     if (d.reported) {
-      const pol = d.policy.p ? 'p=' + d.policy.p : d.policy.action ? 'action=' + d.policy.action : '';
+      const pol = d.policy.p ? (plain ? ({ none: 'failures: watch only', quarantine: 'failures go to spam', reject: 'failures refused' }[d.policy.p] || 'setting: ' + d.policy.p) : 'p=' + d.policy.p) : d.policy.action && !plain ? 'action=' + d.policy.action : '';
       const mismatch = c.result !== 'none' && c.result !== d.result ? 'computed here: ' + c.result : '';
-      out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: mismatch && d.state === 'pass' ? 'caveat' : d.state, v: cap(d.result), d: [pol, mismatch].filter(Boolean).join(', '), jump: 'auth' });
+      out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: mismatch && d.state === 'pass' ? 'caveat' : d.state, v: plain ? ({ pass: 'Passed', fail: 'Failed', none: 'No DMARC setting' }[d.result] || cap(d.result)) : cap(d.result), d: [pol, mismatch].filter(Boolean).join(', '), jump: 'auth' });
     } else if (c.result === 'none') out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: 'unknown', v: 'Not reported', d: '', jump: 'auth' });
     else out.push({ k: 'DMARC', q: 'Does it pass as the From domain?', state: c.result === 'pass' ? 'pass' : 'fail', v: cap(c.result), d: 'computed here; the receiver reported none', jump: 'auth' });
     // A forward the finding already blamed: say what passed before it, from
@@ -102,8 +105,8 @@
     const ch = R.chain;
     if (ch.totalSec !== null && ch.totalSec >= 0) {
       const b = band(ch.totalSec);
-      out.push({ k: 'Delivery', q: 'How long did it take?', state: b === 'fail' ? 'fail' : b === 'warn' ? 'caveat' : 'pass', v: fmtDur(ch.totalSec), d: ch.count + ' hop' + (ch.count === 1 ? '' : 's') + (ch.trust.operator ? ', received by ' + ch.trust.operator : ''), jump: 'path' });
-    } else out.push({ k: 'Delivery', q: 'How long did it take?', state: 'unknown', v: 'Unknown', d: ch.count + ' hop' + (ch.count === 1 ? '' : 's'), jump: 'path' });
+      out.push({ k: 'Delivery', q: 'How long did it take?', state: b === 'fail' ? 'fail' : b === 'warn' ? 'caveat' : 'pass', v: fmtDur(ch.totalSec), d: hopWord(ch.count) + (ch.trust.operator ? ', received by ' + ch.trust.operator : ''), jump: 'path' });
+    } else out.push({ k: 'Delivery', q: 'How long did it take?', state: 'unknown', v: 'Unknown', d: hopWord(ch.count), jump: 'path' });
     return out;
   }
   function tileHtml(t) {
@@ -111,26 +114,30 @@
       '<span class="tv"><span class="sym" aria-hidden="true">' + (STATES[t.state] || STATES.unknown)[0] + '</span>' + esc(t.v) + '</span>' + (t.d ? '<span class="td">' + esc(t.d) + '</span>' : '') + '</button>';
   }
 
-  // The finding: the one sentence, the four checks, why and what the policy
-  // did, what to do. The evidence and the limits fold away under it.
+  // The finding, top down: what happened, what to do, the four checks, why,
+  // and what the DMARC setting did. Each part sits under a label that says
+  // what it is. The evidence and the limits fold away under it.
   function renderFinding() {
     const f = R.finding;
-    const para = (s) => s ? '<p class="fpara">' + esc(s[voice]) + srcBtn(s.src) + '</p>' : '';
+    const para = (s) => s ? '<p class="fpara">' + esc(s.plain) + '</p>' : '';
     $('finding').className = 'card finding s-' + f.state;
     let h = '<h2 id="h-finding">Finding</h2><div class="fhead">' + chip(f.state, STATUS_WORD[f.status]) +
-      '<p class="headline">' + esc(f.headline[voice]) + srcBtn(f.headline.src) + '</p>' +
-      (voice === 'plain' && f.headline.technical !== f.headline.plain ? '<p class="tech-line">' + esc(f.headline.technical) + '</p>' : '') + '</div>';
-    h += '<div class="tiles">' + tiles().map(tileHtml).join('') + '</div>';
-    h += para(f.cause) + para(f.consequence);
-    if (f.fixes.length) h += '<h3>What to do</h3><ol class="steps">' + f.fixes.map(x => '<li><span class="txt">' + esc(x[voice]) + srcBtn(x.src) + '</span></li>').join('') + '</ol>';
-    if (f.flags.length) h += '<h3>Also worth knowing</h3>' + says(f.flags);
-    const n = f.details.length + f.limits.length;
-    if (n) {
-      h += '<details class="more" id="finding-more"><summary>Evidence behind this finding <span class="count">' + n + ' item' + (n === 1 ? '' : 's') + '</span></summary>';
-      if (f.details.length) h += '<h3>Details</h3>' + says(f.details);
-      if (f.limits.length) h += '<h3>What these headers cannot show</h3>' + says(f.limits);
-      h += '</details>';
-    }
+      '<p class="headline">' + esc(f.headline.plain) + '</p>' +
+      '</div>';
+    if (f.fixes.length) h += '<h3>What to do</h3><ol class="steps">' + f.fixes.map(x => '<li><span class="txt">' + esc(x.plain) + '</span></li>').join('') + '</ol>';
+    else if (f.state === 'pass') h += '<h3>What to do</h3><p class="fpara">Nothing to fix.</p>';
+    h += '<h3>The checks</h3><div class="tiles">' + tiles().map(tileHtml).join('') + '</div>';
+    if (f.cause) h += '<h3>Why</h3>' + para(f.cause);
+    if (f.consequence) h += '<h3>What the DMARC setting did</h3>' + para(f.consequence);
+    if (f.flags.length) h += '<h3>Also worth knowing</h3>' + says(f.flags, 'plain');
+    // The same finding in the protocol's terms, with the lines it came from.
+    const tp = (s) => s ? '<p class="fpara">' + esc(s.technical) + srcBtn(s.src) + '</p>' : '';
+    h += '<details class="more" id="finding-more"><summary>Technical details</summary>';
+    h += tp(f.headline) + tp(f.cause) + tp(f.consequence);
+    if (f.fixes.length) h += '<h3>Fixes</h3>' + says(f.fixes);
+    if (f.details.length) h += '<h3>Evidence</h3>' + says(f.details);
+    if (f.limits.length) h += '<h3>What these headers cannot show</h3>' + says(f.limits);
+    h += '</details>';
     $('finding').innerHTML = h;
   }
 
@@ -140,14 +147,16 @@
     if (m.subject) L.push('Subject: ' + (m.subject.value || '(empty)'));
     if (m.from) L.push('From: ' + m.from.address);
     if (m.date) L.push('Date: ' + m.date.text);
-    L.push('', STATUS_WORD[f.status] + ': ' + f.headline[voice]);
-    if (voice === 'plain' && f.headline.technical !== f.headline.plain) L.push('Technical: ' + f.headline.technical);
-    for (const s of [f.cause, f.consequence]) if (s) L.push(s[voice]);
-    L.push('');
+    L.push('', STATUS_WORD[f.status] + ': ' + f.headline.plain);
+    if (f.headline.technical !== f.headline.plain) L.push('Technical: ' + f.headline.technical);
+    if (f.fixes.length) { L.push('', 'What to do:'); f.fixes.forEach(x => L.push('- ' + x.plain)); }
+    else if (f.state === 'pass') L.push('', 'What to do: Nothing to fix.');
+    L.push('', 'The checks:');
     for (const t of tiles()) L.push(t.k + ': ' + t.v + (t.d ? ' (' + t.d + ')' : ''));
-    if (f.fixes.length) { L.push('', 'What to do:'); f.fixes.forEach(x => L.push('- ' + x[voice])); }
+    if (f.cause) L.push('', 'Why: ' + f.cause.plain);
+    if (f.consequence) L.push('', 'What the DMARC setting did: ' + f.consequence.plain);
     if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
-    L.push('', 'Decoded in the browser at headers.dns-audit.com. The headers were not sent anywhere.');
+    L.push('', 'Decoded in the browser at headers.dns-audit.com. The headers weren\'t sent anywhere.');
     return L.join('\n');
   }
   function copyText(text) {
@@ -262,7 +271,7 @@
       '<span class="who mono">' + esc(rec.writer || '(no host named)') + '</span>' +
       (rec.primary ? '<span class="badge">Primary</span>' : '') + chip(t[0], t[1]) +
       '<span class="how">' + esc(rec.matchedBy ? MATCHED[rec.matchedBy] + (rec.hopIdx >= 0 ? ', hop ' + (rec.hopIdx + 1) : '') : 'no Received by host matches') + '</span>' + srcBtn(rec.src) + '</div>';
-    if (!rec.entries.length) h += '<p class="absent">' + (rec.none ? 'Reports none: no methods were checked.' : 'No method results could be read.') + '</p>';
+    if (!rec.entries.length) h += '<p class="absent">' + (rec.none ? 'It reported none, so no methods were checked.' : 'No method results were readable.') + '</p>';
     else h += '<div class="ents">' + rec.entries.map(e => '<div class="ent"><span class="m">' + esc(e.method) + '</span>' + chip(e.state, e.result) +
       '<span class="id mono">' + esc(idText(e) || 'no identifiers') + '</span>' + (e.reason ? '<span class="why">reason ' + esc(e.reason) + '</span>' : '') + '</div>').join('') + '</div>';
     return h + '</div>';
@@ -304,8 +313,8 @@
       rep += chip(d.state, 'dmarc=' + d.result) + (d.headerFrom ? '<span class="sub mono">header.from=' + esc(d.headerFrom) + '</span>' : '') + (pol ? '<span class="sub mono">' + esc(pol) + '</span>' : '') + srcBtn(d.src);
     } else rep += chip('unknown', 'Not reported') + '<span class="sub">No dmarc= result in the receiver\'s Authentication-Results.</span>';
     let cmp = '<span class="k">Computed here</span>';
-    const NONE_WHY = { 'no-from': 'There is no From domain to align with.', 'two-from': 'There is more than one From field, so there is no single domain to align with.', 'multi-domain': 'The From field names addresses in more than one domain, so there is no single domain to align with.', 'no-trusted-results': 'No Authentication-Results field here was written by the receiver.' };
-    if (c.result === 'none') cmp += chip('unknown', 'Cannot compute') + '<span class="sub">' + (NONE_WHY[c.why] || 'The receiver reported no SPF or DKIM results to combine.') + '</span>';
+    const NONE_WHY = { 'no-from': 'There\'s no From domain to align with.', 'two-from': 'There\'s more than one From field, so there\'s no single domain to align with.', 'multi-domain': 'The From field names addresses in more than one domain, so there\'s no single domain to align with.', 'no-trusted-results': 'No Authentication-Results field here was written by the receiver.' };
+    if (c.result === 'none') cmp += chip('unknown', 'Can\'t compute') + '<span class="sub">' + (NONE_WHY[c.why] || 'The receiver reported no SPF or DKIM results to combine.') + '</span>';
     else if (c.differ) cmp += '<span class="modes">' + chip('pass', 'relaxed: pass') + chip('fail', 'strict: fail') + '</span><span class="sub">The DMARC record decides: ' + esc(c.tags.join(' and ')) + ' (relaxed when absent).</span>' + srcBtn(c.src);
     else cmp += chip(c.result, 'dmarc=' + c.result) + '<span class="sub">' + (c.result === 'pass' ? 'Aligned pass from ' + esc((c.by.strict.length ? c.by.strict : c.by.relaxed).join(', ')) + '.' : 'No method that passed aligns with the From domain.') + '</span>' + srcBtn(c.src);
     h += '<div class="dmt">' + rep + '</div><div class="dmt">' + cmp + '</div></div>';
@@ -403,21 +412,34 @@
       '<div class="rawbox" id="rawbox"></div></details>';
     if (R.input.bodyPresent) h += '<p class="note-line">A message body followed the headers. It was not read.</p>';
     $('raw').innerHTML = h;
-    drawRaw('');
+    rawLimit = RAW_CHUNK; rawFull = new Set(); rawDrawn = false;
+    $('raw-details').addEventListener('toggle', (e) => { if (e.target.open && !rawDrawn) drawRaw($('raw-filter').value); });
     $('raw-filter').addEventListener('input', (e) => drawRaw(e.target.value));
     $('raw-clear-hl').addEventListener('click', () => highlight([]));
   }
 
-  let lit = [];
+  // A real paste can carry thousands of fields or a value of hundreds of
+  // kilobytes. The list is drawn when opened, RAW_CHUNK fields at a time,
+  // and a field longer than RAW_CLIP characters shows clipped until expanded.
+  const RAW_CHUNK = 200, RAW_CLIP = 2000;
+  let lit = [], rawLimit = RAW_CHUNK, rawFull = new Set(), rawDrawn = false;
   function drawRaw(q) {
+    rawDrawn = true;
     q = (q || '').trim().toLowerCase();
     const mark = (t) => { if (!q) return esc(t); const i = t.toLowerCase().indexOf(q); return i < 0 ? esc(t) : esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length)); };
-    const shown = R.fields.filter(f => !q || f.raw.toLowerCase().includes(q));
-    $('rawbox').innerHTML = shown.map(f => '<div class="f' + (lit.includes(f.index) ? ' hl' : '') + '" data-field="' + f.index + '">' + f.raw.split('\n').map((t, k) => {
-      const body = k === 0 ? '<span class="nm">' + mark(t.slice(0, f.name.length + 1)) + '</span>' + mark(t.slice(f.name.length + 1)) : mark(t);
-      return '<div class="l"><span class="ln">' + (f.lines[0] + k + 1) + '</span><span class="tx">' + body + '</span></div>';
-    }).join('') + '</div>').join('') || '<p class="empty-raw">No header matches that search.</p>';
-    $('raw-status').textContent = q ? shown.length + ' of ' + R.fields.length + ' fields match' : '';
+    const matched = R.fields.filter(f => !q || f.raw.toLowerCase().includes(q));
+    const shown = matched.slice(0, rawLimit);
+    const n = (x) => x.toLocaleString('en-US');
+    $('rawbox').innerHTML = shown.map(f => {
+      const clip = f.raw.length > RAW_CLIP && !rawFull.has(f.index);
+      const raw = clip ? f.raw.slice(0, RAW_CLIP) : f.raw;
+      return '<div class="f' + (lit.includes(f.index) ? ' hl' : '') + '" data-field="' + f.index + '">' + raw.split('\n').map((t, k) => {
+        const body = k === 0 ? '<span class="nm">' + mark(t.slice(0, f.name.length + 1)) + '</span>' + mark(t.slice(f.name.length + 1)) : mark(t);
+        return '<div class="l"><span class="ln">' + (f.lines[0] + k + 1) + '</span><span class="tx">' + body + '</span></div>';
+      }).join('') + (clip ? '<button type="button" class="link-btn raw-more" data-expand="' + f.index + '">Show all ' + n(f.raw.length) + ' characters of ' + esc(f.name) + '</button>' : '') + '</div>';
+    }).join('') + (matched.length > shown.length ? '<button type="button" class="link-btn raw-more" data-more>Show the next ' + n(Math.min(RAW_CHUNK, matched.length - shown.length)) + ' of ' + n(matched.length - shown.length) + ' more fields</button>' : '') ||
+      '<p class="empty-raw">No header matches that search.</p>';
+    $('raw-status').textContent = q ? matched.length + ' of ' + R.fields.length + ' fields match' : '';
   }
 
   function highlight(src) {
@@ -425,10 +447,15 @@
     document.querySelectorAll('.prov.on, .src.on').forEach(el => el.classList.remove('on'));
     document.querySelectorAll('#rawbox .f').forEach(el => el.classList.toggle('hl', lit.includes(+el.dataset.field)));
     if (!lit.length) { $('live').textContent = 'Highlight cleared.'; return; }
+    $('analysis').open = true;
     const det = $('raw-details');
     det.open = true;
     const filter = $('raw-filter');
-    if (filter.value && !lit.every(i => document.querySelector('#rawbox .f[data-field="' + i + '"]'))) { filter.value = ''; drawRaw(''); }
+    if (!lit.every(i => document.querySelector('#rawbox .f[data-field="' + i + '"]'))) {
+      filter.value = '';
+      rawLimit = Math.max(rawLimit, Math.max.apply(null, lit) + 1);
+      drawRaw('');
+    }
     const firstEl = document.querySelector('#rawbox .f[data-field="' + Math.min.apply(null, lit) + '"]');
     if (firstEl) firstEl.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
     const names = lit.map(i => R.fields[i].name + ' (' + linesOf([i]) + ')');
@@ -437,7 +464,17 @@
 
   document.addEventListener('click', (e) => {
     const jump = e.target.closest('[data-jump]');
-    if (jump && R) { $(jump.dataset.jump).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); return; }
+    if (jump && R) { if ($('analysis').contains($(jump.dataset.jump))) $('analysis').open = true; $(jump.dataset.jump).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); return; }
+    const more = e.target.closest('[data-more], [data-expand]');
+    if (more && R) {
+      const from = rawLimit;
+      if (more.dataset.expand) rawFull.add(+more.dataset.expand); else rawLimit += RAW_CHUNK;
+      drawRaw($('raw-filter').value);
+      // The button is gone after the redraw; keyboard focus moves to the field it revealed.
+      const to = more.dataset.expand ? document.querySelector('#rawbox .f[data-field="' + more.dataset.expand + '"]') : document.querySelectorAll('#rawbox .f')[from];
+      if (to) { to.tabIndex = -1; to.focus({ preventScroll: true }); }
+      return;
+    }
     const el = e.target.closest('[data-src]');
     if (!el || !R) return;
     if (el.closest('summary')) e.preventDefault(); // a source button inside a group row should not also toggle it
@@ -446,22 +483,13 @@
     el.classList.add('on');
   });
 
-  function setVoice(v) {
-    voice = v;
-    document.querySelectorAll('[data-voice]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.voice === v)));
-    if (R) renderAll();
-  }
-
   function renderAll() {
     const open = $('raw-details') && $('raw-details').open;
     const moreOpen = $('finding-more') && $('finding-more').open;
     const openGroups = Array.from(document.querySelectorAll('#path details[open]')).map(d => d.dataset.group);
     // One line above the cards: what the paste was read as.
     const c = R.chain;
-    const parts = [R.fields.length + ' field' + (R.fields.length === 1 ? '' : 's'), c.count + ' hop' + (c.count === 1 ? '' : 's')];
-    if (c.totalSec !== null && c.totalSec >= 0) parts.push('transit ' + fmtDur(c.totalSec));
-    if (c.originIp && !c.trust.originPrivate) parts.push('origin ' + c.originIp);
-    $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read as ' + (FORMATS[R.input.format] || 'a header block') + ': ' + parts.join(', ') + '.' + (R.input.repairedLines ? ' ' + R.input.repairedLines + ' line' + (R.input.repairedLines === 1 ? '' : 's') + ' had lost their indentation and were rejoined.' : '');
+    $('read-as').textContent = (sample ? 'Sample: ' + sample + '. ' : '') + 'Read ' + R.fields.length + ' header' + (R.fields.length === 1 ? '' : 's') + ' and ' + c.count + ' handoff' + (c.count === 1 ? '' : 's') + ' between servers.';
     renderFinding();
     renderFilters();
     renderMessage();
@@ -476,11 +504,35 @@
     if (lit.length) highlight(lit);
   }
 
+  // One usage note per new read to dns-audit.com, so its maker can see the page is
+  // used: the finding status only, never header text. text/plain needs no CORS
+  // preflight; the reply is not read and a failure is ignored.
+  let noted = null;
+  function note(text) {
+    if (text === noted) return;
+    noted = text;
+    // Where the visitor came from, host only; a link within the site is not a source
+    let ref;
+    try { const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) ref = h; } catch (e) { /* no referrer */ }
+    const body = { tool: 'header-decoder', status: (R.finding && R.finding.status) || 'unknown', sample: !!sample, ref };
+    try {
+      fetch('https://dns-audit.com/api/usage', { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) }).catch(() => {});
+    } catch (e) { /* never let the note break the page */ }
+  }
+
   function run(scroll) {
     const text = $('headers').value;
     if (!text.trim()) { $('results').hidden = true; R = null; return; }
     lit = [];
-    R = HA.analyze(text);
+    try { R = HA.analyze(text); } catch (e) {
+      // Never leave the previous result on screen for a paste that failed.
+      R = null;
+      $('results').hidden = false;
+      $('read-as').textContent = '';
+      $('finding').innerHTML = '<h2 id="h-finding">Could not read these headers</h2><p>Something in this paste stopped the page from reading it. Nothing was sent anywhere.</p>';
+      ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).innerHTML = ''; $(id).hidden = true; });
+      return;
+    }
     $('results').hidden = false;
     if (!R.input.blockFound) {
       $('read-as').textContent = '';
@@ -490,6 +542,7 @@
     }
     ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).hidden = false; });
     renderAll();
+    note(text);
     if (scroll) $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
 
@@ -510,7 +563,6 @@
   };
   document.querySelectorAll('[data-sample]').forEach(b => b.addEventListener('click', () => loadSample(b.dataset.sample, true)));
   $('headers').addEventListener('input', () => { sample = ''; });
-  document.querySelectorAll('[data-voice]').forEach(b => b.addEventListener('click', () => setVoice(b.dataset.voice)));
   $('headers').addEventListener('paste', () => { sample = ''; setTimeout(() => run(true), 0); });
   $('headers').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run(true); });
 
@@ -526,8 +578,6 @@
     reader.readAsText(f);
   });
 
-  setVoice(voice);
-  // Open on a sample so the page shows what it does before anyone pastes:
-  // the forward case, the one a plain hop table explains worst.
-  if (!$('headers').value.trim()) loadSample('forwarded', false);
+  // A browser restoring form state can refill the box; read it if so.
+  run(false);
 })();

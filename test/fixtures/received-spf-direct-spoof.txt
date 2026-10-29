@@ -1,0 +1,11 @@
+Return-Path: <x@attacker.example>
+Received: from relay.attacker.example (relay.attacker.example [198.51.100.13])
+        by mx.corp.example (Postfix) with ESMTPS id 1Aa1
+        for <victim@corp.example>; Fri, 23 Oct 2026 18:00:02 +0000 (UTC)
+Authentication-Results: mx.corp.example; dkim=none; dmarc=none header.from=bank.example
+Received-SPF: pass (mx.corp.example: domain of alerts@bank.example designates 198.51.100.13 as permitted sender) client-ip=198.51.100.13; envelope-from=alerts@bank.example;
+From: Bank <alerts@bank.example>
+To: victim@corp.example
+Subject: hi
+Date: Fri, 23 Oct 2026 18:00:00 +0000
+Message-ID: <a@attacker.example>

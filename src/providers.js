@@ -9,7 +9,7 @@
   const P = HA.parse;
   const say = P.sentence;
 
-  function item(key, raw, level, technical, plain, src) { return { key, raw: String(raw), level: level || 'info', technical, plain: plain || technical, src: src || [] }; }
+  function item(key, raw, level, technical, plain, src) { return { key, raw: String(raw), level: level || 'info', technical, plain: P.contract(plain || technical), src: src || [] }; }
   const notListed = (key, raw, vendor, src) => item(key, raw, 'info', key + ' ' + raw + ' is not in ' + vendor + '\'s published table, so it is shown as written.', vendor + ' recorded a code this page does not know. It is shown as written.', src);
   const first = (fields, name) => fields.find(f => f.lower === name) || null;
 
@@ -48,12 +48,11 @@
   function sclItem(v, src, name) {
     const raw = String(v).trim();
     const n = /^-?\d+$/.test(raw) ? parseInt(raw, 10) : NaN;
-    const tail = ' In cloud organizations SCL does not decide the filing; CAT does.';
     const known = { '-1': ['pass', 'filtering skipped', 'Spam filtering was skipped.'], 0: ['pass', 'not spam', 'Not spam.'], 1: ['pass', 'not spam', 'Not spam.'], 5: ['fail', 'spam', 'Rated as spam.'], 6: ['fail', 'spam', 'Rated as spam.'], 9: ['fail', 'high confidence spam', 'Rated as spam with high confidence.'] };
     const k = known[n];
-    if (k) return item(name, raw, k[0], 'Spam confidence level ' + raw + ': ' + k[1] + '.' + tail, k[2], src);
-    if (n === 7 || n === 8) return item(name, raw, 'warn', 'Spam confidence level ' + raw + '. Microsoft gives this value no meaning of its own and says 5 or higher generally means the message is considered bad.' + tail, 'Rated as likely spam.', src);
-    if (n >= 2 && n <= 4) return item(name, raw, 'info', 'Spam confidence level ' + raw + ' is inside Microsoft\'s range but has no published meaning, so it is shown as written.' + tail, 'Microsoft recorded a spam score this page cannot interpret.', src);
+    if (k) return item(name, raw, k[0], 'Spam confidence level ' + raw + ': ' + k[1] + '.', k[2], src);
+    if (n === 7 || n === 8) return item(name, raw, 'warn', 'Spam confidence level ' + raw + '. Microsoft gives this value no meaning of its own and says 5 or higher generally means the message is considered bad.', 'Rated as likely spam.', src);
+    if (n >= 2 && n <= 4) return item(name, raw, 'info', 'Spam confidence level ' + raw + ' is inside Microsoft\'s range but has no published meaning, so it is shown as written.', 'Microsoft recorded a spam score this page cannot interpret.', src);
     return notListed(name, raw, 'Microsoft', src);
   }
 
@@ -61,7 +60,15 @@
     const n = /^\d+$/.test(raw) ? +raw : NaN;
     if (!(n >= 0 && n <= 9)) return notListed('BCL', raw, 'Microsoft', src);
     const [lvl, t, p] = n === 0 ? ['pass', 'not from a bulk sender', 'Not bulk mail.'] : n <= 3 ? ['info', 'a bulk sender that generates few complaints', 'Bulk mail from a sender with few complaints.'] : n <= 7 ? ['warn', 'a bulk sender that generates a mixed number of complaints', 'Bulk mail from a sender people sometimes complain about.'] : ['fail', 'a bulk sender that generates a high number of complaints', 'Bulk mail from a sender people often complain about.'];
-    return item('BCL', raw, lvl, 'Bulk complaint level ' + n + ': ' + t + '. The tenant\'s threshold decides the action (7 by default, 6 Standard, 5 Strict); it is not in the headers.', p, src);
+    return item('BCL', raw, lvl, 'Bulk complaint level ' + n + ': ' + t + '.', p, src);
+  }
+
+  // PCL: Exchange publishes 1 to 3 as Neutral and 4 to 8 as Suspicious.
+  function pclItem(raw, src) {
+    const n = /^\d+$/.test(raw) ? +raw : NaN;
+    if (n >= 1 && n <= 3) return item('PCL', raw, 'pass', 'Phishing confidence level ' + n + ': Neutral, the content is not likely phishing.', 'The content did not look like phishing.', src);
+    if (n >= 4 && n <= 8) return item('PCL', raw, 'warn', 'Phishing confidence level ' + n + ': Suspicious, the content is likely phishing.', 'The content looked like phishing.', src);
+    return notListed('PCL', raw, 'Microsoft', src);
   }
 
   // Composite authentication reason codes. A code missing from the table
@@ -73,9 +80,9 @@
     '010': 'DMARC failed with quarantine or reject, and the From domain is one of the organization\'s own accepted domains',
     '100': 'SPF or DKIM passed and aligns with the From domain', '101': 'DKIM signed by the From domain', '102': 'SPF passed and the MAIL FROM aligns with the From domain',
     '103': 'the From domain aligns with the PTR record of the source IP', '104': 'the PTR record of the source IP aligns with the From domain',
-    '108': 'DKIM failed because an earlier legitimate hop modified the body', '109': 'no DMARC record, but the message would pass', '111': 'DMARC hit an error, but SPF or DKIM aligns with the From domain',
+    '108': 'an earlier legitimate hop modified the body, so the DKIM signature did not verify', '109': 'no DMARC record, but the message would pass', '111': 'DMARC hit an error, but SPF or DKIM aligns with the From domain',
     '112': 'a DNS timeout prevented the DMARC record lookup', '115': 'sent from a Microsoft 365 organization where the From domain is an accepted domain', '116': 'the MX record of the From domain aligns with the PTR record of the connecting IP',
-    '130': 'an ARC result from a trusted ARC sealer overrode the DMARC failure', '201': 'the PTR of the From domain aligns with the subnet of the connecting IP\'s PTR', '202': 'the From domain aligns with the domain of the connecting IP\'s PTR record',
+    '130': 'an ARC result from a trusted ARC sealer overrode the DMARC result', '201': 'the PTR of the From domain aligns with the subnet of the connecting IP\'s PTR', '202': 'the From domain aligns with the domain of the connecting IP\'s PTR record',
     '501': 'DMARC not enforced: a valid bounce where sender and recipient had prior contact', '502': 'DMARC not enforced: a valid bounce for a message this organization sent',
     '601': 'the From domain is one of the organization\'s accepted domains (self-to-self or intra-org spoofing)', '905': 'DMARC not enforced because of complex routing, such as mail through on-premises Exchange or another service first',
   };
@@ -91,8 +98,10 @@
     const lvl = { pass: 'pass', fail: 'fail', softpass: 'warn' }[c.result] || 'info';
     const meaning = compauthMeaning(c.reason);
     const raw = c.result + (c.reason ? ' reason=' + c.reason : '');
-    if (c.reason && !meaning) return item('compauth', raw, lvl, 'Composite authentication ' + c.result + '. Reason code ' + c.reason + ' is not in Microsoft\'s published table, so it is shown as written.', 'Microsoft\'s combined sender check came out ' + c.result + ', for a reason this page does not know.', c.src);
-    return item('compauth', raw, lvl, 'Composite authentication ' + c.result + (meaning ? ': ' + meaning + '.' : '.'), 'Microsoft\'s combined sender check came out ' + c.result + (meaning ? ': ' + meaning + '.' : '.'), c.src);
+    // none is a skip for 3xx and a bypass for 4xx and 9xx.
+    const did = { pass: 'passed', fail: 'failed', softpass: 'gave a soft pass' }[c.result] || (c.result === 'none' ? (/^[49]/.test(c.reason || '') ? 'was bypassed' : 'was skipped') : 'came out ' + c.result);
+    if (c.reason && !meaning) return item('compauth', raw, lvl, 'Reason code ' + c.reason + ' is not in Microsoft\'s published table, so it is shown as written.', 'Microsoft\'s own sender check ' + did + '. Its reason code isn\'t one Microsoft explains publicly.', c.src);
+    return item('compauth', raw, lvl, meaning ? meaning.charAt(0).toUpperCase() + meaning.slice(1) + '.' : 'Microsoft wrote no reason code.', 'Microsoft\'s own sender check ' + did + '.', c.src);
   }
 
   function decodeMicrosoft(fields, auth) {
@@ -100,8 +109,10 @@
     const xma = first(fields, 'x-microsoft-antispam');
     const scl = first(fields, 'x-ms-exchange-organization-scl');
     const authAs = first(fields, 'x-ms-exchange-organization-authas');
+    const authSrc = first(fields, 'x-ms-exchange-organization-authsource');
+    const pclF = first(fields, 'x-ms-exchange-organization-pcl');
     const mbd = first(fields, 'x-microsoft-antispam-mailbox-delivery');
-    if (!ff && !xma && !scl && !authAs && !mbd && !auth.compauth) return null;
+    if (!ff && !xma && !scl && !authAs && !authSrc && !pclF && !mbd && !auth.compauth) return null;
     const items = [];
     let kv = {};
     if (ff) {
@@ -109,7 +120,7 @@
       for (const part of ff.value.split(';')) { const i = part.indexOf(':'); if (i > 0) kv[part.slice(0, i).trim().toUpperCase()] = part.slice(i + 1).trim(); }
       if (kv.CAT) {
         const m = MS_CAT[kv.CAT.toUpperCase()];
-        items.push(m ? item('CAT', kv.CAT, m[0], 'Threat category: ' + m[1] + ' In cloud organizations CAT, not SCL, says how the message was filtered.', m[2], s) : notListed('CAT', kv.CAT, 'Microsoft', s));
+        items.push(m ? item('CAT', kv.CAT, m[0], 'Threat category: ' + m[1], m[2], s) : notListed('CAT', kv.CAT, 'Microsoft', s));
       }
       if (kv.SFV) { const m = MS_SFV[kv.SFV.toUpperCase()]; items.push(m ? item('SFV', kv.SFV, m[0], m[1], m[2], s) : notListed('SFV', kv.SFV, 'Microsoft', s)); }
       if (kv.SCL) items.push(sclItem(kv.SCL, scl && scl.value.trim() === kv.SCL ? [ff.index, scl.index] : s, 'SCL'));
@@ -129,19 +140,32 @@
       if (kv.CTRY) items.push(item('CTRY', kv.CTRY, 'info', 'Country or region of the connecting IP, which may differ from where the message started.', 'Where the server that handed it over is.', s));
       if (kv.H) items.push(item('H', kv.H, 'info', 'HELO or EHLO name the connecting server gave.', 'The name the sending server gave itself.', s));
       if (kv.PTR) items.push(item('PTR', kv.PTR, 'info', 'Reverse DNS of the connecting IP, as Microsoft looked it up.', 'The name registered for the sending server\'s address.', s));
+      // SFS lists internal spam rule IDs; Microsoft publishes no meanings for them.
+      if (kv.SFS) items.push(notListed('SFS', kv.SFS, 'Microsoft', s));
     }
     const bcl = kv.BCL !== undefined ? { raw: kv.BCL, src: [ff.index] } : xma && /BCL:(\d+)/i.test(xma.value) ? { raw: /BCL:(\d+)/i.exec(xma.value)[1], src: [xma.index] } : null;
     if (bcl) items.push(bclItem(bcl.raw, bcl.src));
     if (scl && !(kv.SCL && scl.value.trim() === kv.SCL)) items.push(sclItem(scl.value, [scl.index], 'X-MS-Exchange-Organization-SCL'));
+    const pcl = pclF ? { raw: pclF.value.trim(), src: [pclF.index] } : xma && /PCL:(-?\d+)/i.test(xma.value) ? { raw: /PCL:(-?\d+)/i.exec(xma.value)[1], src: [xma.index] } : null;
+    if (pcl) items.push(pclItem(pcl.raw, pcl.src));
     if (authAs) {
       const v = authAs.value.trim();
-      const known = { internal: ['Treated as internal, authenticated mail.', 'Microsoft treated this as mail from inside the organization.'], anonymous: ['Treated as external, unauthenticated mail.', 'Microsoft treated this as mail from outside the organization.'] }[v.toLowerCase()];
+      const known = { internal: ['Treated as internal, authenticated mail.', 'Microsoft treated this as mail from inside the organization.'], anonymous: ['Treated as external, unauthenticated mail.', 'Microsoft treated this as mail from outside the organization.'],
+        external: ['Authentication source External.', 'Microsoft recorded this as authenticated mail from outside the organization.'], partner: ['Authentication source Partner.', 'Microsoft recorded this as mail from a partner organization.'] }[v.toLowerCase()];
       items.push(known ? item('AuthAs', v, 'info', known[0], known[1], [authAs.index]) : notListed('AuthAs', v, 'Microsoft', [authAs.index]));
     }
+    if (authSrc && authSrc.value.trim()) items.push(item('AuthSource', authSrc.value.trim(), 'info', 'The server that evaluated authentication for the organization.', 'The Microsoft server that checked who sent this.', [authSrc.index]));
     if (mbd) items.push(item(mbd.name, mbd.value.trim(), 'info', mbd.name + ' is a mailbox delivery marker Microsoft does not document, so its value is shown as written.', 'Microsoft added a delivery marker it does not explain publicly.', [mbd.index]));
     if (auth.compauth) items.push(compauthItem(auth.compauth));
     const catItem = items.find(i => i.key === 'CAT');
-    return group('microsoft', 'Microsoft 365', items, ff ? say('unknown', 'Fields of X-Forefront-Antispam-Report that Microsoft does not document are left out; Microsoft says they are for its own diagnostics.', 'Only the parts Microsoft explains publicly are shown.', [ff.index]) : null, catItem || null);
+    // Notes that hold for every CAT, SCL and BCL value, said once on the card.
+    const has = (k) => items.some(i => i.key === k || i.key === 'X-MS-Exchange-Organization-SCL' && k === 'SCL');
+    const nt = [], np = [];
+    if (ff) { nt.push('Fields of X-Forefront-Antispam-Report that Microsoft does not document are left out; Microsoft says they are for its own diagnostics.'); np.push('Only the parts Microsoft explains publicly are shown.'); }
+    if (has('CAT') || has('SCL')) { nt.push('In cloud organizations CAT, not SCL, says how the message was filtered.'); np.push('Microsoft\'s threat category (CAT), not its spam score (SCL), decides where the message went.'); }
+    if (has('BCL')) { nt.push('The tenant\'s threshold decides the BCL action (7 by default, 6 Standard, 5 Strict); it is not in the headers.'); np.push('Each organization sets its own limit for bulk mail, and the headers don\'t show it.'); }
+    const noteSrc = Array.from(new Set(items.flatMap(i => i.src))).sort((a, b) => a - b);
+    return group('microsoft', 'Microsoft 365', items, nt.length ? say('unknown', nt.join(' '), np.join(' '), noteSrc) : null, catItem || null);
   }
 
   // Google writes no spam or placement decision into headers. Its own
@@ -164,20 +188,24 @@
     return group('google', 'Google', items, byGoogle ? say('unknown', 'Gmail writes no spam, Promotions or inbox placement decision into headers. Where the message landed is visible only in the mailbox.', 'Gmail does not record in the headers whether it put the message in spam.', []) : null, null);
   }
 
+  // Rspamd actions, from its documentation. The action is what the
+  // filter did; the result line carries the score and reject threshold.
+  const RSPAMD_ACTIONS = { 'no action': ['pass', 'No action: the message is not spam.', 'Rspamd decided this is not spam.'], greylist: ['warn', 'Greylisted: delivery was delayed once.', 'Rspamd delayed the message once as a test.'], 'add header': ['fail', 'Marked as spam with a header.', 'Rspamd marked this as spam.'], 'rewrite subject': ['fail', 'Marked as spam in the subject line.', 'Rspamd marked this as spam in its subject.'], 'soft reject': ['warn', 'Temporarily refused.', 'Rspamd asked the sender to try again later.'], reject: ['fail', 'Rejected as spam.', 'Rspamd refused this as spam.'] };
+
   // Gateways and on-host filters. Each is shown only when its headers are.
   function decodeGateways(fields) {
     const out = [];
     const pp = first(fields, 'x-proofpoint-spam-details');
     if (pp) {
       const s = [pp.index], kv = {}, items = [];
-      for (const m of pp.value.matchAll(/([a-z]+)=([^\s]+)/gi)) kv[m[1].toLowerCase()] = m[2];
+      for (const m of pp.value.matchAll(/(?<![a-z])([a-z]+)=(\S+)/gi)) kv[m[1].toLowerCase()] = m[2];
       if (kv.rule) {
         const r = kv.rule.toLowerCase();
         items.push(r === 'notspam' ? item('rule', kv.rule, 'pass', 'Classification rule notspam: not spam.', 'Proofpoint decided this is not spam.', s)
           : r === 'spam' ? item('rule', kv.rule, 'fail', 'Classification rule spam: spam.', 'Proofpoint decided this is spam.', s)
             : item('rule', kv.rule, 'info', 'Classification rule ' + kv.rule + '. The customer names its own rules, so it is shown as written.', 'Proofpoint applied a rule named ' + kv.rule + '.', s));
       }
-      if (kv.policy) items.push(item('policy', kv.policy, 'info', 'Policy route applied.', 'The Proofpoint policy that handled it.', s));
+      if (kv.policy) items.push(item('policy', kv.policy, 'info', 'Policy route applied.', 'The Proofpoint rule set that handled the message.', s));
       for (const k of ['score', 'spamscore', 'phishscore', 'bulkscore', 'malwarescore', 'suspectscore', 'impostorscore', 'adultscore', 'mlxscore', 'clxscore']) {
         if (kv[k] !== undefined) items.push(item(k, kv[k], 'info', k + ' ' + kv[k] + '. The customer sets the thresholds, which are not in the headers, so the score is shown as written.', 'A Proofpoint score of ' + kv[k] + '. What it leads to is set by the receiving organization.', s));
       }
@@ -254,10 +282,7 @@
     const rs = first(fields, 'x-spamd-result'), ra = first(fields, 'x-rspamd-action');
     if (rs || ra) {
       const items = [];
-      // Rspamd actions, from its documentation. The action is what the
-      // filter did; the result line carries the score and reject threshold.
-      const ACTIONS = { 'no action': ['pass', 'No action: the message is not spam.', 'Rspamd decided this is not spam.'], greylist: ['warn', 'Greylisted: delivery was delayed once.', 'Rspamd delayed the message once as a test.'], 'add header': ['fail', 'Marked as spam with a header.', 'Rspamd marked this as spam.'], 'rewrite subject': ['fail', 'Marked as spam in the subject line.', 'Rspamd marked this as spam in its subject.'], 'soft reject': ['warn', 'Temporarily refused.', 'Rspamd asked the sender to try again later.'], reject: ['fail', 'Rejected as spam.', 'Rspamd refused this as spam.'] };
-      if (ra) { const a = ACTIONS[ra.value.trim().toLowerCase()]; items.push(a ? item('X-Rspamd-Action', ra.value.trim(), a[0], a[1], a[2], [ra.index]) : notListed('X-Rspamd-Action', ra.value.trim(), 'Rspamd', [ra.index])); }
+      if (ra) { const a = RSPAMD_ACTIONS[ra.value.trim().toLowerCase()]; items.push(a ? item('X-Rspamd-Action', ra.value.trim(), a[0], a[1], a[2], [ra.index]) : notListed('X-Rspamd-Action', ra.value.trim(), 'Rspamd', [ra.index])); }
       if (rs) {
         const d = /default:\s*(True|False)\s*\[(-?[\d.]+)\s*\/\s*(-?[\d.]+)\]/i.exec(rs.value);
         if (!d) items.push(notListed('X-Spamd-Result', rs.value.trim().slice(0, 60), 'Rspamd', [rs.index]));
@@ -354,7 +379,7 @@
   }
 
   // List and sending headers: unsubscribe (RFC 2369, RFC 8058), list
-  // identity, Reply-To and Sender at another organization, Precedence,
+  // identity, Reply-To and Sender at another organization, Message-ID domain, Precedence,
   // Auto-Submitted, and Feedback-ID.
   function listItems(fields, message, auth) {
     const items = [];
@@ -365,21 +390,21 @@
     if (lu) {
       const https = /<https:/i.test(lu.value), mailto = /<mailto:/i.test(lu.value);
       const kinds = [https && 'https', mailto && 'mailto'].filter(Boolean).join(' and ');
-      items.push(kinds ? item('List-Unsubscribe', kinds, 'pass', 'Unsubscribe offered (RFC 2369) by ' + kinds + '.', 'The message offers a way to unsubscribe.', [lu.index])
-        : item('List-Unsubscribe', lu.value.trim().slice(0, 60), 'warn', 'List-Unsubscribe holds no https or mailto address this page can read.', 'The unsubscribe header is there but holds no usable link.', [lu.index]));
+      items.push(kinds ? item('List-Unsubscribe', kinds, 'pass', 'List-Unsubscribe offers ' + kinds + ' (RFC 2369).', https ? 'The message has an unsubscribe link.' : 'The message offers a way to unsubscribe by email.', [lu.index])
+        : item('List-Unsubscribe', lu.value.trim().slice(0, 60), 'warn', 'List-Unsubscribe has no https or mailto URI this page can read.', 'The message has an unsubscribe option, but no link in it works.', [lu.index]));
       if (lup && /^\s*List-Unsubscribe=One-Click\s*$/i.test(lup.value)) {
         // RFC 8058 section 4: a DKIM signature must cover both fields.
         const covering = auth.signatures.filter(s => s.signedHeaders.includes('list-unsubscribe') && s.signedHeaders.includes('list-unsubscribe-post'));
         const passed = covering.filter(s => auth.dkim.some(k => k.signature === auth.signatures.indexOf(s) && k.result === 'pass'));
         const sigSrc = covering.flatMap(s => s.src);
-        if (!https) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'One-click declared, but RFC 8058 needs an https address in List-Unsubscribe and there is none.', 'One-click unsubscribe is declared but cannot work without a web link.', [lup.index, lu.index]));
-        else if (!covering.length) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'RFC 8058 one-click declared, but no DKIM-Signature lists both List-Unsubscribe and List-Unsubscribe-Post in h=, which RFC 8058 section 4 requires.', 'One-click unsubscribe is declared, but the message signature does not cover it, so mailbox providers may ignore it.', [lup.index, lu.index].concat(auth.signatures.flatMap(s => s.src))));
-        else if (!passed.length) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'RFC 8058 one-click declared and signed by d=' + covering.map(s => s.d).join(', ') + ', but no result shows that signature passing.', 'One-click unsubscribe is declared, but the signature that covers it did not check out.', [lup.index, lu.index].concat(sigSrc)));
-        else items.push(item('List-Unsubscribe-Post', 'One-Click', 'pass', 'RFC 8058 one-click unsubscribe, covered by the passing DKIM signature of d=' + passed.map(s => s.d).join(', ') + '. Gmail and Yahoo require this of bulk senders.', 'Recipients can unsubscribe with one click.', [lup.index, lu.index].concat(passed.flatMap(s => s.src))));
+        if (!https) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'List-Unsubscribe-Post declares one-click, but List-Unsubscribe has no https URI, which RFC 8058 requires.', 'One-click unsubscribe is turned on, but it can\'t work without a web link.', [lup.index, lu.index]));
+        else if (!covering.length) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'One-click is declared, but no DKIM-Signature has both List-Unsubscribe and List-Unsubscribe-Post in h=. RFC 8058 section 4 requires that.', 'One-click unsubscribe is turned on, but the digital signature doesn\'t cover it, so Gmail and Yahoo may not offer it. The sender\'s email service can fix that.', [lup.index, lu.index].concat(auth.signatures.flatMap(s => s.src))));
+        else if (!passed.length) items.push(item('List-Unsubscribe-Post', 'One-Click', 'warn', 'One-click is declared and signed by d=' + covering.map(s => s.d).join(', ') + ', but no result shows that signature passing.', 'One-click unsubscribe is turned on, but the digital signature that covers it didn\'t check out.', [lup.index, lu.index].concat(sigSrc)));
+        else items.push(item('List-Unsubscribe-Post', 'One-Click', 'pass', 'One-click unsubscribe per RFC 8058, covered by the passing DKIM signature of d=' + passed.map(s => s.d).join(', ') + '. Gmail and Yahoo require it of bulk senders.', 'Recipients can unsubscribe with one click, the way Gmail and Yahoo expect.', [lup.index, lu.index].concat(passed.flatMap(s => s.src))));
       } else if (lup) {
-        items.push(item('List-Unsubscribe-Post', lup.value.trim().slice(0, 60), 'warn', 'List-Unsubscribe-Post must be exactly List-Unsubscribe=One-Click (RFC 8058); this value is shown as written.', 'The one-click unsubscribe header is written wrong, so it will not work.', [lup.index]));
+        items.push(item('List-Unsubscribe-Post', lup.value.trim().slice(0, 60), 'warn', 'List-Unsubscribe-Post must read exactly List-Unsubscribe=One-Click (RFC 8058). The value is shown as written.', 'The one-click unsubscribe setting is written wrong, so it won\'t work.', [lup.index]));
       } else if (https) {
-        items.push(item('List-Unsubscribe-Post', 'missing', 'warn', 'No List-Unsubscribe-Post, so there is no RFC 8058 one-click unsubscribe. Gmail and Yahoo require it of bulk senders.', 'There is no one-click unsubscribe, which Gmail and Yahoo require of bulk senders.', [lu.index]));
+        items.push(item('List-Unsubscribe-Post', 'missing', 'warn', 'No List-Unsubscribe-Post, so there\'s no one-click unsubscribe (RFC 8058). Gmail and Yahoo require it of bulk senders.', 'There\'s no one-click unsubscribe. Gmail and Yahoo require it from anyone who sends bulk mail.', [lu.index]));
       }
     }
     const lid = first(fields, 'list-id');
@@ -387,15 +412,26 @@
     const rt = first(fields, 'reply-to');
     if (rt && from) {
       const a = P.parseAddresses(rt.value)[0];
-      if (a && a.domain && org(a.domain) !== org(from)) items.push(item('Reply-To', a.address, 'warn', 'Replies go to ' + a.domain + ', a different organization from ' + from + '. Normal for some platforms and help desks; a phishing sign when unexpected.', 'Replies go to a different company than the one the message says it is from. Check that this is expected.', [rt.index]));
+      if (a && a.domain && org(a.domain) !== org(from)) items.push(item('Reply-To', a.address, 'warn', 'Replies go to ' + a.domain + ', a different organization from ' + from + '. Normal for some platforms and help desks; a phishing sign when unexpected.', 'Replies go to a different company than the one in the From address. Check that you expected that.', [rt.index]));
     }
     const snd = first(fields, 'sender');
     if (snd && from) {
       const a = P.parseAddresses(snd.value)[0];
       if (a && a.domain && org(a.domain) !== org(from)) items.push(item('Sender', a.address, 'info', 'Sent on behalf of the From address by ' + a.domain + '. DMARC still checks the From domain.', 'Another company sent this on the sender\'s behalf.', [snd.index]));
     }
+    const mid = message.messageId && /@([^@\s>]+)$/.exec(message.messageId.value);
+    if (mid && from) {
+      const d = mid[1].toLowerCase();
+      items.push(org(d) === org(from) ? item('Message-ID', d, 'info', 'Message-ID domain ' + d + ', the same organization as ' + from + '.', 'The message ID was made by the sender\'s own domain.', message.messageId.src)
+        : item('Message-ID', d, 'info', 'Message-ID domain ' + d + ', a different organization from ' + from + '. Usually the sending platform or mail server that created the message.', 'The message ID was made by ' + d + ', usually the service or server that created the message.', message.messageId.src));
+    }
     const prec = first(fields, 'precedence');
-    if (prec) items.push(item('Precedence', prec.value.trim(), 'info', /bulk|list|junk/i.test(prec.value) ? 'Declares bulk or list mail; auto-responders should not answer it.' : 'Precedence ' + prec.value.trim() + ', shown as written.', /bulk|list|junk/i.test(prec.value) ? 'The sender marked this as bulk mail.' : 'The sender set a priority label.', [prec.index]));
+    if (prec) {
+      // bulk, list and junk are the values auto-responders act on (RFC 3834 section 3.1.8).
+      const v = prec.value.trim(), known = /^(bulk|list|junk)$/i.test(v);
+      items.push(item('Precedence', v, 'info', known ? 'Precedence: ' + v.toLowerCase() + ' marks bulk or list mail, so auto-responders shouldn\'t answer it.' : 'Precedence: ' + v + ' isn\'t bulk, list, or junk, the values mail software acts on. It has no defined effect.',
+        known ? 'The sender marked this as ' + (/list/i.test(v) ? 'mailing list' : 'bulk') + ' mail, so automatic replies skip it.' : 'The sender added a label that mail software ignores.', [prec.index]));
+    }
     const auto = first(fields, 'auto-submitted');
     if (auto && !/^\s*no\b/i.test(auto.value)) items.push(item('Auto-Submitted', auto.value.trim(), 'info', 'Generated automatically (RFC 3834).', 'A machine sent this, not a person.', [auto.index]));
     const fid = first(fields, 'feedback-id');
@@ -417,7 +453,7 @@
     return { filters, platform: detectPlatform(fields, message, auth, chain), list: listItems(fields, message, auth), notes };
   }
 
-  HA.providers = { decodeAll, decodeMicrosoft, decodeGateways, decodeGoogle, detectPlatform, listItems, compauthMeaning, PLATFORMS };
+  HA.providers = { decodeAll, decodeMicrosoft, decodeGateways, decodeGoogle, detectPlatform, listItems, compauthMeaning, PLATFORMS, TABLES: { MS_SFV, MS_CAT, MS_SFTY, MS_DIR, COMPAUTH, RSPAMD_ACTIONS } };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.providers;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

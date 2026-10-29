@@ -71,6 +71,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--
 .site-bar-in, main.wrap, .site-foot-in { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 main.wrap { padding-block: 28px 48px; }
 #results.wrap { padding: 0; }
+[hidden] { display: none !important; }
 .wrap { max-width: var(--max-width); margin: 0 auto; display: grid; gap: 16px; min-width: 0; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-sm); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -90,7 +91,6 @@ header.top { display: grid; gap: 8px; }
 header.top h1 { font-size: var(--font-3xl); font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.2; text-wrap: balance; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 header.top .lede { margin: 0; color: var(--text-2); max-width: 60ch; font-size: var(--font-md); }
 .beta { display: inline-flex; align-items: center; font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--caveat); border: 1px solid var(--caveat-border); background: var(--caveat-bg); border-radius: 999px; padding: 3px 9px; line-height: 1.2; }
-.policy summary svg { width: 16px; height: 16px; margin-right: 6px; flex: none; color: var(--pass); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; min-width: 0; }
 .card > h2 { font-size: var(--font-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
@@ -118,9 +118,6 @@ button { font: inherit; cursor: pointer; }
 .hint { margin: 10px 0 0; font-size: var(--font-sm); color: var(--muted); }
 
 /* Reader switch */
-.voice { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
-.voice button { border: 0; background: transparent; color: var(--text-2); font-size: var(--font-sm); font-weight: 600; padding: 6px 12px; min-height: 44px; }
-.voice button[aria-pressed="true"] { background: var(--primary-subtle); color: var(--text); }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .toolbar .read-as { font-size: var(--font-sm); color: var(--text-2); }
 
@@ -159,9 +156,13 @@ button { font: inherit; cursor: pointer; }
 .card.finding.s-caveat { border-top-color: var(--caveat); }
 .card.finding.s-fail { border-top-color: var(--fail); }
 .card.finding.s-unknown { border-top-color: var(--unknown); }
-.finding .headline { font-size: var(--font-xl); line-height: 1.4; }
-.finding .tech-line { margin: 0; font-family: var(--font-mono); font-size: var(--font-xs); color: var(--muted); line-height: 1.6; max-width: 90ch; overflow-wrap: anywhere; }
-.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 16px 0 4px; }
+.finding .headline { font-size: var(--font-md); line-height: 1.5; }
+.finding .fhead { background: var(--unknown-bg); border-left: 4px solid var(--unknown); border-radius: 8px; padding: 14px 16px; }
+.finding.s-pass .fhead { background: var(--pass-bg); border-left-color: var(--pass); }
+.finding.s-caveat .fhead { background: var(--caveat-bg); border-left-color: var(--caveat); }
+.finding.s-fail .fhead { background: var(--fail-bg); border-left-color: var(--fail); }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.card.finding > h3, .card.finding > h3:first-of-type { margin: 20px 0 8px; }
 @media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .tile { display: grid; gap: 2px; align-content: start; text-align: left; font: inherit; color: inherit; border: 1px solid var(--border); border-left: 4px solid var(--unknown); border-radius: var(--radius); background: var(--raised); padding: 10px 12px; min-width: 0; min-height: 44px; cursor: pointer; }
 .tile:hover { background: var(--surface-hover); }
@@ -170,7 +171,7 @@ button { font: inherit; cursor: pointer; }
 .tile.fail { border-left-color: var(--fail); }
 .tile .tk { font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .tile .tq { font-size: var(--font-xs); color: var(--muted); }
-.tile .tv { display: flex; align-items: baseline; gap: 6px; font-weight: 700; font-size: var(--font-md); }
+.tile .tv { display: flex; align-items: baseline; gap: 6px; font-weight: 700; font-size: var(--font-base); }
 .tile .tv .sym { font-family: var(--font-mono); }
 .tile.pass .tv { color: var(--pass); }
 .tile.caveat .tv { color: var(--caveat); }
@@ -182,6 +183,9 @@ button { font: inherit; cursor: pointer; }
 .steps .txt { overflow-wrap: anywhere; }
 .more { margin-top: 14px; border-top: 1px solid var(--border); }
 .more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--font-sm); color: var(--primary); }
+.analysis > summary { cursor: pointer; min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 0 16px; font-weight: 600; color: var(--primary); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.analysis > summary .count { color: var(--text-2); font-weight: 400; font-size: var(--font-sm); }
+.analysis-body { display: grid; gap: 16px; margin-top: 16px; min-width: 0; }
 .more > summary .count { color: var(--text-2); font-weight: 400; }
 .toolbar .tools { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .btn.small { min-height: 44px; padding: 6px 12px; }
@@ -194,6 +198,9 @@ button { font: inherit; cursor: pointer; }
 .headline { margin: 0; font-size: var(--font-lg); font-weight: 600; line-height: 1.45; max-width: 68ch; overflow-wrap: anywhere; }
 .fpara { margin: 0; font-size: var(--font-base); line-height: 1.6; color: var(--text-2); max-width: 68ch; overflow-wrap: anywhere; }
 .fpara .src { margin-left: 6px; }
+/* Line tags point into the raw headers: only in Technical details
+   and Full analysis, never in the plain finding. */
+#finding .src:not(.more .src) { display: none; }
 
 /* Filter headers: one row per decoded value, the raw value beside it */
 .fgroup { margin-top: 14px; }
@@ -229,11 +236,6 @@ button { font: inherit; cursor: pointer; }
 .bar i.d-fail { background: var(--delay-fail); }
 .hop.slowest .route { font-weight: 600; }
 .tag { display: inline-flex; align-items: center; font-size: var(--font-xs); font-weight: 600; padding: 2px 6px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); color: var(--text-2); }
-.policy { font-size: var(--font-sm); color: var(--text-2); }
-.policy summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.policy .panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--raised); padding: 12px 14px; max-width: 62ch; }
-.policy .panel p { margin: 0 0 8px; }
-.policy .panel code { font-family: var(--font-mono); font-size: var(--font-xs); overflow-wrap: anywhere; }
 .delay .val { font-family: var(--font-mono); font-size: var(--font-sm); font-variant-numeric: tabular-nums; min-width: 5.5em; text-align: right; }
 .slow-word { font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--caveat); }
 .hop.group > .body > details > summary { list-style: none; cursor: pointer; display: grid; gap: 6px; }
@@ -261,6 +263,7 @@ details.raw > summary .count { font-weight: 400; color: var(--text-2); font-size
 .rawbox .l .nm { color: var(--primary); }
 .rawbox mark { background: var(--caveat-bg); color: inherit; outline: 1px solid var(--caveat-border); border-radius: 2px; }
 .empty-raw { padding: 8px 12px; color: var(--muted); font-family: var(--font-body); font-size: var(--font-sm); }
+.rawbox .raw-more { margin-left: calc(3.5em + 10px); font-family: var(--font-body); text-align: left; }
 
 /* Guide: real text for readers and search engines, below the tool */
 .guide { display: grid; gap: 4px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
@@ -284,7 +287,6 @@ details.raw > summary .count { font-weight: 400; color: var(--text-2); font-size
 .site-foot a { color: var(--primary); font-weight: 500; text-underline-offset: 3px; }
 .site-foot .beta { margin-right: 6px; }
 .foot-links { display: flex; flex-wrap: wrap; gap: 4px 18px; }
-.site-foot .fine { color: var(--muted); font-size: var(--font-xs); }
 
 /* Sub-headings inside a card */
 .card h3 { font-size: var(--font-sm); font-weight: 600; margin: 18px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
@@ -406,13 +408,6 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
   <header class="top">
     <h1>Email Header Decoder <span class="beta">Beta</span></h1>
     <p class="lede">Paste the headers of any email and read, in one sentence, why it passed or failed SPF, DKIM, and DMARC, and what to fix.</p>
-    <details class="policy">
-      <summary><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.1c0 3.4 2.3 6.4 5.5 7.4 3.2-1 5.5-4 5.5-7.4V3.2L8 1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m5.6 8 1.7 1.7 3.2-3.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Nothing you paste leaves your browser. Read how.</summary>
-      <div class="panel">
-        <p>This page has no server behind it. The headers you paste are read by code running on this page, in your browser, and are never sent, stored, or logged anywhere.</p>
-        <p>It makes no network requests at all: no fonts, no analytics, no DNS lookups. Its Content Security Policy has no connect-src, so the browser itself blocks any attempt to send data out.</p>
-      </div>
-    </details>
   </header>
 
   <section class="card input" id="input-panel" aria-label="Paste headers">
@@ -441,31 +436,32 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <span class="read-as" id="read-as"></span>
       <span class="tools">
         <button class="btn small" type="button" id="copy-report">Copy report</button>
-        <span class="voice" role="group" aria-label="Wording">
-          <button type="button" data-voice="plain" aria-pressed="true">Plain</button>
-          <button type="button" data-voice="technical" aria-pressed="false">Technical</button>
-        </span>
       </span>
     </div>
     <section class="card finding" id="finding" aria-labelledby="h-finding"></section>
+    <details class="analysis" id="analysis">
+      <summary>Full analysis <span class="count">message, alignment, authentication, path, filter headers, raw headers</span></summary>
+      <div class="analysis-body">
     <section class="card" id="message" aria-labelledby="h-message"></section>
     <section class="card" id="alignment" aria-labelledby="h-alignment"></section>
     <section class="card" id="auth" aria-labelledby="h-auth"></section>
     <section class="card" id="path" aria-labelledby="h-path"></section>
     <section class="card" id="filters" aria-labelledby="h-filters"></section>
     <section class="card" id="raw"></section>
+      </div>
+    </details>
   </div>
   <p class="sr-only" id="live" aria-live="polite"></p>
 
   <section class="guide" aria-labelledby="h-guide">
     <h2 id="h-guide">What it reads</h2>
     <ul class="checks-list">
-      <li><strong>SPF, DKIM, and DMARC</strong> as the receiving server recorded them, each identifier checked for alignment with the From domain.</li>
-      <li><strong>A second DMARC result worked out on the page</strong> from those identifiers, set beside the receiver's own, with the reason when the two disagree.</li>
-      <li><strong>Forwarded mail.</strong> ARC headers show what passed before a forward, so the page can say when the forward broke a message the sender set up correctly.</li>
-      <li><strong>Every hop</strong> in order, with the delay at each one, TLS where the stamp records it, and the point where the receiver took custody. Hops above that point could have been written by the sender.</li>
-      <li><strong>Spam filter headers</strong> from Microsoft 365, Google, Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd, decoded in plain words with the raw value beside each one.</li>
-      <li><strong>The sending platform</strong>, named only when the evidence is strong, and the unsubscribe headers, including RFC 8058 one-click.</li>
+      <li><strong>SPF, DKIM, and DMARC</strong> are read as the receiving server recorded them. Each passing domain is checked against the domain in the From address.</li>
+      <li><strong>A second DMARC result</strong> is worked out on the page from those domains and set beside the receiver's own. When the two disagree, the page says why.</li>
+      <li><strong>Forwarded mail</strong> often carries ARC headers that show what passed before the forward. The page uses them to say when a forward broke a message the sender set up correctly.</li>
+      <li><strong>Every hop</strong> is listed in order, with its delay and whether it was encrypted. The page marks where the receiver took custody, since anything above that point could have been written by the sender.</li>
+      <li><strong>Spam filter headers</strong> from Microsoft 365, Google, Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd are decoded in plain words, with the raw value beside each one.</li>
+      <li><strong>The sending platform</strong> is named only when the evidence is strong. The unsubscribe headers are checked too, including RFC 8058 one-click.</li>
     </ul>
 
     <h2 id="h-how">How to copy the headers</h2>
@@ -474,27 +470,26 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <dt>Outlook and Outlook on the web</dt><dd>Open the message, select More actions, then View, then View message details. Copy everything in the box.</dd>
       <dt>Classic Outlook for Windows</dt><dd>Double-click the message to open it, then select File, then Properties. The headers are in the Internet headers box.</dd>
       <dt>Apple Mail</dt><dd>Select the message, then View, Message, Raw Source.</dd>
-      <dt>Any client</dt><dd>Save the message as an .eml file and drop it on the paste box. Only the headers are read; the body is ignored.</dd>
+      <dt>Any client</dt><dd>Save the message as an .eml file and drop it on the paste box. The page reads only the headers and ignores the body.</dd>
     </dl>
     <p class="note-line">Use the copy the recipient received. A copy from the Sent folder never passed through the receiving server, so it carries no authentication results.</p>
 
     <h2 id="h-faq">Questions</h2>
     <div class="faq">
       <details><summary>Why did a forwarded message fail DMARC?</summary><p>A forward sends the message on from the forwarder's server, so SPF checks the forwarder's address instead of the original sender's. If the forwarder also changes the message, for example by adding a footer, the DKIM signature no longer matches. With both gone, DMARC fails even though the sender did nothing wrong. When the forwarder adds ARC headers, this page reads the results recorded before the forward and says so.</p></details>
-      <details><summary>Does anything I paste leave my browser?</summary><p>No. The page has no server behind it and makes no network requests. Its Content Security Policy blocks any attempt to send data, so your headers stay on your machine.</p></details>
-      <details><summary>Why are there two DMARC results?</summary><p>The receiving server writes its DMARC result into the Authentication-Results header. This page also works the result out from the SPF and DKIM results and the domains involved. When the two differ, the page names the reason, such as a local policy override at the receiver.</p></details>
-      <details><summary>Why does it not verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups, so nothing about your message leaves the page.</p></details>
-      <details><summary>What does "aligned" mean?</summary><p>DMARC passes only when SPF or DKIM passes for a domain that matches the domain in the From address. A pass for some other domain, such as a mailing platform's own, is a pass that is not aligned, and it does not count toward DMARC.</p></details>
+      <details><summary>How does it read the headers?</summary><p>It reads them as the receiving servers wrote them. Dates follow RFC 5322, and a time zone it can't trust is read as UTC and marked. Encryption is taken from what each server recorded. DMARC finds a domain's parent with a DNS lookup (RFC 9989), which this page can't make, so it uses a short built-in list and marks any guess. ARC records are checked for structure, but their seals aren't verified.</p></details>
+      <details><summary>Why are there two DMARC results?</summary><p>The receiving server writes its DMARC result into the Authentication-Results header. This page also works the result out from the SPF and DKIM results and the domains involved. When the two differ, the page names the reason, such as a rule of the receiver's own that overrode the result.</p></details>
+      <details><summary>Why doesn't it verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups of its own.</p></details>
+      <details><summary>What does aligned mean?</summary><p>DMARC passes only when SPF or DKIM passes for a domain that matches the domain in the From address. A pass for some other domain, such as a mailing platform's own, isn't aligned, and it doesn't count toward DMARC.</p></details>
     </div>
   </section>
 </main>
 
 <footer class="site-foot">
   <div class="site-foot-in">
-    <p class="beta-note"><span class="beta">Beta</span> Found a message it reads wrong? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a> with what it said and what it should have said.</p>
-    <p>Built by <a href="https://dns-audit.com/about">Neil Anuskiewicz</a>. Need help with email deliverability, email security, or DNS? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a> or <a href="https://www.linkedin.com/in/neilanuskiewicz/" rel="noopener">message me on LinkedIn</a>.</p>
-    <p class="foot-links"><a href="https://dns-audit.com/">dns-audit.com</a><a href="https://dns-audit.com/articles/">Articles</a><a href="https://github.com/marmot7775/email-header-decoder" rel="noopener">Source on GitHub</a></p>
-    <p class="fine">Reads the headers as the receiving servers wrote them. Received dates follow RFC 5322, including the obsolete zones; a zone it cannot trust is read as UTC and marked. TLS is taken from each hop's with clause (RFC 3848) and the comments around it. Alignment checks each identifier against the From domain (RFC 7489); the organizational domain comes from a short built-in suffix list, not DNS, and the page marks it when that is a guess. ARC (RFC 8617) is checked for structure only; seals are not verified.</p>
+    <p class="beta-note"><span class="beta">Beta</span> Did it read a message wrong? Email <a href="mailto:dns@dns-audit.com">dns@dns-audit.com</a>.</p>
+    <p>Built by <a href="https://dns-audit.com/about">Neil Anuskiewicz</a>, an email deliverability and DNS consultant.</p>
+    <p class="foot-links"><a href="https://dns-audit.com/">dns-audit.com</a><a href="https://dns-audit.com/articles/">Articles</a><a href="https://www.linkedin.com/in/neilanuskiewicz/" rel="noopener">LinkedIn</a><a href="https://github.com/marmot7775/email-header-decoder" rel="noopener">Source on GitHub</a></p>
   </div>
 </footer>
 <!-- SCRIPTS -->
