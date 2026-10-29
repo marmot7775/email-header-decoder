@@ -1,0 +1,25 @@
+Received: from SA1P222CA0126.NAMP222.PROD.OUTLOOK.COM (2603:10b6:806:3c5::15)
+ by PH7PR10MB7106.namprd10.prod.outlook.com (2603:10b6:510:268::20) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9769.48; Fri, 17 Apr
+ 2026 06:31:04 +0000
+Received: from SN1PEPF0002636B.namprd02.prod.outlook.com
+ (2603:10b6:806:3c5:cafe::2) by SA1P222CA0126.outlook.office365.com
+ (2603:10b6:806:3c5::15) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9769.52 via Frontend Transport; Fri,
+ 17 Apr 2026 06:31:04 +0000
+Authentication-Results: =?utf-8?B?c3BmPXBhc3MgKHNlbmRlciBJUCBpcyAyMDMuMC4xMTMuMTg5KSBzbXRwLm1haWxmcm9tPXNlbmRlci5leGFtcGxlOyBka2ltPW5vbmUgKG1lc3NhZ2Ugbm90IHNpZ25lZCkgaGVhZGVyLmQ9bm9uZTtkbWFyYz1ub25lIGFjdGlvbj1ub25lIGhlYWRlci5mcm9tPfCdkJ/wnZCu8J2Qp/CdkJstY2x1Yi5leGFtcGxlOw==?=
+Received: from mta.sender.example (203.0.113.189) by
+ SN1PEPF0002636B.mail.protection.outlook.com (10.167.241.136) with Microsoft
+ SMTP Server id 15.20.9769.17 via Frontend Transport; Fri, 17 Apr 2026
+ 06:31:03 +0000
+From: Club <noreply@𝐟𝐮𝐧𝐛-club.example>
+To: reader@example.com
+Subject: Your bonus is waiting
+Date: Fri, 17 Apr 2026 06:31:00 +0000
+Message-ID: <a1@mta.sender.example>
+List-Unsubscribe: <mailto:unsub@sender.example>
+ 
+Return-Path: bounce@sender.example
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Exchange-Organization-AuthSource: SN1PEPF0002636B.namprd02.prod.outlook.com

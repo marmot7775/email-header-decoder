@@ -32,6 +32,9 @@
   const IDS = ['header.d', 'header.i', 'header.s', 'header.b', 'smtp.mailfrom', 'smtp.helo', 'header.from'];
 
   function parseAuthResults(value) {
+    // Exchange Online writes the whole field as RFC 2047 encoded words
+    // when header.from holds non-ASCII text, a look-alike domain.
+    if (/^\s*=\?[^?\s]+\?[bq]\?/i.test(value || '')) value = P.decodeWords(value);
     const out = { raw: value, authserv: '', version: '', instance: null, results: [], none: false };
     const parts = splitOutside(value, ';').map(s => s.trim()).filter(s => s !== '');
     if (!parts.length) return out;
@@ -285,7 +288,11 @@
     const b = chain.trust.boundaryIdx;
     const custodyTop = b >= 0 ? chain.hops[b].src[0] : -1;
     const senderTop = b > 0 ? chain.hops[b - 1].src[0] : custodyTop;
-    const reportSet = all.filter(r => r.primary || (!r.untrusted && r.index < senderTop));
+    // Proton's exported messages carry its fields under the whole Received
+    // block, where a sender could write fields too. They count, with a note.
+    const anywhere = !!primary && HA.received.operatorOf(primary.authserv) === 'Proton';
+    const reportSet = all.filter(r => r.primary || (!r.untrusted && (r.index < senderTop || anywhere)));
+    const lowered = anywhere && reportSet.some(r => !r.primary && r.index >= senderTop);
     // A receiver that seals its own ARC set copies its results into that
     // set's ARC-Authentication-Results, above its first Received stamp,
     // where no sender can put them. A method missing from the trusted set
@@ -404,6 +411,7 @@
       const named = m.length > 1 ? m.slice(0, -1).join(', ') + ' and ' + m[m.length - 1] + ' results come' : m[0] + ' result comes';
       notes.push(say('caveat', 'The ' + named + ' from the ARC-Authentication-Results ' + primary.authserv + ' wrote when it sealed the message, since its other Authentication-Results fields sit where a sender could have written them.', 'Some of the receiving system\'s check results are read from a second copy it keeps of them.', [ownAar.f.index]));
     }
+    if (lowered) notes.push(say('caveat', 'Proton puts its Authentication-Results fields under every Received field when it exports a message, where a sender could have written fields too. They are read as ' + primary.authserv + '\'s own, since Proton always places them there.', 'Proton keeps its check results in a spot where a sender could also add text, so they are trusted here because Proton always puts them there.', reportSet.filter(r => !r.primary && r.index >= senderTop).flatMap(r => r.src)));
     const auth = { all, primary: primary ? all.indexOf(primary) : -1, primaryRule, exchangeOnline: exo, spf, dkim, signatures, receivedSpf, dmarc, computed, arc, arcResult, compauth, notes };
     authNotes(auth);
     return { auth, alignment: alignmentOf(from, dkim, spf, computed) };

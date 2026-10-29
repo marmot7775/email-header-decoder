@@ -353,3 +353,31 @@ test('mail straight from the sender: results below the receiver\'s only stamp co
   assert.equal(r.auth.spf.result, 'none');
   assert.ok(r.auth.notes.some(n => /^The spf and dmarc results come from the ARC-Authentication-Results smtp\.lists\.example wrote/.test(n.technical)));
 });
+
+// Patterns from public phishing samples received at Outlook and Proton (2026-10-29), rebuilt with synthetic names.
+test('Exchange Online: an Authentication-Results field in encoded words is decoded, a line of spaces does not end the headers, and look-alike letters in the From domain are flagged', () => {
+  const r = run('exo-encoded-ar-lookalike.txt');
+  assert.ok(r.fields.some(f => f.name === 'X-MS-Exchange-Organization-AuthAs'));
+  assert.equal(r.auth.primary, 0);
+  assert.equal(r.auth.spf.result, 'pass');
+  assert.ok(r.finding.flags.some(f => /look-alike characters that read as funb-club\.example/.test(f.technical)));
+});
+
+test('Proton: its own fields under the whole Received block count, with a note', () => {
+  const r = run('proton-ar-at-bottom.txt');
+  assert.equal(r.finding.status, 'pass');
+  assert.equal(r.auth.spf.result, 'pass');
+  assert.ok(r.auth.notes.some(n => /^Proton puts its Authentication-Results fields under every Received field/.test(n.technical)));
+});
+
+test('a quoted display name split off by a comma is not a second From address', () => {
+  const a = HA.parse.parseAddresses('"Promotions@shop.example", <service@other.example>');
+  assert.deepEqual(a.map(x => x.domain), ['other.example']);
+  assert.equal(HA.parse.parseAddresses('<x@trailing.example.>')[0].domain, 'trailing.example');
+});
+
+test('a look-alike From domain replaces the setup advice with a phishing warning', () => {
+  const f = run('exo-encoded-ar-lookalike.txt').finding;
+  assert.equal(f.fixes.length, 1);
+  assert.match(f.fixes[0].technical, /^Treat the message as phishing/);
+});

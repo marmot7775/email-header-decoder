@@ -307,3 +307,15 @@ Decisions
             tag. Known limit: Proton strips its Received fields, so
             at a receiver that seals below its stamp the page shows
             the reported pass without the results behind it.
+2026-10-29  Second real mail pass: 12,864 public phishing samples
+            received at Outlook, Hotmail, Gmail, Proton and Zoho
+            (rf-peixoto/phishing_pot), run locally, none committed.
+            Unknown findings fell from 618 to 179. Fixes: a line of
+            spaces no longer ends the header block (186 messages had
+            lost every Microsoft field); Exchange's encoded word
+            Authentication-Results is decoded; Proton's fields under
+            the Received block count, with a note; a quoted display
+            name split off by a comma, and a trailing dot, no longer
+            make a second From domain. New flag: a From domain in
+            look-alike letters such as mathematical bold.
+
