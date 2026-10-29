@@ -277,18 +277,35 @@
     const primaryRule = !primary ? '' : primary.authserv ? 'operator' : 'exchange-online';
     // The receiver's own fields. iCloud writes one field per method, so
     // results are gathered from all of them, the first per method winning.
-    // Beside the primary, a field counts only above the receiver's first
-    // Received stamp: one below it was in the message before custody, and
-    // the sender could have written it with the receiver's authserv-id.
+    // Beside the primary, a field counts only above the Received field of
+    // the last hop before the receiver took custody, the rule Received-SPF
+    // follows: Postfix filters write theirs just below Postfix's own stamp.
+    // With no hop before the receiver, only fields above its own first
+    // stamp count, since the sender could have written the rest.
     const b = chain.trust.boundaryIdx;
     const custodyTop = b >= 0 ? chain.hops[b].src[0] : -1;
-    const reportSet = all.filter(r => r.primary || (!r.untrusted && r.index < custodyTop));
-    const reported = (method) => { for (const r of reportSet) { const es = r.entries.filter(e => e.method === method); if (es.length) return es; } return []; };
+    const senderTop = b > 0 ? chain.hops[b - 1].src[0] : custodyTop;
+    const reportSet = all.filter(r => r.primary || (!r.untrusted && r.index < senderTop));
+    // A receiver that seals its own ARC set copies its results into that
+    // set's ARC-Authentication-Results, above its first Received stamp,
+    // where no sender can put them. A method missing from the trusted set
+    // is read from there: kernel.org writes its other fields below its
+    // stamp, which counts for nothing when no hop came before it.
+    const ownAar = !primary || !primary.authserv ? null : fields.filter(f => f.lower === 'arc-authentication-results' && f.index < custodyTop)
+      .map(f => ({ f, ar: parseAuthResults(f.value) })).filter(x => x.ar.instance && x.ar.authserv === primary.authserv)
+      .sort((a, b) => b.ar.instance - a.ar.instance)[0] || null;
+    const ownAarEntries = ownAar ? ownAar.ar.results.map(r => ({ method: r.method, result: r.result, state: resultState(r.result), reason: r.reason, ids: r.ids, props: r.props, policy: r.policy, comments: r.comments, text: r.text, field: ownAar.f.index, src: [ownAar.f.index] })) : [];
+    const fromOwnAar = new Set();
+    const reported = (method) => {
+      for (const r of reportSet) { const es = r.entries.filter(e => e.method === method); if (es.length) return es; }
+      const es = ownAarEntries.filter(e => e.method === method);
+      if (es.length) fromOwnAar.add(method);
+      return es;
+    };
 
     // Received-SPF counts when the receiver wrote it: above the Received
     // field of the last hop before the receiver took custody, or, with no
     // hop before the receiver, above the receiver's own first stamp.
-    const senderTop = b > 0 ? chain.hops[b - 1].src[0] : custodyTop;
     const rspfFields = fields.filter(f => f.lower === 'received-spf');
     const receivedSpf = rspfFields.map(f => Object.assign(parseReceivedSpf(f.value), { src: [f.index], trusted: b >= 0 && f.index < senderTop }));
     const dkimFields = fields.filter(f => f.lower === 'dkim-signature');
@@ -382,6 +399,11 @@
     const computed = computeDmarc(from, rows, dkim, spf, all, primary);
     dmarc.disagreement = compare(dmarc, computed, from, rows, arc, arcResult);
 
+    if (fromOwnAar.size) {
+      const m = Array.from(fromOwnAar);
+      const named = m.length > 1 ? m.slice(0, -1).join(', ') + ' and ' + m[m.length - 1] + ' results come' : m[0] + ' result comes';
+      notes.push(say('caveat', 'The ' + named + ' from the ARC-Authentication-Results ' + primary.authserv + ' wrote when it sealed the message, since its other Authentication-Results fields sit where a sender could have written them.', 'Some of the receiving system\'s check results are read from a second copy it keeps of them.', [ownAar.f.index]));
+    }
     const auth = { all, primary: primary ? all.indexOf(primary) : -1, primaryRule, exchangeOnline: exo, spf, dkim, signatures, receivedSpf, dmarc, computed, arc, arcResult, compauth, notes };
     authNotes(auth);
     return { auth, alignment: alignmentOf(from, dkim, spf, computed) };

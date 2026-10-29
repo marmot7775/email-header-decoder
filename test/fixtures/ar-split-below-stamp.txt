@@ -1,0 +1,19 @@
+Authentication-Results: smtp.lists.example; arc=none smtp.remote-ip=198.51.100.40
+ARC-Seal: i=1; d=lists.example; s=arc2026; a=rsa-sha256; cv=none; t=1793296783; b=SyntheticSeal0701
+ARC-Message-Signature: i=1; d=lists.example; s=arc2026; a=rsa-sha256; c=relaxed/relaxed; t=1793296783; h=Received:From:To:Subject:Date:Message-ID; bh=SyntheticBh0701=; b=SyntheticAms0701
+ARC-Authentication-Results: i=1; smtp.lists.example;
+	dmarc=permerror header.from=author.example;
+	spf=none smtp.mailfrom=host.author.example;
+	arc=none smtp.remote-ip=198.51.100.40
+Received: from host.author.example (host.author.example [198.51.100.40])
+	by smtp.lists.example (Postfix) with ESMTP id F1A3C606A31A
+	for <dev@lists.example>; Thu, 29 Oct 2026 17:59:41 +0000 (UTC)
+Authentication-Results: smtp.lists.example; dmarc=permerror header.from=author.example
+Authentication-Results: smtp.lists.example; spf=none smtp.mailfrom=host.author.example
+Received: by host.author.example (Postfix, from userid 25121)
+	id D52EC18002E8D4; Thu, 29 Oct 2026 18:59:41 +0100 (CET)
+From: Sam Author <sam@author.example>
+To: dev@lists.example
+Subject: [PATCH v2] fix the cache topology
+Date: Thu, 29 Oct 2026 18:59:41 +0100
+Message-ID: <20261029175941.1@host.author.example>

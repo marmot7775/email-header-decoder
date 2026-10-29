@@ -94,7 +94,10 @@ test('forwarded mail that already failed before the forward stays a sender failu
 test('a broken ARC chain is not trusted to shift the blame', () => {
   const f = run('arc-cv-fail.txt').finding;
   assert.equal(f.status, 'fail');
-  assert.ok(f.details.some(x => /not blamed on the forward/.test(x.technical)));
+  assert.ok(!f.forwarded.blamed);
+  // The list re-sent it, so the list explanation applies, quoting its seal's record as unverified.
+  assert.match(f.headline.technical, /came through the mailing list club\.list\.example/);
+  assert.match(f.cause.technical, /in its ARC-Authentication-Results field\. The list's own server wrote that record and this page cannot verify it/);
 });
 
 test('the receiver\'s own ARC seal is not a forward', () => {
@@ -312,4 +315,41 @@ test('Simple wording uses none of the technical words', () => {
     for (const x of all) if (x.plain && (SIMPLE_BANNED.test(x.plain.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')) || x.plain.includes(';'))) bad.push(name + ': ' + x.plain);
   }
   assert.deepEqual(Array.from(new Set(bad)).slice(0, 40), []);
+});
+
+// Patterns from real list traffic (kernel.org, 2026-10-29), rebuilt with synthetic names.
+test('the receiver\'s results split across fields just below its own stamp are all read', () => {
+  const r = run('ar-split-below-stamp.txt');
+  assert.equal(r.finding.status, 'error');
+  assert.equal(r.auth.dmarc.result, 'permerror');
+  assert.equal(r.auth.spf.result, 'none');
+});
+
+test('Gmail\'s seal on sent mail is not a forward, and an author\'s [PATCH] is not a list tag', () => {
+  const f = run('gmail-outbound-seal-list.txt').finding;
+  assert.equal(f.forwarded.yes, false);
+  assert.equal(f.status, 'fail');
+  assert.match(f.headline.technical, /came through the mailing list dev\.lists\.example/);
+  assert.doesNotMatch(f.cause.technical, /already failing|list tag/);
+});
+
+test('Microsoft 365 sealing a tenant\'s outgoing mail is not a forward', () => {
+  const f = run('m365-outbound-seal.txt').finding;
+  assert.equal(f.status, 'pass');
+  assert.equal(f.forwarded.yes, false);
+  assert.doesNotMatch(f.cause.technical, /forwarded by/);
+});
+
+test('a field with the receiver\'s authserv-id below the previous hop\'s stamp is still not trusted', () => {
+  const text = fixture('ar-split-below-stamp.txt').replace('From: Sam Author', 'Authentication-Results: smtp.lists.example; dkim=pass header.d=author.example header.s=forged\nFrom: Sam Author');
+  const a = HA.analyze(text).auth;
+  assert.ok(!a.dkim.some(k => k.result === 'pass'));
+});
+
+test('mail straight from the sender: results below the receiver\'s only stamp come from its own ARC record', () => {
+  const text = fixture('ar-split-below-stamp.txt').replace(/Received: by host\.author\.example[^\n]*\n[^\n]*\n/, '');
+  const r = HA.analyze(text);
+  assert.equal(r.auth.dmarc.result, 'permerror');
+  assert.equal(r.auth.spf.result, 'none');
+  assert.ok(r.auth.notes.some(n => /^The spf and dmarc results come from the ARC-Authentication-Results smtp\.lists\.example wrote/.test(n.technical)));
 });
