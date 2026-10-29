@@ -1,7 +1,7 @@
 Email Header Decoder, plan
 
 Four steps. Each ends with a report and a commit, and the next prompt
-is handed out only after that. Status as of 2026-10-25.
+is handed out only after that. Status as of 2026-10-29.
 
 1  Repo, parser, hop timeline, page skeleton, tests, build.    DONE
    parse.js (header block in a bare paste, a full .eml, a Show
@@ -37,7 +37,7 @@ is handed out only after that. Status as of 2026-10-25.
    original step 3 prompt, commit bc8930f: Microsoft PCL, AuthSource,
    SFS, AuthAs External and Partner, and the Message-ID domain.
 
-4  Copy pass, design, mobile, hosting.                      IN PROGRESS
+4  Copy pass, design, mobile, hosting.                      DONE
    Design pass done 2026-10-25: dns-audit.com site bar and footer,
    Beta label, check tiles, plain first with the technical line
    under it, numbered fixes, evidence folded, quieter line chips,
@@ -285,3 +285,11 @@ Decisions
 2026-10-29  Mailbox-Delivery dest:I and dest:J are read as the Inbox
             and the Junk Email folder, labelled as not documented by
             Microsoft. Any other dest value gets no reading.
+2026-10-29  Step 4 closed. The polish pass deployed (Worker version
+            4850b909, main 0073213). Live check in Chromium at 320,
+            375 and 1280px in both themes: six fixtures read, no
+            sideways scroll, no page errors, DM Sans loaded, the
+            theme switch works, and one usage note reached the
+            droplet log flagged as a bot. Merged branches deleted.
+            From here the app is in upkeep: fix what real pastes
+            turn up.
