@@ -148,7 +148,16 @@
   function forwardOf(auth, chain, from) {
     const op = chain.trust.operator;
     const opOf = (s) => HA.received.operatorOf(s.sealer.host) || HA.received.operatorOf(s.sealer.domain);
-    const sets = auth.arc.instances.filter(s => !op || opOf(s) !== op);
+    // Not a forward either: a set whose record holds no SPF, DKIM or DMARC
+    // result (Gmail seals sent mail with arc=none alone), or an i=1 set
+    // from the operator the message started at: the first hop was a login,
+    // or stayed inside that operator (Microsoft 365 seals a tenant's
+    // outgoing mail).
+    const first = chain.hops[0];
+    const startedThere = first && (first.authenticated || first.internal || HA.received.operatorOf(first.fromHost) === HA.received.operatorOf(first.byHost));
+    const originOp = startedThere ? HA.received.operatorOf(first.byHost) : '';
+    const checked = (s) => s.preForward.some(x => ['spf', 'dkim', 'dmarc'].includes(x.method));
+    const sets = auth.arc.instances.filter(s => (!op || opOf(s) !== op) && checked(s) && !(s.i === 1 && originOp && opOf(s) === originOp));
     if (!sets.length) return { yes: false, by: [], writer: '', pre: [], preResult: '', intact: false, receiverArc: '', src: [] };
     const set = sets[0];
     const pre = set.preForward;
@@ -159,7 +168,7 @@
       const ok = pre.some(x => x.result === 'pass' && (x.method === 'dkim' ? HA.auth.alignRow('dkim', P.domainOf(x.ids['header.d'] || x.ids['header.i'] || ''), 'pass', from).relaxed : x.method === 'spf' ? HA.auth.alignRow('spf', P.domainOf(x.ids['smtp.mailfrom'] || ''), 'pass', from).relaxed : false));
       preResult = ok ? 'pass' : 'fail';
     }
-    return { yes: true, by: sets.map(s => s.sealer.domain || s.sealer.host || 'an unnamed forwarder'), writer: set.sealer.host || set.sealer.domain || 'the first forwarder', set: set.i, pre, preResult, derived: !dm && !!preResult, intact: auth.arc.state === 'pass', receiverArc: auth.arcResult ? auth.arcResult.result : '', src: uniq(sets.flatMap(s => s.src)), aarSrc: set.aar ? [set.aar.field] : set.src.slice() };
+    return { yes: true, by: Array.from(new Set(sets.map(s => s.sealer.domain || s.sealer.host || 'an unnamed forwarder'))), writer: set.sealer.host || set.sealer.domain || 'the first forwarder', set: set.i, pre, preResult, derived: !dm && !!preResult, intact: auth.arc.state === 'pass', receiverArc: auth.arcResult ? auth.arcResult.result : '', src: uniq(sets.flatMap(s => s.src)), aarSrc: set.aar ? [set.aar.field] : set.src.slice() };
   }
   function preText(fw) {
     return joinList(fw.pre.filter(x => ['spf', 'dkim', 'dmarc'].includes(x.method)).map(x => {
@@ -187,7 +196,11 @@
     const ar = orig ? HA.auth.parseAuthResults(orig.value) : null;
     const pre = ar ? ar.results.filter(x => ['spf', 'dkim', 'dmarc'].includes(x.method)) : [];
     const dmPre = pre.find(x => x.method === 'dmarc');
-    const tag = /^\s*(?:(?:re|fwd?|aw)\s*:\s*)*(\[[^\]]+\])/i.exec(message.subject ? message.subject.value : '');
+    // A subject tag counts as the list's only when it names the list: an
+    // author's own [PATCH v2 1/2] is not a change the list made.
+    const label = id.split('.')[0].replace(/[^a-z0-9]/g, '');
+    const lead = /^\s*(?:(?:re|fwd?|aw)\s*:\s*|\[[^\]]{1,80}\]\s*)*/i.exec(message.subject ? message.subject.value : '')[0];
+    const tag = (lead.match(/\[[^\]]{1,80}\]/g) || []).map(t => [null, t]).find(t => { const n = t[1].slice(1, -1).toLowerCase().replace(/[^a-z0-9]/g, ''); return n.length > 1 && label.length > 1 && (label.includes(n) || n.includes(label)); }) || null;
     return { yes: true, id, org, resent, broken: auth.dkim.filter(k => k.result === 'fail' && !ofList(k.domain)), writer: (ar && ar.authserv) || 'the list\'s server', origName: orig ? orig.name : '', pre, preResult: dmPre ? dmPre.result : '', preSrc: orig ? [orig.index] : [], tag: tag ? tag[1] : '', mailman: fields.some(f => f.lower === 'x-mailman-version'), src: lid.src };
   }
 
@@ -345,7 +358,12 @@
     const list = listOf(ctx);
     // The list is blamed only when it re-sent the mail under its own domain
     // and its server did not record a failure before the list.
-    list.take = list.yes && list.resent && !fw.yes && list.preResult !== 'fail';
+    // A list that ARC-seals what it forwards shows up as a forward too.
+    // Unless the receiver vouched for that forward, the list explanation
+    // wins, and the seal's record stands in for the list's own.
+    const vouched = fw.yes && fw.preResult === 'pass' && fw.intact && (fw.receiverArc === 'pass' || !!(auth.compauth && auth.compauth.reason === '130'));
+    if (list.yes && fw.yes && !list.pre.length && fw.pre.length) Object.assign(list, { pre: fw.pre.filter(x => ['spf', 'dkim', 'dmarc'].includes(x.method)), preResult: fw.preResult, writer: fw.writer, origName: 'ARC-Authentication-Results', preSrc: fw.aarSrc });
+    list.take = list.yes && list.resent && !vouched && list.preResult !== 'fail';
     const c = Object.assign({}, ctx, { receiver, svc, fw, dm, list });
     const out = { status: 'unknown', state: 'unknown', headline: null, cause: null, consequence: null, details: [], fixes: [], flags: [], limits: [], forwarded: { yes: fw.yes, by: fw.by, preForward: fw.yes ? { writer: fw.writer, result: fw.preResult, derived: !!fw.derived, text: preText(fw), src: fw.aarSrc } : null, src: fw.src } };
     const finish = (status, headline, cause) => {
@@ -385,7 +403,7 @@
         say('unknown', 'The field is there, but it lists no method this page reads' + (primary.none ? ' (it reports none).' : '.'), 'There is nothing in the record to go on.', primary.src));
     }
 
-    const via = fw.yes ? 'forward' : list.take ? 'list' : '';
+    const via = list.take ? 'list' : fw.yes ? 'forward' : '';
     for (const k of auth.dkim) out.details.push(rowSentence(k, fd, via));
     const spfRow = rowSentence(auth.spf, fd, via);
     out.details.push(spfRow);
@@ -446,7 +464,7 @@
     // an i=1 set of its own.
     const fp = failPieces(auth);
     const fcl = failClause(fp, fd);
-    if (fw.yes) {
+    if (fw.yes && !list.take) {
       const pre = preText(fw);
       const preSay = 'before the forward, ' + fw.writer + ' recorded ' + (pre || 'no results') + (fw.derived ? ', which aligns with ' + fd : '');
       const vouched = fw.receiverArc === 'pass' || !!(auth.compauth && auth.compauth.reason === '130');

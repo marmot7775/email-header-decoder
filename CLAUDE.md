@@ -159,7 +159,17 @@ together, and the receiver reported arc=pass (or Microsoft
 compauth reason 130). This page does not verify seals, so a sender
 can write an ARC set; without the receiver's word it is not a
 forward. An ARC set the final receiver sealed itself is not a
-forward.
+forward. Nor is a set whose record holds no SPF, DKIM or DMARC
+result (Gmail seals sent mail with arc=none alone), or an i=1 set
+from the operator the message started at, where the first hop was
+a login or stayed inside that operator (Microsoft 365 sealing a
+tenant's outgoing mail).
+
+A mailing list that ARC-seals what it forwards is still a list.
+Unless the receiver vouched for the forward, the list explanation
+wins, quoting the seal's record as unverified. A subject tag counts
+as the list's only when it names the list; an author's [PATCH v2]
+is not one.
 
 A filter header below the receiver's first Received stamp is
 marked before custody. Microsoft's own fields count as the
@@ -207,6 +217,15 @@ light both work. No horizontal scroll at 375px.
   authserv-id. No trusted field means no primary and computed
   DMARC is none.
 - An id-less field without Exchange Online headers is untrusted.
+- The receiver's other Authentication-Results fields (same
+  operator as the primary) count down to the Received field of the
+  last hop before custody, the Received-SPF rule: Postfix filters
+  write theirs just below Postfix's own stamp. With no hop before
+  the receiver, only fields above its own stamp count, and a
+  missing method is read from the ARC-Authentication-Results the
+  receiver wrote above its stamp when it sealed the message, with
+  a note saying so (2026-10-29, from kernel.org and sourceware.org
+  list mail).
 - Received-SPF counts only when it sits above the last sender-side
   Received field, and is the SPF source only when the primary set
   has no spf= result.

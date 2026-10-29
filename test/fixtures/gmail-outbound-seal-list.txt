@@ -1,0 +1,27 @@
+Received: from bombadil.lists.example (bombadil.lists.example [198.51.100.133])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
+	by smtp.archive.example (Postfix) with ESMTPS id 74F18606A31A
+	for <dev@archive.example>; Wed, 28 Oct 2026 22:43:40 +0000 (UTC)
+Authentication-Results: smtp.archive.example;
+	dkim=pass (2048-bit key) header.d=lists.example header.i=@lists.example header.s=bombadil.2021 header.b=t3Frn1qY;
+	dkim=fail reason="signature verification failed" (2048-bit key) header.d=gmail.com header.i=@gmail.com header.s=20260707 header.b=xfekL2eJ
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=lists.example; s=bombadil.2021; h=Sender:List-Id:From:Subject:Date:Message-ID; bh=SyntheticBh0801=; b=t3Frn1qYSynthetic0801
+Received: from mail-qk1-x72f.google.com ([2607:f8b0:4864:20::72f])
+	by bombadil.lists.example with esmtps (Exim 4.100.1)
+	id 1xMCMh-000000081tx-3CV2
+	for dev@lists.example; Wed, 28 Oct 2026 22:43:29 +0000
+ARC-Seal: i=1; a=rsa-sha256; t=1793227406; cv=none; d=google.com; s=arc-20240605; b=SyntheticSeal0801
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605; h=from:to:subject:date:message-id; bh=SyntheticBh0802=; b=SyntheticAms0801
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20260707; t=1793227406; h=from:to:subject:date:message-id; bh=SyntheticBh0803=; b=xfekL2eJSynthetic0802
+Received: from laptop.home.example ([2600:4040:ad65:1c00::886])
+	by smtp.gmail.com with ESMTPSA id af79cd13be357-940f0787d96sm1370085685a.28
+	(version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+	Wed, 28 Oct 2026 15:43:25 -0700 (PDT)
+From: Pat Writer <pat.writer@gmail.com>
+To: dev@lists.example
+Subject: [PATCH v2 1/2] trim the register lookup
+Date: Wed, 28 Oct 2026 15:43:25 -0700
+Message-ID: <20261028224325.1@gmail.com>
+List-Id: <dev.lists.example>
+Sender: "dev" <dev-bounces@lists.example>

@@ -293,3 +293,17 @@ Decisions
             droplet log flagged as a bot. Merged branches deleted.
             From here the app is in upkeep: fix what real pastes
             turn up.
+2026-10-29  Real mail test: 9,272 messages from the kernel.org and
+            sourceware.org public list archives, run through
+            analyze() locally, none committed. No crash, p99 under
+            5 ms. Four fixes, each with a synthetic fixture: the
+            receiver's per method Authentication-Results fields just
+            below its own stamp now count (2,040 kernel and 758
+            sourceware messages had read as unknown or as a pass for
+            no shown reason); with no earlier hop, its own ARC record
+            fills the gap; Gmail's and Microsoft 365's seals on sent
+            mail are not forwards; a list that ARC-seals gets the
+            list explanation, and an author's [PATCH] is not a list
+            tag. Known limit: Proton strips its Received fields, so
+            at a receiver that seals below its stamp the page shows
+            the reported pass without the results behind it.

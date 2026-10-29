@@ -1,0 +1,25 @@
+Received: from mx.lists.example (mx.lists.example [131.252.210.177])
+	by smtp.archive.example (Postfix) with ESMTPS id 2B11C606A31A
+	for <dev@archive.example>; Wed, 28 Oct 2026 23:59:40 +0000 (UTC)
+Authentication-Results: smtp.archive.example;
+	dkim=pass (2048-bit key) header.d=corp.example header.i=@corp.example header.s=s2026 header.b=Ab12Cd34;
+	spf=pass smtp.mailfrom=corp.example;
+	dmarc=pass header.from=corp.example
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=corp.example; s=s2026; h=from:to:subject:date:message-id; bh=SyntheticBh0901=; b=Ab12Cd34Synthetic0901
+Received: from BYAPR05CU005.outbound.protection.outlook.com (52.101.85.7) by
+ mx.lists.example (Postfix) with ESMTPS id 95C7F10E71F
+ for <dev@lists.example>; Wed, 28 Oct 2026 23:59:31 +0000 (UTC)
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none; b=SyntheticSeal0901
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com; s=arcselector10001; h=From:Date:Subject:Message-ID; bh=SyntheticBh0902=; b=SyntheticAms0901
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=corp.example; dmarc=pass action=none header.from=corp.example;
+ dkim=pass header.d=corp.example; arc=none
+Received: from SJ0PR11MB1234.namprd11.prod.outlook.com (2603:10b6:a03:1234::5) by
+ BYAPR05CU005.namprd05.prod.outlook.com (2603:10b6:a03:5678::9) with Microsoft SMTP
+ Server (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.20.9253.12; Wed, 28 Oct 2026 23:59:29 +0000
+From: Robin Dev <robin@corp.example>
+To: dev@lists.example
+Subject: [PATCH] tidy the driver probe
+Date: Wed, 28 Oct 2026 23:59:28 +0000
+Message-ID: <20261028235928.1@corp.example>
