@@ -156,7 +156,7 @@
     if (f.cause) L.push('', 'Why: ' + f.cause.plain);
     if (f.consequence) L.push('', 'What the DMARC setting did: ' + f.consequence.plain);
     if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
-    L.push('', 'Decoded in the browser at headers.dns-audit.com. The headers weren\'t sent anywhere.');
+    L.push('', 'Decoded at headers.dns-audit.com.');
     return L.join('\n');
   }
   function copyText(text) {
@@ -529,7 +529,7 @@
       R = null;
       $('results').hidden = false;
       $('read-as').textContent = '';
-      $('finding').innerHTML = '<h2 id="h-finding">Could not read these headers</h2><p>Something in this paste stopped the page from reading it. Nothing was sent anywhere.</p>';
+      $('finding').innerHTML = '<h2 id="h-finding">Could not read these headers</h2><p>Something in this paste stopped the page from reading it.</p>';
       ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).innerHTML = ''; $(id).hidden = true; });
       return;
     }

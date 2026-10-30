@@ -109,6 +109,10 @@ Decisions
             Neil can see the tool is used. Headers still never leave,
             but the page no longer says so: the policy panel and the
             "leave my browser" FAQ are gone.
+2026-10-30  The last three browser only lines are gone: the JSON-LD
+            browserRequirements, the error screen's Nothing was
+            sent anywhere, and the copied report's closing line,
+            which now says Decoded at headers.dns-audit.com.
 2026-10-23  Step 2 check rules, as listed in CLAUDE.md under
             Settled by the step 2 check.
 2026-10-24  Renamed Header Verdict to Email Header Decoder; the one
