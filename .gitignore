@@ -1,3 +1,6 @@
 dist/
 node_modules/
 lcov.info
+
+# Nightly fix run scratch (see .github/workflows/nightly-fix.yml)
+.nightly/
