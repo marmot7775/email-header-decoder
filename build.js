@@ -25,7 +25,7 @@ const SAMPLES = { gmail: 'gmail-show-original.txt', esp: 'esp-unaligned.txt', fo
 const cspFor = (script) => "default-src 'none'; script-src 'sha256-" + crypto.createHash('sha256').update(script, 'utf8').digest('base64') + "'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src " + USAGE_ORIGIN + "; form-action 'none'; base-uri 'none'";
 // Links the page may carry. A link sends nothing until someone follows it;
 // the CSP still blocks every request the page itself could make.
-const LINKS = /https?:\/\/(?!datatracker\.ietf\.org|www\.rfc-editor\.org|dns-audit\.com|www\.linkedin\.com\/in\/neilanuskiewicz|github\.com\/marmot7775)/;
+const LINKS = /https?:\/\/(?!datatracker\.ietf\.org|www\.rfc-editor\.org|(?:headers\.|aprf\.)?dns-audit\.com|www\.linkedin\.com\/in\/neilanuskiewicz|github\.com\/marmot7775)/;
 
 const TITLE = 'Email Header Decoder: why SPF, DKIM, or DMARC failed';
 const DESCRIPTION = 'This free email header analyzer shows in one sentence why a message passed or failed SPF, DKIM, and DMARC, and what to fix.';

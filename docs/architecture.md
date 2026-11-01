@@ -54,7 +54,7 @@ src/finding.js   The finding, the one sentence result. Reads
 src/analyze.js   analyze(text) returns one plain result object.
                  The page renders it; the tests assert on it.
 
-ui/page.html     Markup and tokens. The dns-audit.com site bar,
+ui/page.html     Markup and tokens. The shared site header,
                  the paste box, then the results: finding (headline,
                  what to do, the four check tiles, why, what the
                  DMARC setting did, evidence), message, alignment,
