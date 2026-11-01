@@ -42,7 +42,8 @@ function read(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
 const FONTS = [['DM Sans', 'dm-sans-normal-latin.woff2'], ['JetBrains Mono', 'jetbrains-mono-latin.woff2']];
 const fontFaces = () => FONTS.map(([family, file]) => "@font-face { font-family: '" + family + "'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(data:font/woff2;base64," + fs.readFileSync(path.join(ROOT, 'ui/fonts', file)).toString('base64') + ") format('woff2'); }").join('\n');
 const attr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-const text = (html) => html.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+const stripTags = (h) => { let p; do { p = h; h = h.replace(/<[^>]*>/g, ''); } while (h !== p); return h.replace(/</g, ''); };
+const text = (html) => stripTags(html).replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 
 // The FAQ structured data is read from the page's own FAQ, so the two
 // cannot drift apart.

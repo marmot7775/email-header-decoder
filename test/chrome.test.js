@@ -33,7 +33,8 @@ const firstNav = block(/<nav\b[\s\S]*?<\/nav>/);
 const footer = block(/<footer\b[\s\S]*?<\/footer>/);
 const anchors = (html) => [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
 // The tool links carry a long and a short label; the long one is the name.
-const label = (inner) => ((/<span class="nav-long">([\s\S]*?)<\/span>/.exec(inner) || [])[1] || inner).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+const stripTags = (h) => { let p; do { p = h; h = h.replace(/<[^>]*>/g, ''); } while (h !== p); return h.replace(/</g, ''); };
+const label = (inner) => stripTags((/<span class="nav-long">([\s\S]*?)<\/span>/.exec(inner) || [])[1] || inner).replace(/\s+/g, ' ').trim();
 const pairs = (html) => anchors(html).map(([, attrs, inner]) => [label(inner), (/\bhref="([^"]*)"/.exec(attrs) || [])[1]]);
 
 test('chrome: the header nav is the canonical list', () => {

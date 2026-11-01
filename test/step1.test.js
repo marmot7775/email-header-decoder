@@ -157,14 +157,14 @@ test('build: one self contained page whose CSP connects only to dns-audit.com, a
   // script-src allows only the hashes of the two inline scripts, the theme
   // script in the head and the page script, never 'unsafe-inline'.
   assert.ok(!/script-src[^;]*'unsafe-inline'/.test(CSP));
-  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script\s*>/gi)].map(m => m[1]);
   assert.equal(scripts.length, 2);
   assert.match(html, /<head>[\s\S]*<script>[\s\S]*<\/head>/);
   const sources = (CSP.match(/script-src ([^;]*)/) || [])[1].split(' ');
   for (const s of scripts) assert.ok(sources.includes("'sha256-" + require('crypto').createHash('sha256').update(s, 'utf8').digest('base64') + "'"));
   assert.ok(fs.readFileSync(path.join(__dirname, '..', 'dist', '_headers'), 'utf8').includes(CSP));
   // No inline event handlers, which a hash does not allow.
-  assert.ok(!/<[a-z][^>]*\son[a-z]+\s*=/i.test(html.replace(/<script>[\s\S]*?<\/script>/g, '')));
+  assert.ok(!/<[a-z][^>]*\son[a-z]+\s*=/i.test(html.replace(/<script>[\s\S]*?<\/script\s*>/gi, '')));
   // The only links in the head are the canonical URL and a data: icon;
   // nothing the browser would fetch from another host.
   for (const l of html.match(/<link\b[^>]*>/g) || []) assert.match(l, /rel="canonical"|rel="icon" href="data:/, l);
