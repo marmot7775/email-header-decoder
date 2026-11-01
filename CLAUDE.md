@@ -13,14 +13,19 @@ two tests check for it on purpose.
 
 ## Hard rules
 
-Everything runs in the visitor's browser. No storage, no analytics
-scripts. Pasted headers are never sent anywhere, but the page no
-longer advertises that (Neil, 2026-10-28: not a selling point; he
-wants usage logs). The one network call is the usage note (Neil,
-2026-10-28: he wants to see the tool is used): after each new read,
-ui/app.js posts the finding status only to
-https://dns-audit.com/api/usage, the CSP's only connect-src. Never
-add header text, addresses, or domains to it.
+Everything runs in the visitor's browser, with no analytics
+scripts. Pasted headers, addresses, and domains are never sent
+anywhere, but the page no longer advertises that (Neil, 2026-10-28:
+not a selling point; he wants usage logs). The usage note to
+dns-audit.com is the page's only network call (Neil, 2026-10-28: he
+wants to see the tool is used): after each new read, ui/app.js posts
+the finding status only to https://dns-audit.com/api/usage, the
+CSP's only connect-src. Never add header text, addresses, or domains
+to it.
+
+The header and footer are the canonical copy from dns-audit's
+docs/site-chrome.html. Change them there first, then copy them here;
+test/chrome.test.js holds the lists.
 
 Standalone repo, not a dns-audit.com feature. Hosting comes in
 step 4 as a static site; the droplet never serves it.
@@ -198,8 +203,10 @@ differ: Header Decoder carries nav-link-active and
 aria-current="page", and the footer's GitHub, Security policy, and
 MIT License links point at this repo. The footer brand and version
 are dns-audit.com's. Change the chrome in dns-audit first, then copy
-it here. The theme switch lasts for the visit only, since the page
-keeps no storage.
+it here. The theme switch works as dns-audit.com's static/theme.js:
+the choice is saved under the localStorage key theme, and a small
+head script applies it before first paint (Doc 106b, 2026-11-01).
+The CSP carries two sha256 sources, one per inline script.
 
 SCL: Microsoft documents -1, 0, 1, 5, 6, and 9. Show 2 to 4 raw;
 7 and 8 are a warning. BCL comes from X-Forefront-Antispam-Report
