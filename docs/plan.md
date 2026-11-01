@@ -99,7 +99,8 @@ is handed out only after that. Status as of 2026-10-29.
    Microsoft card. Commit 2120673.
    Shared site chrome 2026-11-01 (Doc 106): the header and footer
    are dns-audit.com's canonical copy, with Header Decoder active
-   and the repo links pointing here. Live once deployed.
+   and the repo links pointing here. PR #9, main b3fd9a3, live
+   2026-11-01 as Worker version 30b82e79.
    Still to do: more real headers from Neil and the copy pass they
    drive.
 
