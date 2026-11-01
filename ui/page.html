@@ -93,8 +93,8 @@ main.wrap { padding-block: 28px 48px; }
 /* Site chrome: the header and footer rules from dns-audit.com's
    static/style.css, copied as they are so the three apps match
    (docs/site-chrome.html in the dns-audit repo). The theme switch sets
-   data-theme on <html> for this visit only: the page keeps no storage,
-   so a reload follows the system setting again. */
+   data-theme on <html> and keeps the choice in localStorage, as
+   dns-audit.com does. */
 .container { width: 100%; max-width: var(--max-width); margin: 0 auto; padding: 0 max(var(--space-lg), env(safe-area-inset-right)) 0 max(var(--space-lg), env(safe-area-inset-left)); }
 .site-header { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }

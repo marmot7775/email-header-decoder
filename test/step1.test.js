@@ -154,12 +154,14 @@ test('build: one self contained page whose CSP connects only to dns-audit.com, a
   assert.ok(html.includes('http-equiv="Content-Security-Policy" content="' + CSP + '"'));
   // The usage note is the only connection the page may make
   assert.equal((CSP.match(/connect-src ([^;]*)/) || [])[1], 'https://dns-audit.com');
-  // script-src allows only the hash of the one inline script, never 'unsafe-inline'.
+  // script-src allows only the hashes of the two inline scripts, the theme
+  // script in the head and the page script, never 'unsafe-inline'.
   assert.ok(!/script-src[^;]*'unsafe-inline'/.test(CSP));
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-  assert.equal(scripts.length, 1);
-  const hash = require('crypto').createHash('sha256').update(scripts[0], 'utf8').digest('base64');
-  assert.ok(CSP.includes("script-src 'sha256-" + hash + "'"));
+  assert.equal(scripts.length, 2);
+  assert.match(html, /<head>[\s\S]*<script>[\s\S]*<\/head>/);
+  const sources = (CSP.match(/script-src ([^;]*)/) || [])[1].split(' ');
+  for (const s of scripts) assert.ok(sources.includes("'sha256-" + require('crypto').createHash('sha256').update(s, 'utf8').digest('base64') + "'"));
   assert.ok(fs.readFileSync(path.join(__dirname, '..', 'dist', '_headers'), 'utf8').includes(CSP));
   // No inline event handlers, which a hash does not allow.
   assert.ok(!/<[a-z][^>]*\son[a-z]+\s*=/i.test(html.replace(/<script>[\s\S]*?<\/script>/g, '')));
@@ -167,6 +169,18 @@ test('build: one self contained page whose CSP connects only to dns-audit.com, a
   // nothing the browser would fetch from another host.
   for (const l of html.match(/<link\b[^>]*>/g) || []) assert.match(l, /rel="canonical"|rel="icon" href="data:/, l);
   assert.ok(!/<script\s+src=|@import|url\(\s*['"]?https?:|<img\b[^>]*src="https?:/i.test(html));
+});
+
+test('build: the CSP carries two sha256 sources, the head theme script and the page script', () => {
+  const { build, cspFor, THEME_SCRIPT } = require('../build.js');
+  const { csp } = build();
+  const sources = (csp.match(/script-src ([^;]*)/) || [])[1].split(' ');
+  assert.equal(sources.length, 2);
+  for (const s of sources) assert.match(s, /^'sha256-[A-Za-z0-9+/]+=*'$/);
+  assert.ok(cspFor(THEME_SCRIPT).includes(sources[0]));
+  // The head script only applies a saved choice; it never writes.
+  assert.match(THEME_SCRIPT, /localStorage\.getItem\('theme'\)/);
+  assert.ok(!/setItem|fetch|XMLHttpRequest/.test(THEME_SCRIPT));
 });
 
 test('build: the FAQ structured data matches the FAQ on the page', () => {

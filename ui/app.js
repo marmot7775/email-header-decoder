@@ -546,17 +546,24 @@
     if (scroll) $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
 
-  // Theme switch: sets data-theme on <html> for this visit. Nothing is
-  // stored, so a reload follows the system setting again.
+  // Theme switch, as dns-audit.com's static/theme.js: a click sets
+  // data-theme on <html> and saves it under the localStorage key theme. The
+  // head script applies a saved choice before first paint. When storage is
+  // blocked the choice lasts for the visit.
   const toggle = $('theme-toggle');
   if (toggle) {
     const root = document.documentElement;
     const light = matchMedia('(prefers-color-scheme: light)');
-    const isDark = () => root.dataset.theme ? root.dataset.theme === 'dark' : !light.matches;
-    const relabel = () => { const next = isDark() ? 'light' : 'dark'; toggle.setAttribute('aria-label', 'Switch to ' + next + ' theme'); toggle.title = 'Switch to ' + next + ' theme'; };
+    const current = () => root.getAttribute('data-theme') || (light.matches ? 'light' : 'dark');
+    const relabel = () => { const next = current() === 'dark' ? 'light' : 'dark'; toggle.setAttribute('aria-label', 'Switch to ' + next + ' theme'); toggle.title = 'Switch to ' + next + ' theme'; };
     relabel();
-    toggle.addEventListener('click', () => { root.dataset.theme = isDark() ? 'light' : 'dark'; relabel(); });
-    if (light.addEventListener) light.addEventListener('change', relabel);
+    toggle.addEventListener('click', () => {
+      const next = current() === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch (e) { /* storage blocked */ }
+      relabel();
+    });
+    if (light.addEventListener) light.addEventListener('change', () => { if (!root.getAttribute('data-theme')) relabel(); });
   }
 
   $('go').addEventListener('click', () => run(true));
