@@ -1,8 +1,9 @@
 Email Header Decoder, architecture
 
 Shape
-One static page. No server of its own and no storage. Pasted
-headers are parsed in the visitor's browser and never leave it. The
+One static page with no server of its own. Pasted headers are
+parsed in the visitor's browser and never leave it. The only thing
+stored is the theme choice, in localStorage. The
 one network call is a usage note with the finding status only, to
 dns-audit.com/api/usage.
 The same files run under Node for tests. This is the plan for the

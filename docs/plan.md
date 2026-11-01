@@ -343,3 +343,12 @@ Decisions
             sets scroll-padding-top (76px, 128px at 640px and under)
             and jumps to a result stop below it. The logo links to /
             as in the canonical, which here is this page.
+2026-11-01  Doc 106b finishes Doc 106. test/chrome.test.js checks the
+            nav and footer links against the canonical lists. The
+            theme choice is now kept under the localStorage key
+            theme, as on dns-audit.com: a head script applies it
+            before first paint and the CSP carries two sha256
+            sources. Blocked storage falls back to a per visit
+            choice. CLAUDE.md drops no storage from the hard rules
+            and adds the chrome rule. In dns-audit, check_chrome.py
+            reads Cloudflare's obfuscated email text as the address.
