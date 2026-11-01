@@ -54,8 +54,8 @@ No model name, plan, tier, or model version appears in any file
 in the repo: not in docs, comments, commit messages, or the page.
 Claude Code as the name of the tool is fine.
 
-Links may point only at dns-audit.com, Neil's LinkedIn, and the
-GitHub repo; build.js refuses any other host. The page loads
+Links may point only at dns-audit.com (with headers. and aprf.),
+Neil's LinkedIn, and his GitHub; build.js refuses any other host. The page loads
 nothing from anywhere.
 
 Commit each step locally. Publishing was approved on 2026-10-25:
@@ -92,7 +92,7 @@ src/finding.js    The sentence. Status, headline, cause, policy
                   consequence, details, fixes, flags, and limits.
 src/analyze.js    analyze(text) returns one plain result object.
                   The page renders it; the tests assert on it.
-ui/page.html      Markup and tokens. Site bar, paste box, then
+ui/page.html      Markup and tokens. Site header, paste box, then
                   finding with the check tiles, message, alignment,
                   authentication, path, filter headers, raw headers
                   collapsed. Static guide and FAQ below the tool.
@@ -191,9 +191,15 @@ dest field alone gets a reading, I as the Inbox and J as the Junk
 Email folder, and both voices say Microsoft does not document it
 (Neil, 2026-10-29). Other values and fields get none.
 
-The site bar matches dns-audit.com's nav (Home, Articles, About,
-Header Decoder) and has its theme switch. The switch lasts for
-the visit only, since the page keeps no storage.
+The header and footer are the shared site chrome, copied verbatim
+from docs/site-chrome.html in the dns-audit repo, with their CSS
+from its static/style.css (Doc 106, 2026-11-01). Only three things
+differ: Header Decoder carries nav-link-active and
+aria-current="page", and the footer's GitHub, Security policy, and
+MIT License links point at this repo. The footer brand and version
+are dns-audit.com's. Change the chrome in dns-audit first, then copy
+it here. The theme switch lasts for the visit only, since the page
+keeps no storage.
 
 SCL: Microsoft documents -1, 0, 1, 5, 6, and 9. Show 2 to 4 raw;
 7 and 8 are a warning. BCL comes from X-Forefront-Antispam-Report

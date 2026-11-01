@@ -97,6 +97,9 @@ is handed out only after that. Status as of 2026-10-29.
    mailing list wording cut down; the CAT versus SCL and BCL
    threshold sentences moved off every item into one note on the
    Microsoft card. Commit 2120673.
+   Shared site chrome 2026-11-01 (Doc 106): the header and footer
+   are dns-audit.com's canonical copy, with Header Decoder active
+   and the repo links pointing here. Live once deployed.
    Still to do: more real headers from Neil and the copy pass they
    drive.
 
@@ -322,4 +325,20 @@ Decisions
             name split off by a comma, and a trailing dot, no longer
             make a second From domain. New flag: a From domain in
             look-alike letters such as mathematical bold.
-
+2026-11-01  Doc 106: the shared site chrome from dns-audit
+            (docs/site-chrome.html and the chrome rules in
+            static/style.css) replaces the site bar and footer,
+            copied as is. The footer now reads dns-audit.com and
+            v2.0.0, by design: only the active nav link and the
+            three repo links differ per app. The old footer's Beta
+            note and Did it read a message wrong line are gone; the
+            Beta badge stays on the H1. The chrome CSS uses
+            dns-audit's token names, so page.html maps them onto its
+            own (text-primary to text, bg-raised to raised, and so
+            on) and adds primary-light, the space scale, ease, and
+            duration with dns-audit's values. build.js now allows
+            headers. and aprf.dns-audit.com links, which the new nav
+            needs. The header is sticky like the site's, so the page
+            sets scroll-padding-top (76px, 128px at 640px and under)
+            and jumps to a result stop below it. The logo links to /
+            as in the canonical, which here is this page.

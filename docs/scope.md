@@ -17,7 +17,7 @@ load on the droplet. Nothing in the first release needs DNS.
 
 Where it lives
 headers.dns-audit.com, a static site on Cloudflare, with the same
-site bar and footer as dns-audit.com so the two read as one family.
+shared header and footer as dns-audit.com so the two read as one family.
 Its own repo, its own hosting; the droplet never serves it. A link
 in the dns-audit.com nav points to it. A subdomain rather than a
 path was chosen for simplicity; dns-audit.com/headers through a
