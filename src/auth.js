@@ -432,7 +432,16 @@
       notes.push(say('caveat', 'The ' + named + ' from the ARC-Authentication-Results ' + primary.authserv + ' wrote when it sealed the message, since its other Authentication-Results fields sit where a sender could have written them.', 'Some of the receiving system\'s check results are read from a second copy it keeps of them.', [ownAar.f.index]));
     }
     if (lowered) notes.push(say('caveat', 'Proton puts its Authentication-Results fields under every Received field when it exports a message, where a sender could have written fields too. They are read as ' + primary.authserv + '\'s own, since Proton always places them there.', 'Proton keeps its check results in a spot where a sender could also add text, so they are trusted here because Proton always puts them there.', reportSet.filter(r => !r.primary && r.index >= senderTop).flatMap(r => r.src)));
-    const auth = { all, primary: primary ? all.indexOf(primary) : -1, primaryRule, exchangeOnline: exo, spf, dkim, signatures, receivedSpf, dmarc, computed, arc, arcResult, compauth, notes };
+    // The primary stays the primary below the receiver's only stamp, since
+    // Gmail and Postfix write theirs there. But when it is the only trusted
+    // field, no hop came before the receiver, and it reports dkim=pass with
+    // no DKIM-Signature in the paste, nothing backs it: the sender could
+    // have written it (issue 14).
+    const dkimPass = primary ? primary.entries.find(e => e.method === 'dkim' && e.result === 'pass') : null;
+    const unbacked = !!dkimPass && !signatures.length && chain.count === 1 && b === 0 && primary.index > custodyTop
+      && all.filter(r => !r.untrusted).length === 1;
+    const unbackedDkim = unbacked ? { authserv: primary.authserv, src: [chain.hops[0].src[0]].concat(dkimPass.src) } : null;
+    const auth = { all, primary: primary ? all.indexOf(primary) : -1, primaryRule, exchangeOnline: exo, spf, dkim, signatures, receivedSpf, dmarc, computed, arc, arcResult, compauth, unbackedDkim, notes };
     authNotes(auth);
     return { auth, alignment: alignmentOf(from, dkim, spf, computed) };
   }
