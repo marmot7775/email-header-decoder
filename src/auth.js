@@ -275,6 +275,25 @@
     // authserv-id shares an operator with the last hop's by host, or, at
     // Exchange Online, the topmost one with no authserv-id. Never one the
     // sender could have written.
+    // Exchange Online writes one id-less field. A second one below it is not
+    // Microsoft's: RFC 8601 section 5 strips by authserv-id, so an id-less
+    // field a sender wrote is never removed.
+    let idlessSeen = false;
+    for (const r of all) {
+      if (r.writerNamed || r.matchedBy !== 'position') continue;
+      if (idlessSeen) { r.trust = 'unverified'; r.untrusted = true; r.hopIdx = -1; r.matchedBy = ''; r.duplicateIdless = true; }
+      idlessSeen = true;
+    }
+    // Where the receiver's own fields can sit. Beside the primary, a field
+    // counts only above the Received field of the last hop before the
+    // receiver took custody, the rule Received-SPF follows: Postfix filters
+    // write theirs just below Postfix's own stamp. With no hop before the
+    // receiver, only fields above its own first stamp count, since the
+    // sender could have written the rest. Proton is the one exception.
+    const b = chain.trust.boundaryIdx;
+    const custodyTop = b >= 0 ? chain.hops[b].src[0] : -1;
+    const senderTop = b > 0 ? chain.hops[b - 1].src[0] : custodyTop;
+    const isProton = (r) => HA.received.operatorOf(r.authserv) === 'Proton';
     const primary = all.find(r => !r.untrusted) || null;
     if (primary) primary.primary = true;
     const primaryRule = !primary ? '' : primary.authserv ? 'operator' : 'exchange-online';
@@ -285,12 +304,9 @@
     // follows: Postfix filters write theirs just below Postfix's own stamp.
     // With no hop before the receiver, only fields above its own first
     // stamp count, since the sender could have written the rest.
-    const b = chain.trust.boundaryIdx;
-    const custodyTop = b >= 0 ? chain.hops[b].src[0] : -1;
-    const senderTop = b > 0 ? chain.hops[b - 1].src[0] : custodyTop;
     // Proton's exported messages carry its fields under the whole Received
     // block, where a sender could write fields too. They count, with a note.
-    const anywhere = !!primary && HA.received.operatorOf(primary.authserv) === 'Proton';
+    const anywhere = !!primary && isProton(primary);
     const reportSet = all.filter(r => r.primary || (!r.untrusted && (r.index < senderTop || anywhere)));
     const lowered = anywhere && reportSet.some(r => !r.primary && r.index >= senderTop);
     // A receiver that seals its own ARC set copies its results into that
@@ -372,7 +388,11 @@
       const s = e.ids['header.s'] || '';
       const bTag = (e.ids['header.b'] || '').replace(/\s+/g, '');
       const free = signatures.filter(x => !used.has(x));
-      const sameD = d ? free.filter(x => x.d === d) : free;
+      // With no header.d, header.i narrows the candidates: RFC 6376 3.5 has
+      // its domain equal d= or sit below it, so a signature for another
+      // domain cannot be the one the result describes, whatever its selector.
+      const iDom = d ? '' : P.domainOf(e.ids['header.i'] || '');
+      const sameD = d ? free.filter(x => x.d === d) : iDom && iDom !== 'none' ? free.filter(x => x.d && (iDom === x.d || iDom.endsWith('.' + x.d))) : free;
       let sig = null, matchedBy = '', candidates = [];
       if (bTag && (sig = sameD.find(x => x.b.startsWith(bTag)) || null)) matchedBy = 'header.b';
       else if (s && (sig = sameD.find(x => x.s === s) || null)) matchedBy = 'header.s';

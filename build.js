@@ -27,9 +27,48 @@ const THEME_SCRIPT = "try{var t=localStorage.getItem('theme');if(t==='light'||t=
 // script-src names the sha256 of each inline script, so no other script runs.
 const sha = (s) => "'sha256-" + crypto.createHash('sha256').update(s, 'utf8').digest('base64') + "'";
 const cspFor = (...scripts) => "default-src 'none'; script-src " + scripts.map(sha).join(' ') + "; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src " + USAGE_ORIGIN + "; form-action 'none'; base-uri 'none'";
-// Links the page may carry. A link sends nothing until someone follows it;
-// the CSP still blocks every request the page itself could make.
-const LINKS = /https?:\/\/(?!datatracker\.ietf\.org|www\.rfc-editor\.org|(?:headers\.|aprf\.)?dns-audit\.com|www\.linkedin\.com\/in\/neilanuskiewicz|github\.com\/marmot7775)/;
+// Links the page may carry: dns-audit.com with its headers. and aprf.
+// hosts, Neil's LinkedIn profile, and his GitHub account. A link sends
+// nothing until someone follows it; the CSP still blocks every request the
+// page itself could make. Every URL is parsed and its host compared whole,
+// so a look-alike host, another account, a protocol-relative URL, or an
+// upper-case scheme does not pass on a matching prefix.
+const OWN_HOSTS = new Set(['dns-audit.com', 'headers.dns-audit.com', 'aprf.dns-audit.com']);
+function linkAllowed(raw) {
+  const u = String(raw).trim();
+  if (u === '' || u.startsWith('#')) return true;
+  let url;
+  try { url = new URL(u, SITE); } catch (e) { return false; }
+  if (url.protocol === 'data:') return true;
+  if (url.protocol === 'mailto:') return /^[^@\s]+@dns-audit\.com$/i.test(decodeURIComponent(url.pathname));
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) return false;
+  if (OWN_HOSTS.has(url.hostname)) return true;
+  if (url.hostname === 'www.linkedin.com') return /^\/in\/neilanuskiewicz\/?$/.test(url.pathname);
+  if (url.hostname === 'github.com') return url.pathname === '/marmot7775' || url.pathname.startsWith('/marmot7775/');
+  return false;
+}
+// Every URL an attribute carries, and every absolute http(s) URL in the
+// text, except the XML namespace and schema.org context names, which are
+// identifiers and fetch nothing.
+function badLinks(html) {
+  const found = [];
+  const attrRe = /(?:^|[\s"'])(?:href|src|action|formaction|poster|data|xlink:href|srcset)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+  let m;
+  while ((m = attrRe.exec(html))) {
+    const v = m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[3];
+    // srcset holds a comma separated list; the other attributes hold one URL.
+    for (const part of (/^\s*srcset/i.test(m[0].trim()) ? v.split(',').map(x => x.trim().split(/\s+/)[0]) : [v])) if (!linkAllowed(part)) found.push(part);
+  }
+  const absRe = /(?:https?:)?\/\/[^\s"'<>)\\]+/gi;
+  const text = html.replace(/data:[^"')\s]*/gi, 'data:');
+  while ((m = absRe.exec(text))) {
+    if (!/^https?:/i.test(m[0]) && text[m.index - 1] !== '"' && text[m.index - 1] !== "'") continue;
+    if (/^http:\/\/www\.w3\.org\/|^https:\/\/schema\.org\/?$/i.test(m[0])) continue;
+    if (m[0].replace(/\/$/, '') === USAGE_ORIGIN + '/api/usage' || m[0].replace(/\/$/, '') === USAGE_ORIGIN) continue;
+    if (!linkAllowed(m[0])) found.push(m[0]);
+  }
+  return Array.from(new Set(found));
+}
 
 const TITLE = 'Email Header Decoder: why SPF, DKIM, or DMARC failed';
 const DESCRIPTION = 'This free email header analyzer shows in one sentence why a message passed or failed SPF, DKIM, and DMARC, and what to fix.';
@@ -128,12 +167,16 @@ const sitemap = (day) => '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns=
 
 function build() {
   const page = read('ui/page.html').replace('/* FONTS */', fontFaces);
-  if (LINKS.test(page)) throw new Error('ui/page.html references an external URL outside the allowed links');
+  const appJs = read('ui/app.js');
+  for (const [name, text] of [['ui/page.html', page], ['ui/app.js', appJs]]) {
+    const bad = badLinks(text);
+    if (bad.length) throw new Error(name + ' references a URL outside the allowed links: ' + bad.join(', '));
+  }
   const samples = {};
   for (const [k, f] of Object.entries(SAMPLES)) samples[k] = read('test/fixtures/' + f);
   const js = SRC.map(f => read('src/' + f)).join('\n') + '\n' +
     'window.SAMPLES = ' + JSON.stringify(samples).replace(/</g, '\\u003c') + ';\n' +
-    read('ui/app.js');
+    appJs;
   if (js.includes('</script')) throw new Error('script text contains </script');
   const script = '\n' + js + '\n';
   const csp = cspFor(THEME_SCRIPT, script);
@@ -147,6 +190,11 @@ function build() {
   // and puts a real head in front.
   const inner = body.replace(/^<title>[^<]*<\/title>\n/, '').replace(/^<meta name="claude:[^>]*>\n/m, '');
   const full = '<!doctype html>\n<html lang="en">\n<head>\n' + head(page, csp) + '\n</head>\n<body>\n' + inner + '\n</body>\n</html>\n';
+  // The check runs again over the head, with the JSON-LD, and the page body.
+  // The script text is ours and was checked above, so it is left out by
+  // building the text to scan without it, not by filtering the HTML.
+  const bad = badLinks(head(page, '') + '\n' + page.replace('<!-- SCRIPTS -->', ''));
+  if (bad.length) throw new Error('the assembled page references a URL outside the allowed links: ' + bad.join(', '));
   fs.writeFileSync(path.join(dist, 'index.html'), full);
   fs.writeFileSync(path.join(dist, '_headers'), headers(csp));
   fs.writeFileSync(path.join(dist, 'robots.txt'), ROBOTS);
@@ -164,4 +212,4 @@ if (require.main === module) {
   const r = build();
   console.log('dist/index.html (' + r.bytes + ' bytes, CSP, opens from disk), dist/artifact.html, and the host files written');
 }
-module.exports = { build, SRC, cspFor, faqFrom, THEME_SCRIPT };
+module.exports = { build, SRC, cspFor, faqFrom, THEME_SCRIPT, linkAllowed, badLinks };
