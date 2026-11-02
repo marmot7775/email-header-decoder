@@ -193,7 +193,7 @@ function build() {
   // The check runs again over what is written, where the head, the JSON-LD
   // and the assembled page are all present. The CSP names the usage origin
   // as a source, not a link, and the inline scripts were checked above.
-  const scan = (h) => h.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/<script>[\s\S]*?<\/script>/g, '');
+  const scan = (h) => h.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, (sc) => /application\/ld\+json/i.test(sc.slice(0, sc.indexOf('>'))) ? sc : '');
   for (const [name, text] of [['dist/index.html', full], ['dist/artifact.html', body]]) {
     const bad = badLinks(scan(text));
     if (bad.length) throw new Error(name + ' references a URL outside the allowed links: ' + bad.join(', '));
