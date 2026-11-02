@@ -505,7 +505,7 @@
   }
 
   // One usage note per new read to dns-audit.com, so its maker can see the page is
-  // used: the finding status only, never header text. text/plain needs no CORS
+  // used: tool, finding status, sample or not, and the linking host; never header text. text/plain needs no CORS
   // preflight; the reply is not read and a failure is ignored.
   let noted = null;
   function note(text) {

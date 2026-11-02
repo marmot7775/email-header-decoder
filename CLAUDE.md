@@ -19,9 +19,12 @@ anywhere, but the page no longer advertises that (Neil, 2026-10-28:
 not a selling point; he wants usage logs). The usage note to
 dns-audit.com is the page's only network call (Neil, 2026-10-28: he
 wants to see the tool is used): after each new read, ui/app.js posts
-the finding status only to https://dns-audit.com/api/usage, the
-CSP's only connect-src. Never add header text, addresses, or domains
-to it.
+to https://dns-audit.com/api/usage, the CSP's only connect-src. The
+note holds exactly four fields: tool ("header-decoder"), the finding
+status, whether a built-in sample was read, and ref, the host name of
+the site that linked to the page (never its path or query; absent for
+a direct visit or a link from this site). Neil kept ref on 2026-11-02.
+Never add header text, addresses, or domains to it.
 
 The header and footer are the canonical copy from dns-audit's
 docs/site-chrome.html. Change them there first, then copy them here;

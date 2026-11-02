@@ -4,8 +4,9 @@ Shape
 One static page with no server of its own. Pasted headers are
 parsed in the visitor's browser and never leave it. The only thing
 stored is the theme choice, in localStorage. The
-one network call is a usage note with the finding status only, to
-dns-audit.com/api/usage.
+one network call is a usage note to dns-audit.com/api/usage: the tool
+name, the finding status, whether a sample was read, and the host name
+of the linking site (ref). No header text, addresses or domains.
 The same files run under Node for tests. This is the plan for the
 product, not a prototype shortcut: a header analyzer has no reason
 to send mail headers anywhere.
