@@ -26,6 +26,10 @@ Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the s
 
 Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## pass by SPF
 
 Plain headline: This message passed the sender check (DMARC). It came from a server allowed by shop.example, the domain in the From address.
@@ -47,6 +51,10 @@ Detail 1, technical: SPF passed for shop.example, which aligns with shop.example
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: DMARC depends on SPF alone, and a forward breaks SPF. Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## pass by both
 
@@ -74,6 +82,10 @@ Fix 1, plain: Your DMARC setting only watches. It doesn't stop fake mail that us
 
 Fix 1, technical: shop.example publishes p=none, so forged mail is not stopped. Once aggregate reports show every real source passing, move to p=quarantine.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## pass reported with nothing aligned
 
 Plain headline: This message passed the sender check (DMARC), but its own checks don't match shop.example. The receiving system passed it for a reason the headers don't show.
@@ -95,6 +107,10 @@ Detail 1, technical: SPF passed for bounce.mailer.example, which does not align 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: DMARC depends on SPF alone, and a forward breaks SPF. Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## pass computed, no DMARC result reported
 
@@ -122,6 +138,10 @@ Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the s
 
 Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail with no DKIM signature
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sender's list of approved servers gave no clear answer. Nothing proved it came from shop.example.
@@ -139,6 +159,10 @@ Policy, technical: shop.example publishes p=reject, which asks for failing mail 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## fail with DKIM unaligned
 
@@ -170,6 +194,10 @@ Fix 2, plain: Once the signature is fixed, you can also give the service that se
 
 Fix 2, technical: Second, after DKIM: set a custom Return-Path (bounce) domain under shop.example at the sending service so SPF aligns too.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail with DKIM broken in transit
 
 Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
@@ -195,6 +223,10 @@ Detail 2, technical: SPF passed for bounce.mailer.example, which does not align 
 Fix 1, plain: Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave the service that sends this mail. That's the usual cause of a broken signature.
 
 Fix 1, technical: The signature from d=shop.example broke between signing and mx.receiver.example. Look for anything that edits mail after the sending service signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at s1._domainkey.shop.example is the one it signs with.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## fail with SPF for the bounce domain only
 
@@ -222,6 +254,10 @@ Fix 2, plain: Once the signature is fixed, you can also give the service that se
 
 Fix 2, technical: Second, after DKIM: set a custom Return-Path (bounce) domain under shop.example at the sending service so SPF aligns too.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail with SPF for HELO only
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server called itself o1.mailer.example. Nothing that checked out matches shop.example, the domain in the From address.
@@ -243,6 +279,10 @@ Detail 1, technical: SPF passed for the HELO name o1.mailer.example, which does 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## fail with SPF fail
 
@@ -266,6 +306,10 @@ Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to 
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail with SPF softfail
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -287,6 +331,10 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to add the service that sends this mail to its list of allowed servers (the SPF record). The service's setup page gives the exact entry. If you didn't send it, someone else used your domain and the check correctly failed it.
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## fail with SPF none
 
@@ -310,6 +358,10 @@ Fix 2, plain: Ask whoever manages the DNS for shop.example to publish an SPF rec
 
 Fix 2, technical: Publish an SPF record for shop.example that lists the servers that send for it.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail with SPF permerror
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sender's list of approved servers is set up wrong, so it couldn't be read. Nothing proved it came from shop.example.
@@ -332,6 +384,10 @@ Fix 2, plain: The SPF record for shop.example is broken, often because it lists 
 
 Fix 2, technical: Repair the SPF record of shop.example: check its syntax and keep it within 10 DNS lookups.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail with SPF temperror
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sender's list of approved servers couldn't be read this time. Nothing proved it came from shop.example.
@@ -349,6 +405,10 @@ Policy, technical: shop.example publishes p=reject, which asks for failing mail 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## fail with DKIM permerror
 
@@ -376,6 +436,10 @@ Fix 1, plain: The key that checks this signature couldn't be read. Ask whoever m
 
 Fix 1, technical: Publish or repair the DKIM key at s1._domainkey.shop.example; mx.receiver.example could not use it.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail with DKIM temperror
 
 Plain headline: This message failed the sender check (DMARC). The signature couldn't be checked and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
@@ -402,6 +466,10 @@ Fix 1, plain: The key lookup failed for a temporary reason, which isn't a setup 
 
 Fix 1, technical: A temperror on the key query says nothing about the key. If it repeats, check that the nameservers for shop.example answer promptly and that s1._domainkey.shop.example resolves.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail computed, no DMARC result reported
 
 Plain headline: The receiving system didn't record the sender check, so this page worked it out. This message fails the sender check (DMARC). It was signed by mailer.example and shop.example publishes no list of approved servers. Nothing that checked out matches shop.example, the domain in the From address.
@@ -427,6 +495,10 @@ Fix 1, technical: At the sending service, set up domain authentication for shop.
 Fix 2, plain: Ask whoever manages the DNS for shop.example to publish an SPF record listing the services that send your mail.
 
 Fix 2, technical: Publish an SPF record for shop.example that lists the servers that send for it.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## fail through a mailing list
 
@@ -458,6 +530,10 @@ Fix 2, plain: If you run the list: have it send under its own address (it can ke
 
 Fix 2, technical: If you run club.list.example: have the list rewrite the From address to its own; or stop tagging the subject and adding a footer; or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail through a mailing list that kept its record
 
 Plain headline: This message failed the sender check (DMARC) because it came through the mailing list club.list.example. The list changed the message, which broke the sender's signature, and sent it on under its own domain, list.example, not shop.example.
@@ -488,6 +564,10 @@ Fix 2, plain: If you run the list: have it send under its own address (it can ke
 
 Fix 2, technical: If you run club.list.example: have the list rewrite the From address to its own; or stop tagging the subject and adding a footer; or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## fail with the receiver judging differently
 
 Plain headline: This message failed the sender check (DMARC) even though it was signed by shop.example. The receiving system reported a failure the headers don't explain.
@@ -514,6 +594,10 @@ Fix 1, plain: These headers don't show one clear fix. Send the same message to a
 
 Fix 1, technical: Nothing in these headers points at a single change. Compare with a copy of the same message delivered to a different mailbox provider.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## strict alignment suspected
 
 Plain headline: This message failed the sender check (DMARC) although it was signed by a domain in the same organization as shop.example. The sender's DMARC setting probably demands an exact domain match.
@@ -539,6 +623,14 @@ Detail 2, technical: SPF passed for bounce.mailer.example, which does not align 
 Fix 1, plain: shop.example's DMARC record most likely requires an exact domain match. Either have the sending service sign with shop.example itself instead of mail.shop.example, or ask whoever manages the DNS for shop.example to allow subdomains (relaxed alignment). Check the record first. This page can't read it.
 
 Fix 1, technical: The record most likely sets adkim=s. Sign with d=shop.example rather than a subdomain, or change the record to adkim=r. Confirm by reading _dmarc.shop.example; this page does not query DNS.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Limit 2, plain: This page works out where the sender's organization begins from its own short list, so the looser domain match is its best reading, not a certainty.
+
+Limit 2, technical: The organizational domain shop.example comes from a short built in suffix list, not from DNS or the full Public Suffix List that receivers use. Relaxed alignment here rests on it.
 
 ## dmarc none, would pass
 
@@ -570,6 +662,10 @@ Fix 2, plain: Once the signature is fixed, you can also give the service that se
 
 Fix 2, technical: Second, after DKIM: set a custom Return-Path (bounce) domain under shop.example at the sending service so SPF aligns too.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## dmarc none, would fail
 
 Plain headline: shop.example has no DMARC setting, so the sender check didn't apply. With one, this message would fail.
@@ -600,6 +696,10 @@ Fix 3, plain: Once the signature is fixed, you can also give the service that se
 
 Fix 3, technical: Second, after DKIM: set a custom Return-Path (bounce) domain under shop.example at the sending service so SPF aligns too.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## dmarc bestguesspass
 
 Plain headline: shop.example has no DMARC setting, so the sender check didn't apply. The message would pass if the domain had one.
@@ -626,6 +726,10 @@ Fix 2, plain: Turn on email signing (DKIM) for shop.example in the settings of t
 
 Fix 2, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## dmarc permerror
 
 Plain headline: The sender check couldn't run because the DMARC record of shop.example is written wrong.
@@ -649,6 +753,10 @@ Fix 1, technical: Fix the DMARC record at _dmarc.shop.example: mx.receiver.examp
 Fix 2, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 2, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## dmarc temperror
 
@@ -678,6 +786,10 @@ Fix 3, plain: Once the signature is fixed, you can also give the service that se
 
 Fix 3, technical: Second, after DKIM: set a custom Return-Path (bounce) domain under shop.example at the sending service so SPF aligns too.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## dmarc result outside RFC 7489
 
 Plain headline: The receiving system recorded a sender check result this page doesn't know.
@@ -697,6 +809,10 @@ Detail 1, technical: SPF passed for bounce.mailer.example, which does not align 
 Fix 1, plain: Send the same message to a Gmail or Outlook mailbox and copy the headers from there. Those services write down the results this page needs.
 
 Fix 1, technical: Get the same message from a Gmail or Microsoft 365 mailbox; both record SPF, DKIM and DMARC results.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## forwarded with arc=pass
 
@@ -728,6 +844,14 @@ Fix 2, plain: If you didn't set up this forward, there's nothing to change. Ask 
 
 Fix 2, technical: If the forward is not yours, authentication worked as designed. Judge the sender by a copy delivered straight to the mailbox.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Limit 2, plain: This page can't confirm the forwarding service's own record, so what it saw before the forward is taken on its word.
+
+Limit 2, technical: ARC seals are not verified here, so the results before the forward are the forwarder's own record; mx.receiver.example reported arc=pass, which means it did verify them.
+
 ## forwarded, noted but not relied on
 
 Plain headline: This message failed the sender check (DMARC). The signature didn't check out and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -758,6 +882,14 @@ Fix 1, plain: Ask for a copy sent straight to you, without the forward, and chec
 
 Fix 1, technical: Judge the sender by a copy delivered straight to the mailbox. The forwarder's record shows a pass before the forward, but the receiver did not confirm it, so this failure could come from the forward or from a forgery.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Limit 2, plain: This page can't confirm the forwarding service's own record, so what it saw before the forward is taken on its word.
+
+Limit 2, technical: ARC seals are not verified here, so the results before the forward are the forwarder's own record.
+
 ## forwarded, already failing before the forward
 
 Plain headline: This message failed the sender check (DMARC). The signature wasn't checked and it came from a server that forward.example allows. Nothing that checked out matches shop.example, the domain in the From address.
@@ -783,6 +915,44 @@ Detail 2, technical: SPF passed for forward.example, which does not align with s
 Fix 1, plain: The problem started before the forward. If shop.example didn't send this message, it's forged, and the failed check is working as it should.
 
 Fix 1, technical: Look at the sender, not the forward: the message failed before it was forwarded. If shop.example did not send it, it is forged and the DMARC failure is correct.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Limit 2, plain: This page can't confirm the forwarding service's own record, so what it saw before the forward is taken on its word.
+
+Limit 2, technical: ARC seals are not verified here, so the results before the forward are the forwarder's own record; mx.receiver.example reported arc=pass, which means it did verify them.
+
+## pass reported with DKIM nothing backs
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address, and came from a server it allows.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed and SPF passed for the Return-Path domain shop.example (RFC5321.MailFrom), and both align with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, both SPF and DKIM pass and align, so the message still passes after a forward that breaks SPF.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved by shop.example, which belongs to the sender.
+
+Detail 2, technical: SPF passed for shop.example, which aligns with shop.example.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Limit 2, plain: The sender could have written these check results. They say the message carries a valid digital signature (DKIM), but the headers hold no signature to back that.
+
+Limit 2, technical: The only trusted Authentication-Results field (authserv-id mx.receiver.example) sits below the receiver's only Received stamp, where the sender could have written it. It reports dkim=pass, but the headers hold no DKIM-Signature, so nothing here backs that pass.
 
 ## no Authentication-Results
 
@@ -820,6 +990,10 @@ Fix 1, plain: Send the same message to a Gmail or Outlook mailbox and copy the h
 
 Fix 1, technical: Get the same message from a Gmail or Microsoft 365 mailbox; both record SPF, DKIM and DMARC results.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## untrusted Authentication-Results claims a pass
 
 Plain headline: This message failed the sender check (DMARC). It was signed by mailer.example and the sending server isn't on the sender's list of approved servers. Nothing that checked out matches shop.example, the domain in the From address.
@@ -849,6 +1023,10 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 Flag 1, plain: One set of results in the headers claims the message passed, but the receiving system didn't write it, so it's ignored.
 
 Flag 1, technical: An Authentication-Results field the receiver did not write claims dmarc=pass. It is ignored here: the sender or a hop before the receiver could have written it.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## no Received
 
@@ -944,6 +1122,10 @@ Flag 1, plain: The name shown for the sender contains an address at bank.example
 
 Flag 1, technical: The display name shows an address at bank.example, while the real From domain is notify.example. That is a common impersonation layout.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## Microsoft action oreject
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -965,6 +1147,10 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to add the service that sends this mail to its list of allowed servers (the SPF record). The service's setup page gives the exact entry. If you didn't send it, someone else used your domain and the check correctly failed it.
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## Microsoft action quarantine
 
@@ -996,6 +1182,10 @@ Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to 
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## Microsoft action none
 
 Plain headline: This message failed the sender check (DMARC). It was signed by mailer.example and it came from a server that bounce.mailer.example allows. Neither of those is shop.example, the domain in the From address.
@@ -1026,6 +1216,10 @@ Fix 2, plain: Once the signature is fixed, you can also give the service that se
 
 Fix 2, technical: Second, after DKIM: set a custom Return-Path (bounce) domain under shop.example at the sending service so SPF aligns too.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## compauth 0xx, explicit fail
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1048,6 +1242,10 @@ Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to 
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## compauth 1xx, pass
 
 Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address, and came from a server it allows.
@@ -1069,6 +1267,10 @@ Detail 1, technical: DKIM passed for d=shop.example, which aligns with shop.exam
 Detail 2, plain: The sending server is approved by shop.example, which belongs to the sender.
 
 Detail 2, technical: SPF passed for shop.example, which aligns with shop.example.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## compauth 2xx, soft pass
 
@@ -1100,6 +1302,10 @@ Fix 3, plain: If you sent this, ask whoever manages the DNS for shop.example to 
 
 Fix 3, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## compauth 3xx, not checked
 
 Plain headline: shop.example has no DMARC setting, so the sender check didn't apply. With one, this message would fail.
@@ -1130,6 +1336,10 @@ Fix 3, plain: If you sent this, ask whoever manages the DNS for shop.example to 
 
 Fix 3, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## compauth 4xx, bypassed
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1151,6 +1361,10 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to add the service that sends this mail to its list of allowed servers (the SPF record). The service's setup page gives the exact entry. If you didn't send it, someone else used your domain and the check correctly failed it.
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## compauth 5xx, bounce not enforced
 
@@ -1174,6 +1388,10 @@ Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to 
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## compauth 6xx, implicit fail
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1195,6 +1413,10 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to add the service that sends this mail to its list of allowed servers (the SPF record). The service's setup page gives the exact entry. If you didn't send it, someone else used your domain and the check correctly failed it.
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## compauth 7xx, history pass
 
@@ -1218,6 +1440,10 @@ Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to 
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## compauth 8xx, not in the table
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1240,6 +1466,10 @@ Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to 
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
 
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
 ## compauth 9xx, complex routing
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1261,6 +1491,10 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to add the service that sends this mail to its list of allowed servers (the SPF record). The service's setup page gives the exact entry. If you didn't send it, someone else used your domain and the check correctly failed it.
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
 ## Filter code meanings
 

@@ -244,6 +244,10 @@ light both work. No horizontal scroll at 375px.
   receiver wrote above its stamp when it sealed the message, with
   a note saying so (2026-10-29, from kernel.org and sourceware.org
   list mail).
+- The primary keeps its place below the receiver's only stamp. When
+  it is the only trusted field, no hop came before the receiver, and
+  it reports dkim=pass with no DKIM-Signature in the paste, a caveat
+  limit says the sender could have written it (issue 14, 2026-11-02).
 - Proton is the one named exception: its exported messages carry its
   Authentication-Results fields under the whole Received block, so
   fields with its authserv-id count wherever they sit, with a note

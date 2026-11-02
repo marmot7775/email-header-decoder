@@ -27,11 +27,14 @@ test('sentences: every case runs, and no sentence breaks the copy rules', () => 
   for (const [code, t, p] of S.meanings()) { check(code, t); check(code, p); assert.ok(!SIMPLE_BANNED.test(p.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')), code + ' Simple uses a word Simple avoids: ' + p); }
 });
 
-test('sentences: no two cases share a cause', () => {
+// A case may repeat a cause when it is there for a limit the other lacks,
+// as the DKIM pass nothing backs is (issue 14).
+test('sentences: no two cases share a cause and its limits', () => {
   const seen = new Map();
   for (const [name, text] of S.CASES) {
-    const c = S.run(name, text).cause;
-    const key = c.technical + '\n' + c.plain;
+    const f = S.run(name, text);
+    const c = f.cause;
+    const key = [c].concat(f.limits).map(s => s.technical + '\n' + s.plain).join('\n');
     assert.ok(!seen.has(key), name + ' and ' + seen.get(key) + ' produce the same cause: ' + c.technical);
     seen.set(key, name);
   }

@@ -91,6 +91,7 @@ const CASES = [
   ['forwarded with arc=pass', fwd('dkim=fail header.d=shop.example header.s=s1; arc=pass; spf=softfail smtp.mailfrom=orders@shop.example; ' + REJECT, PASS_PRE)],
   ['forwarded, noted but not relied on', fwd('dkim=fail header.d=shop.example header.s=s1; spf=softfail smtp.mailfrom=orders@shop.example; ' + REJECT, PASS_PRE)],
   ['forwarded, already failing before the forward', fwd('spf=pass smtp.mailfrom=srs@forward.example; arc=pass; ' + REJECT, 'spf=fail smtp.mailfrom=orders@shop.example; dmarc=fail header.from=shop.example')],
+  ['pass reported with DKIM nothing backs', rcv({ ar: 'dkim=pass header.d=shop.example header.s=s1; spf=pass smtp.mailfrom=orders@shop.example; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=shop.example' })],
   ['no Authentication-Results', rcv({ sigs: [['shop.example', 's1']] })],
   ['Authentication-Results with no results', rcv({ ar: 'none' })],
   ['untrusted Authentication-Results claims a pass', rcv({ ar: 'dkim=pass header.d=mailer.example header.s=m1; spf=fail smtp.mailfrom=orders@shop.example; ' + REJECT, sigs: [['mailer.example', 'm1']], extra: ['Authentication-Results: spoof.example; dmarc=pass header.from=shop.example'] })],
@@ -130,6 +131,7 @@ function lines(f) {
   f.details.forEach((s, i) => pair('Detail ' + (i + 1), s));
   f.fixes.forEach((s, i) => pair('Fix ' + (i + 1), s));
   f.flags.forEach((s, i) => pair('Flag ' + (i + 1), s));
+  f.limits.forEach((s, i) => pair('Limit ' + (i + 1), s));
   return out;
 }
 

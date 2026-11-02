@@ -98,7 +98,7 @@ says so in the output rather than defaulting silently.
 Result object (what the page renders)
 input, message, finding, alignment (rows per identifier with
 aligned, strict, mode), auth (all A-R, primary, spf, dkim, dmarc,
-computed, arc, arcResult, compauth), chain (hops, totalSec,
+computed, arc, arcResult, compauth, unbackedDkim), chain (hops, totalSec,
 slowestIdx, clockSkew, originIp), decoded (filters, platform,
 list, notes), fields, flags.
 

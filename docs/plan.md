@@ -369,3 +369,13 @@ Decisions
             no longer gets the parent's sp=. build.js parses every
             link and compares the whole host. Issues 14 and 20 wait
             for Neil; see the pull request.
+2026-11-02  Issue 14, the way Neil approved in PR 26. The primary
+            Authentication-Results keeps the current rule, since
+            Gmail and Postfix write theirs just below their Received
+            stamp. When the only trusted field sits below the
+            receiver's only stamp with no hop before it, and reports
+            dkim=pass while the paste holds no DKIM-Signature, a
+            caveat limit says the sender could have written it. The
+            status does not change. docs/sentences.md now lists each
+            case's limits, with a case for this one, and the cause
+            test keys on the cause and its limits.
