@@ -190,14 +190,11 @@ function build() {
   // and puts a real head in front.
   const inner = body.replace(/^<title>[^<]*<\/title>\n/, '').replace(/^<meta name="claude:[^>]*>\n/m, '');
   const full = '<!doctype html>\n<html lang="en">\n<head>\n' + head(page, csp) + '\n</head>\n<body>\n' + inner + '\n</body>\n</html>\n';
-  // The check runs again over what is written, where the head, the JSON-LD
-  // and the assembled page are all present. The CSP names the usage origin
-  // as a source, not a link, and the inline scripts were checked above.
-  const scan = (h) => h.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, (sc) => /application\/ld\+json/i.test(sc.slice(0, sc.indexOf('>'))) ? sc : '');
-  for (const [name, text] of [['dist/index.html', full], ['dist/artifact.html', body]]) {
-    const bad = badLinks(scan(text));
-    if (bad.length) throw new Error(name + ' references a URL outside the allowed links: ' + bad.join(', '));
-  }
+  // The check runs again over the head, with the JSON-LD, and the page body.
+  // The script text is ours and was checked above, so it is left out by
+  // building the text to scan without it, not by filtering the HTML.
+  const bad = badLinks(head(page, '') + '\n' + page.replace('<!-- SCRIPTS -->', ''));
+  if (bad.length) throw new Error('the assembled page references a URL outside the allowed links: ' + bad.join(', '));
   fs.writeFileSync(path.join(dist, 'index.html'), full);
   fs.writeFileSync(path.join(dist, '_headers'), headers(csp));
   fs.writeFileSync(path.join(dist, 'robots.txt'), ROBOTS);

@@ -217,7 +217,7 @@ test('build link guard also reads src, single quoted and unquoted attributes, an
   assert.deepEqual(badLinks('<svg xmlns="http://www.w3.org/2000/svg"></svg>'), []);
 });
 
-test('build runs the link check over the JSON-LD block and over upper case script tags', () => {
+test('build does not filter HTML with a script regular expression', () => {
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'build.js'), 'utf8');
-  assert.ok(/<script\\b\[\^>\]\*>.*\/gi/.test(src), 'script stripping is case insensitive');
+  assert.ok(!/<script\\b/i.test(src.replace(/'<script>'[^\n]*/g, '')), 'no script tag pattern');
 });
