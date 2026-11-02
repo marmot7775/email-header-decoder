@@ -238,18 +238,21 @@
   // Addresses in a From, To, Reply-To, Sender or Return-Path value.
   function parseAddresses(value) {
     if (!value) return [];
-    const v = decodeWords(value);
+    // Encoded words (RFC 2047) are decoded only in the display phrase, after the
+    // mailbox is parsed. Decoding first would let a word that decodes to
+    // "<x@y>" stand in for the address, and RFC 2047 section 5 bars encoded
+    // words from addr-spec and quoted-string anyway.
     const out = [];
-    for (let box of splitMailboxes(v)) {
+    for (let box of splitMailboxes(value)) {
       // Group syntax (RFC 5322 3.4): "name: a@x, b@y;" and the empty
       // "Undisclosed recipients:;". The group name is not an address.
       const g = /^\s*(?:"[^"]*"|[^<>"@:,])*:/.exec(box);
       if (g && !/^\s*<?mailto:/i.test(box)) { box = box.slice(g[0].length); if (!box.replace(/[;\s]/g, '')) continue; }
       box = box.replace(/;\s*$/, '');
-      const m = /<([^<>]*)>/.exec(box);
+      const m = findAngle(box);
       if (m) {
-        const display = stripComments(box.slice(0, m.index)).replace(/^"|"$/g, '').trim();
-        out.push(mkAddress(m[1].trim(), display));
+        const display = decodeWords(stripComments(box.slice(0, m.index)).replace(/^"|"$/g, '').trim());
+        out.push(mkAddress(m.inner.trim(), display));
       } else {
         const b = stripComments(box).trim();
         // A quoted string alone is a display name split off by a stray
@@ -260,6 +263,27 @@
       }
     }
     return out;
+  }
+
+  // The first angle-addr outside quoted strings and comments (RFC 5322 3.4).
+  function findAngle(box) {
+    let inQuote = false, depth = 0;
+    for (let i = 0; i < box.length; i++) {
+      const c = box[i];
+      if (inQuote) { if (c === '\\') i++; else if (c === '"') inQuote = false; continue; }
+      if (depth > 0) {
+        if (c === '\\') i++; else if (c === '(') depth++; else if (c === ')') depth--;
+        continue;
+      }
+      if (c === '"') { inQuote = true; continue; }
+      if (c === '(') { depth = 1; continue; }
+      if (c === '<') {
+        const end = box.indexOf('>', i + 1);
+        if (end < 0) return null;
+        return { index: i, inner: box.slice(i + 1, end) };
+      }
+    }
+    return null;
   }
 
   // Split an address list on commas outside quotes, comments and angle brackets.
@@ -324,7 +348,16 @@
         offsetMin = ZONES[z.toUpperCase()];
         result.tzKnown = true;
       }
-      result.time = Date.UTC(year, mon, parseInt(m[1], 10), parseInt(m[4], 10), parseInt(m[5], 10), m[6] ? parseInt(m[6], 10) : 0) - offsetMin * 60000;
+      // RFC 5322 3.3: the day must exist in the month, the time must be
+      // 00:00:00 to 23:59:60, and the zone minutes 00 to 59. Anything else is
+      // unreadable, not rolled forward into a different moment.
+      const day = parseInt(m[1], 10), hh = parseInt(m[4], 10), mm = parseInt(m[5], 10), ss = m[6] ? parseInt(m[6], 10) : 0;
+      const zoneMinutes = z && /^[+-]\d{4}$/.test(z) ? parseInt(z.slice(3, 5), 10) : 0;
+      if (day < 1 || day > new Date(Date.UTC(year, mon + 1, 0)).getUTCDate() || hh > 23 || mm > 59 || ss > 60 || zoneMinutes > 59) {
+        result.tzKnown = false;
+        return result;
+      }
+      result.time = Date.UTC(year, mon, day, hh, mm, ss) - offsetMin * 60000;
       return result;
     }
     // asctime, as some older MTAs write it: Fri Oct 23 16:30:14 2026. No zone.

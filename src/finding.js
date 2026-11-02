@@ -230,11 +230,18 @@
       return say(fails ? (a === 'none' || /^pct/.test(a) ? 'caveat' : 'fail') : 'pass', t, plain, src);
     }
     if (!pol.p) return say('unknown', receiver + ' did not quote the DMARC policy of ' + from + ', so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.', 'The headers don\'t say what ' + from + ' asks mail providers to do with fake mail.', src);
-    const sub = !!pol.sp && !!org && org !== from;
+    // The receiver quotes the record it found, which for a subdomain is the
+    // subdomain's own record when one exists, and that record's sp= does not
+    // apply to the subdomain itself (RFC 7489 6.3). When the disposition
+    // matches p= and not sp=, the sp= reading cannot be right, so the page
+    // quotes both tags and does not say which domain published them.
+    const subOrg = !!pol.sp && !!org && org !== from;
+    const quotedP = subOrg && !!disp.value && disp.value !== pol.sp && disp.value === pol.p;
+    const sub = subOrg && !quotedP;
     const pv = sub ? pol.sp : pol.p, tag = sub ? 'sp=' : 'p=';
     const P_WORD = { none: 'which asks for no action', quarantine: 'which asks for failing mail to go to spam', reject: 'which asks for failing mail to be refused' };
     const pw = tag + pv + (sub ? ' for subdomains such as ' + from : '') + (P_WORD[pv] ? ', ' + P_WORD[pv] : '');
-    const pub = (sub ? org : from) + ' publishes ' + pw;
+    const pub = quotedP ? receiver + ' quoted p=' + pol.p + ' and sp=' + pol.sp + ' from the record it found, which may be the record of ' + from + ' itself' : (sub ? org : from) + ' publishes ' + pw;
     if (status === 'pass') return say('pass', pub + '. This message passed, so the policy did not come into play.', 'The message passed, so the sender\'s DMARC setting didn\'t come into play.', src);
     if (disp.source === 'dis') {
       const D = { none: 'did not apply it to this message', quarantine: 'sent this message to spam', reject: 'refused this message' };

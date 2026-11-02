@@ -55,23 +55,31 @@ com.ro nom.ro org.ro
 com.hr from.hr
 com.pt edu.pt gov.pt org.pt
 com.gr edu.gr gov.gr net.gr org.gr
+act.gov.au nsw.gov.au nt.gov.au qld.gov.au sa.gov.au tas.gov.au vic.gov.au wa.gov.au
+act.edu.au nsw.edu.au nt.edu.au qld.edu.au sa.edu.au tas.edu.au vic.edu.au wa.edu.au
+ab.ca bc.ca mb.ca nb.ca nf.ca nl.ca ns.ca nt.ca nu.ca on.ca pe.ca qc.ca sk.ca yt.ca gc.ca
 `.split(/\s+/).filter(Boolean);
 
-  const SUFFIXES = new Set(MULTI);
+  // The fifty states and the District of Columbia are public suffixes under us.
+  const US_STATES = 'al ak az ar ca co ct de dc fl ga hi id il in ia ks ky la me md ma mi mn ms mo mt ne nv nh nj nm ny nc nd oh ok or pa ri sc sd tn tx ut vt va wa wv wi wy'.split(' ').map(c => c + '.us');
+  const SUFFIXES = new Set(MULTI.concat(US_STATES));
   // US state locality rules: k12.ca.us, cc.ca.us, lib.ca.us, state.ca.us
   const US_STATE = /^(k12|cc|lib|state)\.[a-z]{2}\.us$/;
   // Private-section suffixes relevant to mail and hosting.
   const PRIVATE = new Set(['github.io', 'herokuapp.com', 'blogspot.com', 'appspot.com', 'azurewebsites.net', 'netlify.app', 'vercel.app', 'pages.dev', 'workers.dev', 'web.app', 'firebaseapp.com', 'myshopify.com']);
 
   // Two-letter TLDs whose second-level suffixes the list above covers, or
-  // whose registry sells names directly at the second level. Generic TLDs
+  // whose registry sells names directly at the second level. ca, us, it, jp
+  // and au are left out on purpose: their public suffixes go deeper than
+  // this file lists (on.ca, il.us, mi.it, tokyo.jp, vic.gov.au), so a name
+  // of three labels under them is an approximation. Generic TLDs
   // (three letters or more) register at the second level by policy. A
   // ccTLD outside this set may have second-level suffixes this file does
   // not know, so a name under it is an approximation.
   const KNOWN_CC = new Set(`
-uk au nz jp br in za mx cn kr tw hk sg my id ph th vn tr ar co pe ve ec uy bo py gt sv hn ni pa do cu pr
+uk nz br in za mx cn kr tw hk sg my id ph th vn tr ar co pe ve ec uy bo py gt sv hn ni pa do cu pr
 pl ru ua il eg sa ae pk bd ng ke gh tz ug zw bw na et kw qa om bh jo lb cy mt es fr at hu ro hr pt gr
-us ca de nl be ch li lu se no dk fi is ie it cz sk si ee lv lt bg rs eu io ai me tv cc ws fm am gg je im
+de nl be ch li lu se no dk fi is ie cz sk si ee lv lt bg rs eu io ai me tv cc ws fm am gg je im
 `.split(/\s+/).filter(Boolean));
 
   function clean(domain) { return String(domain || '').toLowerCase().replace(/\.$/, ''); }
@@ -81,7 +89,7 @@ us ca de nl be ch li lu se no dk fi is ie it cz sk si ee lv lt bg rs eu io ai me
     if (labels.length < 2) return labels[0] || '';
     const last3 = labels.slice(-3).join('.');
     const last2 = labels.slice(-2).join('.');
-    if (US_STATE.test(last3)) return last3;
+    if (US_STATE.test(last3) || SUFFIXES.has(last3)) return last3;
     if (SUFFIXES.has(last2) || PRIVATE.has(last2)) return last2;
     return labels[labels.length - 1];
   }

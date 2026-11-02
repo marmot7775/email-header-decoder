@@ -7,15 +7,23 @@
   const P = HA.parse;
   const say = P.sentence;
 
-  const IPV4 = /\b(\d{1,3}(?:\.\d{1,3}){3})\b/;
-  const IPV6 = /\[?(?:IPv6:)?([0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7})(?:%\d+)?\]?/i;
+  const V4 = '(\\d{1,3}(?:\\.\\d{1,3}){3})';
+  const V6 = '([0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7}(?:\\.\\d{1,3}){0,3})';
 
+  // The address in a from clause (RFC 5321 4.4): the bracketed address
+  // literal, else a token that is an address and nothing more. Digits inside
+  // a host name are not an address: hosting providers write the address
+  // reversed into reverse DNS names, and a name is not evidence of the
+  // connection.
   function findIp(text) {
     if (!text) return '';
-    const m4 = IPV4.exec(text);
-    if (m4) return m4[1];
-    const m6 = IPV6.exec(text);
-    if (m6 && m6[1].includes(':')) return m6[1];
+    const lit = new RegExp('\\[(?:IPv6:)?(?:' + V4 + '|' + V6 + ')(?:%\\w+)?\\]', 'i').exec(text);
+    if (lit) return lit[1] || lit[2];
+    for (const tok of String(text).split(/[\s,;()]+/)) {
+      const t = tok.replace(/^IPv6:/i, '').replace(/%\w+$/, '');
+      if (new RegExp('^' + V4 + '$').test(t)) return t;
+      if (t.includes(':') && !/^\d{1,2}:\d{2}(:\d{2})?$/.test(t) && new RegExp('^' + V6 + '$', 'i').test(t)) return t;
+    }
     return '';
   }
 
@@ -269,7 +277,15 @@
     if (!hops.length || !t.sides[hops.length - 1]) return t;
     t.operator = t.sides[hops.length - 1];
     let b = hops.length - 1;
-    while (b > 0 && t.sides[b - 1] === t.operator) b--;
+    // The run reaches back only while each earlier hop handed the message to
+    // the hop after it: its by host is the later hop's from host, the later
+    // hop's from side is the operator's own, or the later hop started with no
+    // from side at all. A Received line the sender wrote naming the
+    // receiver's host does not meet that, so it ends the run (RFC 5321 4.4:
+    // each server prepends its own line, so nothing below the first stamp
+    // came from the receiver).
+    const handedOver = (prev, next) => sameHost(prev.byHost, next.fromHost) || next.fromOperator === t.operator || next.internal || !next.from;
+    while (b > 0 && t.sides[b - 1] === t.operator && handedOver(hops[b - 1], hops[b])) b--;
     const h = hops[b];
     t.boundaryIdx = b;
     t.src = h.src.slice();

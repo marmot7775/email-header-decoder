@@ -352,3 +352,20 @@ Decisions
             choice. CLAUDE.md drops no storage from the hard rules
             and adds the chrome rule. In dns-audit, check_chrome.py
             reads Cloudflare's obfuscated email text as the address.
+2026-11-02  Fixes for the issues from the 2026-11-01 review (12, 13, 15
+            to 19, 21, 22), tests in test/nightly-fixes.test.js. The
+            From address is the angle address outside quotes and
+            comments, and encoded words decode only in the display
+            name. Dates with an hour past 23, a day the month lacks,
+            or zone minutes past 59 have no time. A second id-less
+            Authentication-Results at Exchange Online is untrusted.
+            A DKIM result with only header.i matches only signatures
+            whose d= equals or is a parent of the i= domain. The
+            origin IP is the bracketed literal, never digits in a host
+            name. Custody reaches back only through hops that handed
+            the message over. Province, state and Australian state
+            suffixes join the list, and ca, us, it, jp and au count as
+            approximate. A subdomain whose disposition followed p=
+            no longer gets the parent's sp=. build.js parses every
+            link and compares the whole host. Issues 14 and 20 wait
+            for Neil; see the pull request.
