@@ -101,7 +101,7 @@
   }
   function passPieces(auth) {
     const out = [];
-    for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: dkimId(k, k.domain) + ' passed', p: (k.dFromI ? 'it was signed on behalf of ' : 'it was signed by ') + k.domain, d: k.domain, kind: 'dkim', dFromI: k.dFromI, relaxedOnly: k.relaxedOnly, src: k.src });
+    for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: dkimId(k, k.domain) + ' passed' + (k.sha1 ? ' (a=rsa-sha1, which RFC 8301 3.1 says verifiers must treat as failed)' : ''), p: (k.dFromI ? 'it was signed on behalf of ' : 'it was signed by ') + k.domain + (k.sha1 ? ' with an outdated method (rsa-sha1) that mail systems should no longer accept' : ''), d: k.domain, kind: 'dkim', dFromI: k.dFromI, sha1: !!k.sha1, relaxedOnly: k.relaxedOnly, src: k.src });
     const s = auth.spf;
     // A null reverse path has SPF check the HELO identity (RFC 7208 2.4),
     // worded as spfPiece words it.
@@ -113,7 +113,7 @@
     // An i= domain below the From domain is a relaxed match whatever d= is.
     const relaxed = pieces.some(x => x.relaxedOnly || (x.dFromI && x.d !== from)) ? ' under relaxed alignment, through the organizational domain' : '';
     // Every pass is the From domain itself: name it once.
-    const own = !relaxed && pieces.every(x => x.d === from) && !pieces.some(x => x.helo || x.dFromI);
+    const own = !relaxed && pieces.every(x => x.d === from) && !pieces.some(x => x.helo || x.dFromI || x.sha1);
     const both = pieces.length > 1;
     const ownP = both ? 'it was signed by ' + from + ', the domain in the From address, and came from a server it allows.'
       : pieces[0] && pieces[0].kind === 'spf' ? 'it came from a server allowed by ' + from + ', the domain in the From address.' : 'it was signed by ' + from + ', the domain in the From address.';
@@ -133,6 +133,7 @@
       if (r.ambiguous) return say('unknown', 'A DKIM result for d=' + d + ' names neither s= nor b=, and two signatures carry d=' + d + ', so this page cannot tell which one it describes.', 'One signature result could belong to either of two signatures, so this page does not pick one.', r.src);
       if (!r.result) return say('unknown', 'DKIM-Signature d=' + d + sel + ' carries no result from the receiver.', 'One signature on the message was not checked by the receiver.', r.src);
       if (r.result === 'pass' && r.dFromI && r.relaxed) return say('pass', 'DKIM passed for i=@' + d + sel + ', which aligns with ' + from + ' in relaxed mode. No DKIM-Signature here shows its d=, so strict mode cannot be judged.', 'The message was signed on behalf of ' + d + ', which belongs to the sender.', r.src);
+      if (r.result === 'pass' && r.sha1 && r.relaxed) return say('caveat', 'DKIM passed for d=' + d + sel + ', which aligns with ' + from + ', but the signature uses rsa-sha1. RFC 8301 3.1 says verifiers must not accept rsa-sha1, so a receiver that follows it would not count this pass.', 'The message was signed by ' + d + ', but with an outdated method (rsa-sha1) that mail systems should no longer accept.', r.src);
       if (r.result === 'pass') return r.relaxed
         ? say('pass', 'DKIM passed for d=' + d + sel + ', which aligns with ' + from + (r.relaxedOnly ? ' in relaxed mode only.' : '.'), 'The message was signed by ' + d + ', which belongs to the sender.', r.src)
         : say('caveat', 'DKIM passed for d=' + d + sel + ', which does not align with ' + from + '. A pass on another domain does not count for DMARC.', 'The message was signed, but by ' + d + ', not by the sender\'s own domain.', r.src);
@@ -321,6 +322,8 @@
       if (temp) add('caveat', 'A temperror on the key query says nothing about the key. If it repeats, check that the nameservers for ' + temp.domain + ' answer promptly and that ' + (temp.selector || '<selector>') + '._domainkey.' + temp.domain + ' resolves.', 'The key lookup failed for a temporary reason, which is not a setup fault. If it keeps happening, ask whoever hosts the DNS for ' + temp.domain + ' whether their servers were slow to answer.', temp.src);
       if (perm) add('fail', 'Publish or repair the DKIM key at ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + '; ' + receiver + ' could not use it.', 'The key that checks this signature could not be read. Ask whoever manages the DNS for ' + perm.domain + ' to compare the record named ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + ' with what ' + svc.p + ' says it should be.', perm.src);
     }
+    const sha1 = auth.dkim.find(k => k.sha1 && k.relaxed);
+    if (sha1) add('caveat', 'Sign with rsa-sha256 at ' + svc.t + ' instead of rsa-sha1 for d=' + sha1.domain + '. RFC 8301 3.1 has verifiers treat rsa-sha1 as failed, so this pass may not hold at other receivers.', 'Ask ' + svc.p + ' to sign with the current method (rsa-sha256). This message uses an old one (rsa-sha1) that mail systems following current rules no longer accept, so it may fail elsewhere.', sha1.src);
     const s = auth.spf;
     if (s.domain && !/helo/i.test(s.identity) && !unproven) {
       if (s.result === 'fail' || s.result === 'softfail') add('fail', 'If this is your mail, add ' + svc.t + ' to the SPF record of ' + s.domain + (s.ip ? ' so it covers ' + s.ip : '') + '. If it is not, the SPF failure is correct.', 'If you sent this, ask whoever manages the DNS for ' + s.domain + ' to add ' + svc.p + ' to its list of allowed servers (the SPF record). The service\'s setup page gives the exact entry. If you didn\'t send it, someone else used your domain and the check correctly failed it.', s.src);
@@ -494,11 +497,15 @@
       const pp = passPieces(auth);
       if (pp.length) {
         const cl = passClause(pp, fd);
-        const head = say(computedOnly ? 'caveat' : 'pass', lead + (computedOnly ? 'passes' : 'passed') + ' because ' + cl.t, plainLead + 'passed the sender check (DMARC). ' + upFirst(cl.p), uniq(pp.flatMap(x => x.src).concat(from.src)));
+        // A pass that rests only on rsa-sha1 is the receiver's word against RFC 8301.
+        const sha1Only = pp.every(x => x.sha1);
+        const head = say(computedOnly || sha1Only ? 'caveat' : 'pass', lead + (computedOnly ? 'passes' : 'passed') + ' because ' + cl.t, plainLead + 'passed the sender check (DMARC). ' + upFirst(cl.p), uniq(pp.flatMap(x => x.src).concat(from.src)));
         const dkimCarries = auth.dkim.some(k => k.result === 'pass' && k.relaxed), spfCarries = auth.spf.result === 'pass' && auth.spf.relaxed;
         const lasts = dkimCarries && spfCarries ? 'For ' + fd + ', both SPF and DKIM pass and align, so the message still passes after a forward that breaks SPF.' : dkimCarries ? 'For ' + fd + ', the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.' : 'For ' + fd + ', only SPF passes and aligns. A forward or a mailing list breaks it, because SPF checks whichever server hands the message over; aligned DKIM would still pass.';
         const cause = say('pass', lasts + (computedOnly ? ' Worked out here; the receiver recorded no DMARC result.' : '') + (fw.yes ? ' The message was forwarded by ' + joinList(fw.by) + ' and still passed.' : ''), 'A message passes when it is signed by, or sent for, the domain in its From address, and this one was.', allSrc);
-        return finish('pass', head, cause);
+        const res = finish('pass', head, cause);
+        if (sha1Only) res.state = 'caveat';
+        return res;
       }
       // Reported pass with nothing aligned: say why the receiver passed it.
       const d = dm.disagreement;

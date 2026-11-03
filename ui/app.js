@@ -76,7 +76,7 @@
   function tiles() {
     const rows = R.alignment.rows;
     const plain = true;
-    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? (plain ? 'Passed' : 'Pass, aligned') : x.state === 'caveat' ? (plain ? 'Passed for another domain' : 'Pass, not aligned') : x.result ? (plain && x.result === 'fail' ? 'Failed' : cap(x.result)) : 'Not reported';
+    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? (plain ? 'Passed' : 'Pass, aligned') : x.state === 'caveat' && x.sha1 && x.relaxed ? 'Passed, outdated signature' : x.state === 'caveat' ? (plain ? 'Passed for another domain' : 'Pass, not aligned') : x.result ? (plain && x.result === 'fail' ? 'Failed' : cap(x.result)) : 'Not reported';
     const idState = (x) => !x || x.absent ? 'unknown' : x.state;
     const spf = rows.find(x => x.kind === 'spf');
     const dkims = rows.filter(x => x.kind === 'dkim' && !x.absent).sort((a, b) => RANK[a.state] - RANK[b.state]);
@@ -250,7 +250,7 @@
     const st = (x) => x.absent ? 'unknown' : x.state;
     const left = (dkim.length ? dkim : [{ kind: 'dkim', absent: true, src: [] }]).map(x => '<div class="arow ' + st(x) + '">' + alignNode(x) + connector(x) + '</div>').join('');
     const right = '<div class="arow ' + st(spf) + '">' + connector(spf) + alignNode(spf) + '</div>';
-    const showOrg = f.domain && a.rows.some(x => x.state === 'pass' && x.relaxedOnly);
+    const showOrg = f.domain && a.rows.some(x => x.passed && x.relaxedOnly);
     let center = '<span class="k">From domain</span>';
     if (f.domain) {
       center += '<span class="d mono">' + esc(f.domain) + '</span>';

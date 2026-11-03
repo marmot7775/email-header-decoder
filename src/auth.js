@@ -110,7 +110,7 @@
     if (!sig.signedHeaders.includes('from')) sig.notes.push('h= does not list From, which RFC 6376 5.4 requires.');
     if (sig.l !== null) sig.notes.push('l= body length limit present; the signature covers only the first ' + sig.l + ' bytes of the body, and content appended after that is unsigned.');
     if (sig.x !== null && sig.t !== null && sig.x < sig.t) sig.notes.push('x= expiry is earlier than t= timestamp.');
-    if (/sha1/i.test(sig.a)) sig.notes.push('rsa-sha1 is historic (RFC 8301); receivers may ignore it.');
+    if (/sha1/i.test(sig.a)) sig.notes.push('a=' + sig.a + ': RFC 8301 3.1 says rsa-sha1 must not be used for signing or verifying, and treats such signatures as permanently failed (RFC 6376 3.9). A receiver that reports a pass for one is not following RFC 8301.');
     return sig;
   }
 
@@ -430,7 +430,11 @@
       if (sig) d = sig.d;
       else if (!d) { d = P.domainOf(e.ids['header.i'] || ''); if (d === 'none') d = ''; fromI = !!d; }
       const ambiguous = candidates.length > 1;
-      return Object.assign(alignRow('dkim', d, e.result, from, fromI), { selector: s || (sig ? sig.s : ''), reason: e.reason, comments: e.comments, signature: sig ? signatures.indexOf(sig) : -1, matchedBy, ambiguous, candidates: candidates.map(c => signatures.indexOf(c)),
+      const row = alignRow('dkim', d, e.result, from, fromI);
+      // RFC 8301 3.1: an rsa-sha1 signature has permanently failed, so a
+      // reported pass on one stays the receiver's word, with a caveat (issue 36).
+      if (sig && /sha1/i.test(sig.a) && row.passed) Object.assign(row, { sha1: true, state: 'caveat', word: row.relaxed ? row.word + ', rsa-sha1' : row.word });
+      return Object.assign(row, { selector: s || (sig ? sig.s : ''), reason: e.reason, comments: e.comments, signature: sig ? signatures.indexOf(sig) : -1, matchedBy, ambiguous, candidates: candidates.map(c => signatures.indexOf(c)),
         src: (sig ? [sig.src[0]] : candidates.map(c => c.src[0])).concat(e.src).sort((a, b) => a - b), absent: !d });
     }).filter(r => !(r.absent && r.result === 'none'));
     for (const sig of signatures) {
@@ -532,8 +536,8 @@
   function alignmentOf(from, dkim, spf, computed) {
     const rows = dkim.concat([spf]);
     const notes = [];
-    if (from.domain && rows.some(r => r.state === 'pass' && r.relaxedOnly)) {
-      const r = rows.filter(x => x.state === 'pass' && x.relaxedOnly);
+    if (from.domain && rows.some(r => r.passed && r.relaxedOnly)) {
+      const r = rows.filter(x => x.passed && x.relaxedOnly);
       notes.push(say('caveat', r.map(x => (x.kind === 'dkim' ? 'DKIM d=' : 'SPF ') + x.domain).join(' and ') + ' align' + (r.length === 1 ? 's' : '') + ' with ' + from.domain + ' only in relaxed mode, through the organizational domain ' + from.org + '. Under ' + (r.some(x => x.kind === 'dkim') ? 'adkim=s' : '') + (r.some(x => x.kind === 'dkim') && r.some(x => x.kind === 'spf') ? ' or ' : '') + (r.some(x => x.kind === 'spf') ? 'aspf=s' : '') + ' it would not count. The DMARC record decides.',
         'The signature belongs to the same organization as the sender but not to the exact same domain. That counts unless the domain\'s policy demands an exact match.', r.flatMap(x => x.src).concat(from.src)));
     }
