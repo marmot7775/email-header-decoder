@@ -204,7 +204,9 @@
     const pp = first(fields, 'x-proofpoint-spam-details');
     if (pp) {
       const s = [pp.index], kv = {}, items = [];
-      for (const m of pp.value.matchAll(/(?<![a-z])([a-z]+)=(\S+)/gi)) kv[m[1].toLowerCase()] = m[2];
+      // The second branch eats a run of letters that starts no pair, so a
+      // name starts only at the start of a run (no lookbehind: see auth.js).
+      for (const m of pp.value.matchAll(/([a-z]+)=(\S+)|[a-z]+/gi)) if (m[1] !== undefined) kv[m[1].toLowerCase()] = m[2];
       if (kv.rule) {
         const r = kv.rule.toLowerCase();
         items.push(r === 'notspam' ? item('rule', kv.rule, 'pass', 'Classification rule notspam: not spam.', 'Proofpoint decided this is not spam.', s)

@@ -379,3 +379,15 @@ Decisions
             status does not change. docs/sentences.md now lists each
             case's limits, with a case for this one, and the cause
             test keys on the cause and its limits.
+2026-11-03  iPhone fix. A visitor on an iPhone pasted headers and
+            found no way to run the read. Two regular expressions
+            used lookbehind, which Safari parses only from iOS 16.4,
+            so on older iOS the whole page script failed and the
+            button, the paste listener, and Cmd+Enter did nothing.
+            Both now use a second branch that eats a run of name
+            characters, which matches the same and still scans a run
+            once. The button reads Analyze headers instead of Decode.
+            Below 640px the paste box uses 16px, so iOS no longer
+            zooms in on focus, and the button takes a full width row
+            under the box. Buttons carry touch-action: manipulation.
+            test/ios-submit.test.js pins all of it.

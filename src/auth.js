@@ -27,8 +27,12 @@
     return parts;
   }
 
-  // The lookbehind starts a name only at the start of a run, so a long run with no = is scanned once, not once per character.
-  const PROP_RE = /(?<![A-Za-z0-9_-])([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s;]+)/g;
+  // A name starts only at the start of a run of name characters. The
+  // second branch eats a whole run that starts no property, so a long run
+  // with no = is scanned once, not once per character. Matches of that
+  // branch leave the name group empty and are skipped. (No lookbehind:
+  // Safari before iOS 16.4 cannot parse one, and the whole page fails.)
+  const PROP_RE = /([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s;]+)|[A-Za-z0-9_-]+/g;
   // The identifiers the page shows for every method (RFC 8601 2.7).
   const IDS = ['header.d', 'header.i', 'header.s', 'header.b', 'smtp.mailfrom', 'smtp.helo', 'header.from'];
 
@@ -66,6 +70,7 @@
       const tail = stripped.slice(mm[0].length);
       PROP_RE.lastIndex = 0;
       while ((pm = PROP_RE.exec(tail))) {
+        if (pm[1] === undefined) continue;
         const key = pm[1].toLowerCase();
         const val = pm[2].replace(/^"|"$/g, '');
         if (key === 'reason') r.reason = val; else r.props[key] = val;
@@ -86,7 +91,7 @@
     const m = /^([A-Za-z]+)/.exec(stripped);
     if (m) r.result = m[1].toLowerCase();
     let pm; PROP_RE.lastIndex = 0;
-    while ((pm = PROP_RE.exec(stripped))) r.props[pm[1].toLowerCase()] = pm[2].replace(/^"|"$/g, '');
+    while ((pm = PROP_RE.exec(stripped))) if (pm[1] !== undefined) r.props[pm[1].toLowerCase()] = pm[2].replace(/^"|"$/g, '');
     return r;
   }
 
