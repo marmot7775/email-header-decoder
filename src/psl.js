@@ -1,10 +1,10 @@
-// psl.js: organizational domain, RFC 7489 style, from an abbreviated
-// public suffix list. The full PSL is about 250 KB; this carries the
-// multi-label suffixes that show up in mail, plus a rule that any
-// unknown two-label name under a ccTLD with a known second level is a
-// suffix. RFC 9989 receivers find the organizational domain with a DNS
-// tree walk instead; that needs DNS, so this file is the first release
-// approximation and the UI says so.
+// psl.js: organizational domain from an abbreviated public suffix list,
+// the method of RFC 7489, which RFC 9989 obsoletes. The full PSL is about
+// 250 KB; this carries the multi-label suffixes that show up in mail,
+// plus a rule that any unknown two-label name under a ccTLD with a known
+// second level is a suffix. RFC 9989 receivers find the organizational
+// domain with a DNS tree walk instead; that needs DNS, so this file is the
+// first release approximation and the UI says so.
 (function (root) {
   'use strict';
   const HA = (root.HA = root.HA || {});
@@ -84,6 +84,29 @@ de nl be ch li lu se no dk fi is ie cz sk si ee lv lt bg rs eu io ai me tv cc ws
 
   function clean(domain) { return String(domain || '').toLowerCase().replace(/\.$/, ''); }
 
+  // Invisible and direction control characters. IDNA processing drops some
+  // of them, so a domain holding one is never mapped to the domain it looks
+  // like; parse.js and finding.js read the same set.
+  const HIDDEN = /[\u00ad\u061c\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/;
+
+  // The A-label form receivers compare (RFC 9989 5.3.1: a U-label is
+  // converted to an A-label before further processing). The WHATWG URL
+  // parser does the IDNA conversion in browsers and Node without a
+  // dependency (ws: is a special scheme, so its host goes through IDNA like
+  // any web address). A name is left as written when the conversion would change
+  // more than its encoding: hidden characters, compatibility forms that
+  // NFKC folds (mathematical bold, fullwidth, which no registry allows), or
+  // anything the URL parser reads as a delimiter.
+  function ascii(domain) {
+    const d = clean(domain);
+    if (!/[^\x00-\x7f]/.test(d)) return d;
+    if (HIDDEN.test(d) || /[\/?#@:\\[\]%\s\u3002\uff0e\uff61]/.test(d) || d.normalize('NFKC') !== d.normalize('NFC')) return d;
+    try {
+      const h = new URL('ws://' + d + '/').hostname.replace(/\.$/, '');
+      return /^[\x00-\x7f]+$/.test(h) && h.split('.').length === d.split('.').length ? h : d;
+    } catch (e) { return d; }
+  }
+
   function publicSuffix(domain) {
     const labels = clean(domain).split('.');
     if (labels.length < 2) return labels[0] || '';
@@ -94,19 +117,23 @@ de nl be ch li lu se no dk fi is ie cz sk si ee lv lt bg rs eu io ai me tv cc ws
     return labels[labels.length - 1];
   }
 
-  // Organizational domain: public suffix plus one label (RFC 7489 3.2).
+  // Organizational domain: public suffix plus one label, the RFC 7489 3.2
+  // method. RFC 9989 replaces it with a DNS tree walk, which needs DNS.
   // approximate is true when the name has three or more labels and its
   // suffix is outside this list, so a longer suffix could exist.
+  // domain and org keep the name as written, for display; key and orgKey
+  // are the A-label forms that alignment compares.
   function lookup(domain) {
     const d = clean(domain);
-    if (!d) return { domain: '', org: '', suffix: '', approximate: false };
-    const labels = d.split('.');
-    const suffix = publicSuffix(d);
+    if (!d) return { domain: '', org: '', key: '', orgKey: '', suffix: '', approximate: false };
+    const key = ascii(d);
+    const labels = d.split('.'), keyLabels = key.split('.');
+    const suffix = publicSuffix(key);
     const n = suffix.split('.').length;
-    const org = labels.length <= n ? d : labels.slice(-(n + 1)).join('.');
-    const tld = labels[labels.length - 1];
+    const cut = (ls) => ls.length <= n ? ls.join('.') : ls.slice(-(n + 1)).join('.');
+    const tld = keyLabels[keyLabels.length - 1];
     const listed = n > 1 || tld.length !== 2 || KNOWN_CC.has(tld);
-    return { domain: d, org, suffix, approximate: labels.length >= 3 && !listed };
+    return { domain: d, org: cut(labels), key, orgKey: cut(keyLabels), suffix, approximate: keyLabels.length >= 3 && !listed };
   }
 
   function orgDomain(domain) { return lookup(domain).org; }
@@ -114,7 +141,7 @@ de nl be ch li lu se no dk fi is ie cz sk si ee lv lt bg rs eu io ai me tv cc ws
   // Two hosts run by one operator share an organizational domain.
   function sameOperator(a, b) { const x = orgDomain(a), y = orgDomain(b); return !!x && x === y; }
 
-  HA.psl = { orgDomain, organizationalDomain: orgDomain, sameOperator, publicSuffix, lookup };
+  HA.psl = { orgDomain, organizationalDomain: orgDomain, sameOperator, publicSuffix, lookup, ascii, HIDDEN };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.psl;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

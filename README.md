@@ -3,8 +3,9 @@
 Paste the headers of any email and read, in one sentence, why it
 passed or failed SPF, DKIM, and DMARC, and what to fix.
 
-It takes bare headers, a whole .eml (paste it or drop the file on the
-box; the body is ignored), or a copy of Gmail's Show original page.
+It takes bare headers, a whole .eml (paste it, choose the file, or drop
+it on the box; the body is ignored), or a copy of Gmail's Show original
+page.
 Sample messages on the page show it working before you paste your own.
 
 Live at https://headers.dns-audit.com, part of

@@ -98,6 +98,7 @@
     const finding = parsed.blockFound ? HA.finding.build({ message, chain, auth, alignment, decoded, fields }) : null;
     const flags = flagsOf(text, parsed, message, chain, auth);
     if (finding && finding.status === 'forwarded') flags.push('forwarded');
+    if (finding && finding.flags.some(x => x.hidden)) flags.push('hidden-characters');
     // Sentences joined after say() built them get contracted here too.
     const seen = new Set();
     (function walk(x) {

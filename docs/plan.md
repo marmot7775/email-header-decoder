@@ -33,7 +33,7 @@ is handed out only after that. Status as of 2026-10-29.
    a confidence; list and sending headers with RFC 8058), both in
    the build. The product name is Email Header Decoder and the repo
    is email-header-decoder (renamed 24 Oct). wip/step3 and the
-   15 Oct verdict.js are gone. Gap check 2026-10-27 against the
+   15 Oct module under the old name are gone. Gap check 2026-10-27 against the
    original step 3 prompt, commit bc8930f: Microsoft PCL, AuthSource,
    SFS, AuthAs External and Partner, and the Message-ID domain.
 
@@ -52,7 +52,7 @@ is handed out only after that. Status as of 2026-10-29.
    cases (every status and cause) and every filter code meaning,
    and writes docs/sentences.md; npm run sentences regenerates it
    and test/sentences.test.js fails on a stale file, a throwing
-   case, a dash as punctuation, the word verdict, a double space,
+   case, a dash as punctuation, the word CLAUDE.md bans, a double space,
    or two cases with the same cause. Commit 12dc5c8: the
    HELO only and forwarded causes reworded.
    First real headers 2026-10-28 (an IETF mailing list message in
@@ -119,8 +119,8 @@ Decisions
             which now says Decoded at headers.dns-audit.com.
 2026-10-23  Step 2 check rules, as listed in CLAUDE.md under
             Settled by the step 2 check.
-2026-10-24  Renamed Header Verdict to Email Header Decoder; the one
-            sentence result is the finding.
+2026-10-24  Renamed the project from its previous name to Email
+            Header Decoder; the one sentence result is the finding.
 2026-10-25  Hosted at headers.dns-audit.com as a static site on
             Cloudflare, styled as part of the dns-audit.com family.
             A subdomain, not a path, for simplicity; neither harms

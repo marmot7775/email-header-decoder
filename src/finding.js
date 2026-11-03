@@ -21,6 +21,9 @@
   const SPF_CAUSES = new WeakSet(); // causes that already say what the SPF row says
 
   const STATE_OF = { pass: 'pass', fail: 'fail', forwarded: 'caveat', none: 'caveat', error: 'caveat', unknown: 'unknown' };
+  // The status chip beside the plain headline, so Simple words only. Kept
+  // here, not in ui/app.js, so the Simple word test covers it (issue 37).
+  const STATUS_WORD = { pass: 'Passed', fail: 'Failed', forwarded: 'Broken by a forward', none: 'No DMARC setting', error: 'DMARC error', unknown: 'Cannot judge' };
   const MAILBOX_OPERATORS = ['Google', 'Microsoft', 'Apple', 'Yahoo'];
   const LEVEL_STATE = { pass: 'pass', warn: 'caveat', fail: 'fail', info: 'unknown' };
   const uniq = (a) => Array.from(new Set(a.filter(i => i !== null && i !== undefined))).sort((x, y) => x - y);
@@ -60,9 +63,11 @@
   // One phrase per identifier that did not carry DMARC, in both voices.
   // unaligned marks a pass on a domain that is not the From domain's.
   const SPF_WORD = { fail: 'failed', softfail: 'soft failed', neutral: 'was neutral', none: 'found no record', permerror: 'hit a permanent error in the record', temperror: 'hit a temporary DNS error', policy: 'was overridden by local policy' };
+  // A DKIM row read from i= has no known d= (issue 30).
+  const dkimId = (k, d) => 'DKIM ' + (k.dFromI ? 'i=@' : 'd=') + d + (k.selector ? ' s=' + k.selector : '');
   function dkimPiece(k) {
     const d = k.domain || 'an unnamed domain';
-    const id = 'DKIM d=' + d + (k.selector ? ' s=' + k.selector : '');
+    const id = dkimId(k, d);
     if (k.result === 'pass' && !k.relaxed) return { t: id + ' passed', p: 'it was signed by ' + d, unaligned: true, src: k.src };
     if (k.result === 'pass') return null;
     if (k.result === 'fail') return { t: id + ' failed verification', p: 'the signature from ' + d + ' did not check out', src: k.src };
@@ -99,15 +104,19 @@
   }
   function passPieces(auth) {
     const out = [];
-    for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: 'DKIM d=' + k.domain + (k.selector ? ' s=' + k.selector : '') + ' passed', p: 'it was signed by ' + k.domain, d: k.domain, kind: 'dkim', relaxedOnly: k.relaxedOnly, src: k.src });
+    for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: dkimId(k, k.domain) + ' passed' + (k.sha1 ? ' (a=rsa-sha1, which RFC 8301 3.1 says verifiers must treat as failed)' : ''), p: (k.dFromI ? 'it was signed on behalf of ' : 'it was signed by ') + k.domain + (k.sha1 ? ' with an outdated method (rsa-sha1) that mail systems should no longer accept' : ''), d: k.domain, kind: 'dkim', dFromI: k.dFromI, sha1: !!k.sha1, relaxedOnly: k.relaxedOnly, src: k.src });
     const s = auth.spf;
-    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF passed for the Return-Path domain ' + s.domain + ' (RFC5321.MailFrom)', p: 'it came from a server that ' + s.domain + ' allows', d: s.domain, kind: 'spf', relaxedOnly: s.relaxedOnly, src: s.src });
+    // A null reverse path has SPF check the HELO identity (RFC 7208 2.4),
+    // worded as spfPiece words it.
+    const helo = /helo/i.test(s.identity);
+    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF passed for ' + (helo ? 'the HELO identity ' + s.domain : 'the Return-Path domain ' + s.domain + ' (RFC5321.MailFrom)'), p: helo ? 'the sending server called itself ' + s.domain + ', and ' + s.domain + ' allows it' : 'it came from a server that ' + s.domain + ' allows', d: s.domain, kind: 'spf', helo, relaxedOnly: s.relaxedOnly, src: s.src });
     return out;
   }
   function passClause(pieces, from) {
-    const relaxed = pieces.some(x => x.relaxedOnly) ? ' under relaxed alignment, through the organizational domain' : '';
+    // An i= domain below the From domain is a relaxed match whatever d= is.
+    const relaxed = pieces.some(x => x.relaxedOnly || (x.dFromI && x.d !== from)) ? ' under relaxed alignment, through the organizational domain' : '';
     // Every pass is the From domain itself: name it once.
-    const own = !relaxed && pieces.every(x => x.d === from);
+    const own = !relaxed && pieces.every(x => x.d === from) && !pieces.some(x => x.helo || x.dFromI || x.sha1);
     const both = pieces.length > 1;
     const ownP = both ? 'it was signed by ' + from + ', the domain in the From address, and came from a server it allows.'
       : pieces[0] && pieces[0].kind === 'spf' ? 'it came from a server allowed by ' + from + ', the domain in the From address.' : 'it was signed by ' + from + ', the domain in the From address.';
@@ -126,6 +135,8 @@
       const sel = r.selector ? ' s=' + r.selector : '';
       if (r.ambiguous) return say('unknown', 'A DKIM result for d=' + d + ' names neither s= nor b=, and two signatures carry d=' + d + ', so this page cannot tell which one it describes.', 'One signature result could belong to either of two signatures, so this page does not pick one.', r.src);
       if (!r.result) return say('unknown', 'DKIM-Signature d=' + d + sel + ' carries no result from the receiver.', 'One signature on the message was not checked by the receiver.', r.src);
+      if (r.result === 'pass' && r.dFromI && r.relaxed) return say('pass', 'DKIM passed for i=@' + d + sel + ', which aligns with ' + from + ' in relaxed mode. No DKIM-Signature here shows its d=, so strict mode cannot be judged.', 'The message was signed on behalf of ' + d + ', which belongs to the sender.', r.src);
+      if (r.result === 'pass' && r.sha1 && r.relaxed) return say('caveat', 'DKIM passed for d=' + d + sel + ', which aligns with ' + from + ', but the signature uses rsa-sha1. RFC 8301 3.1 says verifiers must not accept rsa-sha1, so a receiver that follows it would not count this pass.', 'The message was signed by ' + d + ', but with an outdated method (rsa-sha1) that mail systems should no longer accept.', r.src);
       if (r.result === 'pass') return r.relaxed
         ? say('pass', 'DKIM passed for d=' + d + sel + ', which aligns with ' + from + (r.relaxedOnly ? ' in relaxed mode only.' : '.'), 'The message was signed by ' + d + ', which belongs to the sender.', r.src)
         : say('caveat', 'DKIM passed for d=' + d + sel + ', which does not align with ' + from + '. A pass on another domain does not count for DMARC.', 'The message was signed, but by ' + d + ', not by the sender\'s own domain.', r.src);
@@ -268,9 +279,16 @@
       add('caveat', 'If the forward is not yours, authentication worked as designed. Judge the sender by a copy delivered straight to the mailbox.', 'If you did not set up this forward, there is nothing to change. Ask for a copy sent straight to you to check the sender.', fw.src);
       return f;
     }
+    if (ctx.list && ctx.list.unproven && status === 'fail') {
+      const L = ctx.list;
+      add('fail', 'Judge the sender by a copy delivered straight to the mailbox. Nothing from before the list shows a pass, so this failure could come from the list or from a forgery that borrowed a list\'s headers. If nobody at ' + from + ' sent it, treat it as forged.', 'Don\'t trust this message on its word. Ask for a copy sent straight to you, without the list, and check that one. If nobody at ' + from + ' sent it, treat it as forged.', L.src);
+      add('caveat', 'If you run ' + L.id + ' and it did carry this message: ' + (L.mailman ? 'in Mailman, set DMARC mitigation to replace the From address with the list\'s own for every post' : 'have the list rewrite the From address to its own') + ', or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.', 'If you run the list and it did send this: have it send under its own address (it can keep the sender\'s name).', L.src);
+      return f;
+    }
     if (ctx.list && ctx.list.take) {
       const L = ctx.list, ok = L.preResult === 'pass';
-      add('caveat', 'Nothing to change at ' + from + (ok ? ': its mail passed before the list.' : ' on the strength of this message.') + ' Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list\'s ARC seal.', 'If you sent this, your setup is not the problem as far as these headers show. Lists that change messages break these checks.', L.preSrc.concat(L.src));
+      const forgery = L.pre.length ? '' : ' Nothing from before the list shows a pass, though, so if nobody at ' + from + ' sent it, it is a forgery that borrowed a list\'s headers.';
+      add('caveat', 'Nothing to change at ' + from + (ok ? ': its mail passed before the list.' : ' on the strength of this message.') + ' Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list\'s ARC seal.' + forgery, 'If you sent this, your setup is not the problem as far as these headers show. Lists that change messages break these checks.' + (forgery ? ' If you didn\'t send it, it may be forged to look like list mail.' : ''), L.preSrc.concat(L.src));
       add('caveat', 'If you run ' + L.id + ': ' + (L.mailman ? 'in Mailman, set DMARC mitigation to replace the From address with the list\'s own for every post, not only for domains with p=quarantine or p=reject' : 'have the list rewrite the From address to its own') + '; or stop tagging the subject and adding a footer; or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.', 'If you run the list: have it send under its own address (it can keep the sender\'s name), or stop it adding a subject tag and a footer.', L.src);
       return f;
     }
@@ -307,6 +325,8 @@
       if (temp) add('caveat', 'A temperror on the key query says nothing about the key. If it repeats, check that the nameservers for ' + temp.domain + ' answer promptly and that ' + (temp.selector || '<selector>') + '._domainkey.' + temp.domain + ' resolves.', 'The key lookup failed for a temporary reason, which is not a setup fault. If it keeps happening, ask whoever hosts the DNS for ' + temp.domain + ' whether their servers were slow to answer.', temp.src);
       if (perm) add('fail', 'Publish or repair the DKIM key at ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + '; ' + receiver + ' could not use it.', 'The key that checks this signature could not be read. Ask whoever manages the DNS for ' + perm.domain + ' to compare the record named ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + ' with what ' + svc.p + ' says it should be.', perm.src);
     }
+    const sha1 = auth.dkim.find(k => k.sha1 && k.relaxed);
+    if (sha1) add('caveat', 'Sign with rsa-sha256 at ' + svc.t + ' instead of rsa-sha1 for d=' + sha1.domain + '. RFC 8301 3.1 has verifiers treat rsa-sha1 as failed, so this pass may not hold at other receivers.', 'Ask ' + svc.p + ' to sign with the current method (rsa-sha256). This message uses an old one (rsa-sha1) that mail systems following current rules no longer accept, so it may fail elsewhere.', sha1.src);
     const s = auth.spf;
     if (s.domain && !/helo/i.test(s.identity) && !unproven) {
       if (s.result === 'fail' || s.result === 'softfail') add('fail', 'If this is your mail, add ' + svc.t + ' to the SPF record of ' + s.domain + (s.ip ? ' so it covers ' + s.ip : '') + '. If it is not, the SPF failure is correct.', 'If you sent this, ask whoever manages the DNS for ' + s.domain + ' to add ' + svc.p + ' to its list of allowed servers (the SPF record). The service\'s setup page gives the exact entry. If you didn\'t send it, someone else used your domain and the check correctly failed it.', s.src);
@@ -334,10 +354,44 @@
       l.push(say('unknown', 'The organizational domain' + (from.org ? ' ' + from.org : '') + ' comes from a short built in suffix list, not from DNS or the full Public Suffix List that receivers use' + (approx.length ? '; for ' + Array.from(new Set(approx.map(x => x.domain))).join(', ') + ' it is an approximation' : '') + '. Relaxed alignment here rests on it.', 'This page works out where the sender\'s organization begins from its own short list, so the looser domain match is its best reading, not a certainty.', from.src.concat(relaxedRows.flatMap(r => r.src))));
     }
     if (chain.trust.operator === 'Google') l.push(say('unknown', 'Gmail writes no spam, Promotions or inbox placement decision into headers, so these headers cannot show where the message landed.', 'Gmail does not record in the headers whether it put the message in spam. Only the mailbox shows that.', []));
+    // A DKIM result read from i= with no matching signature: d= is not here (issue 30).
+    for (const x of alignment.rows.filter(r => r.dFromI && r.passed && r.relaxed && r.strict === null)) {
+      l.push(say('unknown', 'The DKIM result names only i=@' + x.domain + ', and no DKIM-Signature here matches it, so its d= is not in the headers. RFC 6376 3.5 puts i= at or below d=, so relaxed alignment holds; strict alignment (adkim=s) cannot be judged.',
+        'The headers don\'t show the exact domain the signature used, only a name under it. It belongs to the sender\'s organization, so the usual, looser match holds.', x.src.concat(from.src)));
+    }
     const ub = auth.unbackedDkim;
     if (ub) l.push(say('caveat', 'The only trusted Authentication-Results field' + (ub.authserv ? ' (authserv-id ' + ub.authserv + ')' : '') + ' sits below the receiver\'s only Received stamp, where the sender could have written it. It reports dkim=pass, but the headers hold no DKIM-Signature, so nothing here backs that pass.', 'The sender could have written these check results. They say the message carries a valid digital signature (DKIM), but the headers hold no signature to back that.', ub.src));
     if (fw.yes) l.push(say('unknown', 'ARC seals are not verified here, so the results before the forward are the forwarder\'s own record' + (fw.receiverArc === 'pass' ? '; ' + ctx.receiver + ' reported arc=pass, which means it did verify them.' : '.'), 'This page can\'t confirm the forwarding service\'s own record, so what it saw before the forward is taken on its word.', fw.src));
     return l;
+  }
+
+  // Invisible and direction control characters in a domain the checks read
+  // (issue 31). IDNA (RFC 5892) disallows all of them except ZWNJ and ZWJ,
+  // which a few scripts need after particular letters, so a From domain
+  // whose visible text is plain ASCII, or that holds any other one of them,
+  // cannot be registered: it is forged.
+  const cp = (c) => 'U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+  function hiddenIn(message, auth) {
+    const G = new RegExp(HA.psl.HIDDEN.source, 'g');
+    const out = [];
+    const check = (what, plainWhat, d, src, from) => {
+      const found = Array.from(new Set(String(d || '').match(G) || []));
+      if (!found.length) return;
+      const seen = d.replace(G, '');
+      const forged = from && (/^[\x00-\x7f]+$/.test(seen) || found.some(c => c !== '\u200c' && c !== '\u200d'));
+      const codes = joinList(found.map(cp));
+      const bidi = found.filter(c => /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/.test(c)).length;
+      const kind = found.length === 1 ? (bidi ? 'a direction control character that reorders how text is shown' : 'an invisible character') : !bidi ? 'invisible characters' : bidi === found.length ? 'direction control characters that reorder how text is shown' : 'invisible and direction control characters';
+      out.push(Object.assign(say(from ? (forged ? 'fail' : 'caveat') : 'caveat',
+        'The ' + what + ' ' + d + ' holds ' + codes + ', ' + kind + ', so it is not ' + seen + '.' + (forged ? ' IDNA (RFC 5892) does not allow ' + (found.length === 1 ? 'it' : 'them') + ' here, so no registered domain is spelled that way.' : ''),
+        plainWhat + ' holds a hidden character, so it isn\'t ' + seen + ' even though it looks like it.' + (forged ? ' No real address can be spelled that way, so this message is forged.' : ''), src), { hidden: true, forged: !!forged, seen }));
+    };
+    const fa = message.from;
+    if (fa) check('From domain', 'The sender\'s address', fa.domain, fa.src, true);
+    const rp = message.returnPath;
+    if (rp) check('Return-Path domain', 'The hidden return address (Return-Path)', rp.domain, rp.src, false);
+    for (const sig of auth.signatures) check('DKIM d= domain', 'The domain that signed the message', sig.d, sig.src, false);
+    return out;
   }
 
   function flagsOf(ctx) {
@@ -355,6 +409,7 @@
       const folded = fa.domain.normalize('NFKC').toLowerCase();
       if (folded !== fa.domain && /^[\x00-\x7f]+$/.test(folded)) fl.push(Object.assign(say('fail', 'The From domain ' + fa.domain + ' is written in look-alike characters that read as ' + folded + '. IDNA (RFC 5892) does not allow them, so no registered domain is spelled that way.', 'The sender\'s address uses special characters made to look like ' + folded + '. No real address can be spelled that way, so this message is forged.', fa.src), { lookalike: true }));
     }
+    for (const x of hiddenIn(message, auth)) fl.push(x);
     const untrustedPass = auth.all.filter(r => r.untrusted && r.entries.some(e => e.method === 'dmarc' && e.result === 'pass'));
     if (untrustedPass.length && status !== 'pass') fl.push(say('caveat', 'An Authentication-Results field the receiver did not write claims dmarc=pass. It is ignored here: the sender or a hop before the receiver could have written it.', 'One set of results in the headers claims the message passed, but the receiving system did not write it, so it is ignored.', untrustedPass.flatMap(r => r.src)));
     for (const it of decoded.list) if (it.key === 'Reply-To' && it.level === 'warn') fl.push(say('caveat', it.technical, it.plain, it.src));
@@ -378,7 +433,14 @@
     // wins, and the seal's record stands in for the list's own.
     const vouched = fw.yes && fw.preResult === 'pass' && fw.intact && (fw.receiverArc === 'pass' || !!(auth.compauth && auth.compauth.reason === '130'));
     if (list.yes && fw.yes && !list.pre.length && fw.pre.length) Object.assign(list, { pre: fw.pre.filter(x => ['spf', 'dkim', 'dmarc'].includes(x.method)), preResult: fw.preResult, writer: fw.writer, origName: 'ARC-Authentication-Results', preSrc: fw.aarSrc });
-    list.take = list.yes && list.resent && !vouched && list.preResult !== 'fail';
+    // List-Id, the subject tag, and a pass for the list's domain are all the
+    // sender's to write. With no record from before the list and no broken
+    // signature from the From domain (what a list's changes leave behind),
+    // the list is one possible reason, and a forgery that borrowed a list's
+    // headers is the other (issue 32).
+    const listClaim = list.yes && list.resent && !vouched && list.preResult !== 'fail';
+    list.unproven = listClaim && !list.pre.length && !list.broken.some(k => k.relaxed);
+    list.take = listClaim && !list.unproven;
     const c = Object.assign({}, ctx, { receiver, svc, fw, dm, list });
     const out = { status: 'unknown', state: 'unknown', headline: null, cause: null, consequence: null, details: [], fixes: [], flags: [], limits: [], forwarded: { yes: fw.yes, by: fw.by, preForward: fw.yes ? { writer: fw.writer, result: fw.preResult, derived: !!fw.derived, text: preText(fw), src: fw.aarSrc } : null, src: fw.src } };
     const finish = (status, headline, cause) => {
@@ -393,6 +455,11 @@
       // A From domain that cannot exist has no owner to fix anything.
       const fake = out.flags.find(x => x.lookalike);
       if (fake) out.fixes = [say('fail', 'Treat the message as phishing: the From domain cannot be registered, so nobody owns it to set up DMARC. Report it to your mail provider and do not act on its links or requests.', 'Treat this as a scam. The sender\'s address is fake, so there is nothing to set up. Report it as phishing and don\'t click its links or reply.', fake.src)];
+      const hid = !fake && out.flags.find(x => x.hidden && x.forged);
+      // Nothing aligns because the From domain only looks like another one;
+      // that, not a sending service, is the cause.
+      if (hid && status === 'fail' && !out.forwarded.blamed) out.cause = say('fail', 'The From domain ' + fd + ' only looks like ' + hid.seen + ': it holds a hidden character, so nothing that passed, for ' + hid.seen + ' or any other domain, aligns with it.', 'The sender\'s address only looks like ' + hid.seen + '. It hides a character, so no check that passed counts for it.', uniq(hid.src.concat(out.cause ? out.cause.src : [])));
+      if (hid) out.fixes = [say('fail', 'Treat the message as phishing: the From domain holds a hidden character, so it is not ' + hid.seen + ' and nobody can register it. If you copied these headers from a formatted view rather than the message source, copy the source and decode it again first.', 'Treat this as a scam. The sender\'s address hides a character so it looks like ' + hid.seen + '. Report it as phishing and don\'t click its links or reply. If you copied the headers from a formatted view, copy the original message source and check again first.', hid.src)];
       return out;
     };
 
@@ -441,11 +508,17 @@
       const pp = passPieces(auth);
       if (pp.length) {
         const cl = passClause(pp, fd);
-        const head = say(computedOnly ? 'caveat' : 'pass', lead + (computedOnly ? 'passes' : 'passed') + ' because ' + cl.t, plainLead + 'passed the sender check (DMARC). ' + upFirst(cl.p), uniq(pp.flatMap(x => x.src).concat(from.src)));
+        // A pass that rests only on rsa-sha1 is the receiver's word against RFC 8301.
+        const sha1Only = pp.every(x => x.sha1);
+        const head = say(computedOnly || sha1Only ? 'caveat' : 'pass', lead + (computedOnly ? 'passes' : 'passed') + ' because ' + cl.t, plainLead + 'passed the sender check (DMARC). ' + upFirst(cl.p), uniq(pp.flatMap(x => x.src).concat(from.src)));
         const dkimCarries = auth.dkim.some(k => k.result === 'pass' && k.relaxed), spfCarries = auth.spf.result === 'pass' && auth.spf.relaxed;
         const lasts = dkimCarries && spfCarries ? 'For ' + fd + ', both SPF and DKIM pass and align, so the message still passes after a forward that breaks SPF.' : dkimCarries ? 'For ' + fd + ', the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.' : 'For ' + fd + ', only SPF passes and aligns. A forward or a mailing list breaks it, because SPF checks whichever server hands the message over; aligned DKIM would still pass.';
-        const cause = say('pass', lasts + (computedOnly ? ' Worked out here; the receiver recorded no DMARC result.' : '') + (fw.yes ? ' The message was forwarded by ' + joinList(fw.by) + ' and still passed.' : ''), 'A message passes when it is signed by, or sent for, the domain in its From address, and this one was.', allSrc);
-        return finish('pass', head, cause);
+        const sha1T = sha1Only ? ' The signature uses rsa-sha1, which RFC 8301 3.1 has verifiers treat as failed, so receivers that follow it would fail this message.' : '';
+        const sha1P = sha1Only ? ' But the signature uses an outdated method (rsa-sha1), so mail systems that follow current rules would fail it.' : '';
+        const cause = say(sha1Only ? 'caveat' : 'pass', lasts + (computedOnly ? ' Worked out here; the receiver recorded no DMARC result.' : '') + (fw.yes ? ' The message was forwarded by ' + joinList(fw.by) + ' and still passed.' : '') + sha1T, 'A message passes when it is signed by, or sent for, the domain in its From address, and this one was.' + sha1P, allSrc);
+        const res = finish('pass', head, cause);
+        if (sha1Only) res.state = 'caveat';
+        return res;
       }
       // Reported pass with nothing aligned: say why the receiver passed it.
       const d = dm.disagreement;
@@ -471,7 +544,7 @@
     }
 
     if (result !== 'fail') {
-      return finish('unknown', say('unknown', receiver + ' reported dmarc=' + result + ', a result outside RFC 7489, so it is shown as written.', 'The receiving system recorded a sender check result this page does not know.', dm.src),
+      return finish('unknown', say('unknown', receiver + ' reported dmarc=' + result + ', a result RFC 9989 does not define, so it is shown as written.', 'The receiving system recorded a sender check result this page does not know.', dm.src),
         say('unknown', 'The identifiers are in the details below; the page does not guess what the receiver meant.', 'The details below show what was checked.', dm.src));
     }
 
@@ -514,7 +587,7 @@
           list.preResult === 'pass' ? 'Before the list, the list\'s own server recorded that the message passed. The sender\'s setup looks fine. The list broke the checks by changing the message' + howPlain : 'The list\'s own server kept a record of the checks before the list, but it does not show a clear pass. The list changed the message' + howPlain, uniq(list.preSrc.concat(list.src)))
         : say('caveat', 'No record from before the list is in the headers, so this page cannot show that the message passed before the list changed it.' + how, 'The headers carry no record of how the message looked before the list, so this page cannot confirm the sender\'s own setup. Lists break these checks by changing the message' + howPlain, list.src);
       return finish('fail', head, cause);
-    } else if (listId) {
+    } else if (listId && !list.unproven) {
       out.details.push(say('caveat', 'List-Id ' + listId.raw + ' shows the message came through a mailing list, and lists often change the subject or body. With no ARC record there is no result from before the list to compare with.', 'The message came through a mailing list, which can break these checks. The headers carry no record of how it looked before the list.', listId.src));
     }
 
@@ -531,6 +604,11 @@
     }
     const head = say('fail', lead + (computedOnly ? 'fails' : 'failed') + ' because ' + fcl.t, plainLead + (computedOnly ? 'fails' : 'failed') + ' the sender check (DMARC). ' + upFirst(fcl.p), uniq(fp.flatMap(x => x.src).concat(from.src, dm.src)));
     out.details = out.details.filter(s => s !== preFail);
+    if (list.unproven) {
+      const t = list.tag ? 'The List-Id, the subject tag ' + list.tag + ', and that pass' : 'The List-Id and that pass';
+      return finish('fail', head, say('fail', 'The message names the mailing list ' + list.id + ' and passed only for ' + list.org + '. ' + t + ' are all the sender\'s to write, and no record from before the list is in the headers. So the list may have broken DMARC, or this is a forgery that borrowed a list\'s headers.',
+        'The message says it came through the mailing list ' + list.id + '. Anyone can write that, and the headers carry no record of the message before the list. The list may have broken the check, or the message may be forged to look like list mail.', uniq(list.src.concat(auth.spf.src, auth.dkim.flatMap(k => k.src)))));
+    }
     return finish('fail', head, fw.yes && fw.preResult === 'fail'
       ? say('fail', 'The message was already failing before the forward: ' + fw.writer + ' recorded ' + (preText(fw) || 'no passing result') + '. ' + (auth.spf.result === 'pass' && !auth.spf.relaxed && auth.spf.domain ? 'SPF now passes only for the forwarder\'s domain ' + auth.spf.domain + ', which does not count for ' + fd + '.' : 'Nothing after the forward aligns with ' + fd + ' either.'), 'The message failed the check before it was ever forwarded, so the problem is with the sender, not the forward.', uniq(fw.aarSrc.concat(auth.spf.src)))
       : causeOfFail(auth, fd, receiver, svc));
@@ -585,7 +663,7 @@
     return cause;
   }
 
-  HA.finding = { build, forwardOf, joinList };
+  HA.finding = { build, forwardOf, joinList, STATUS_WORD };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.finding;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

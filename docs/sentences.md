@@ -522,9 +522,9 @@ Detail 2, plain: The sending server is approved, but by list.example, not by the
 
 Detail 2, technical: SPF passed for list.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
 
-Fix 1, plain: If you sent this, your setup isn't the problem as far as these headers show. Lists that change messages break these checks.
+Fix 1, plain: If you sent this, your setup isn't the problem as far as these headers show. Lists that change messages break these checks. If you didn't send it, it may be forged to look like list mail.
 
-Fix 1, technical: Nothing to change at shop.example on the strength of this message. Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list's ARC seal.
+Fix 1, technical: Nothing to change at shop.example on the strength of this message. Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list's ARC seal. Nothing from before the list shows a pass, though, so if nobody at shop.example sent it, it is a forgery that borrowed a list's headers.
 
 Fix 2, plain: If you run the list: have it send under its own address (it can keep the sender's name), or stop it adding a subject tag and a footer.
 
@@ -790,11 +790,11 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
-## dmarc result outside RFC 7489
+## dmarc result outside RFC 9989
 
 Plain headline: The receiving system recorded a sender check result this page doesn't know.
 
-Technical headline: mx.receiver.example reported dmarc=policy, a result outside RFC 7489, so it is shown as written.
+Technical headline: mx.receiver.example reported dmarc=policy, a result RFC 9989 does not define, so it is shown as written.
 
 Cause, plain: The details below show what was checked.
 
@@ -1491,6 +1491,214 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Fix 2, plain: If you sent this, ask whoever manages the DNS for shop.example to add the service that sends this mail to its list of allowed servers (the SPF record). The service's setup page gives the exact entry. If you didn't send it, someone else used your domain and the check correctly failed it.
 
 Fix 2, technical: If this is your mail, add the sending service to the SPF record of shop.example. If it is not, the SPF failure is correct.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+## pass by SPF for the HELO identity, null Return-Path
+
+Plain headline: This message passed the sender check (DMARC). The sending server called itself o1.shop.example, and o1.shop.example allows it. That belongs to shop.example, the domain in the From address, or to its parent domain.
+
+Technical headline: DMARC at mx.receiver.example passed because SPF passed for the HELO identity o1.shop.example, and it aligns with the From domain shop.example (RFC5322.From) under relaxed alignment, through the organizational domain.
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, only SPF passes and aligns. A forward or a mailing list breaks it, because SPF checks whichever server hands the message over; aligned DKIM would still pass.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The sending server is approved by o1.shop.example, which belongs to the sender.
+
+Detail 1, technical: SPF passed for the HELO name o1.shop.example, which aligns with shop.example in relaxed mode only.
+
+Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
+
+Fix 1, technical: DMARC depends on SPF alone, and a forward breaks SPF. Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Limit 2, plain: This page works out where the sender's organization begins from its own short list, so the looser domain match is its best reading, not a certainty.
+
+Limit 2, technical: The organizational domain shop.example comes from a short built in suffix list, not from DNS or the full Public Suffix List that receivers use. Relaxed alignment here rests on it.
+
+## pass by DKIM known only by i=
+
+Plain headline: This message passed the sender check (DMARC). It was signed on behalf of mail.shop.example. That belongs to shop.example, the domain in the From address, or to its parent domain.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM i=@mail.shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From) under relaxed alignment, through the organizational domain.
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed on behalf of mail.shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for i=@mail.shop.example s=s1, which aligns with shop.example in relaxed mode. No DKIM-Signature here shows its d=, so strict mode cannot be judged.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Limit 2, plain: The headers don't show the exact domain the signature used, only a name under it. It belongs to the sender's organization, so the usual, looser match holds.
+
+Limit 2, technical: The DKIM result names only i=@mail.shop.example, and no DKIM-Signature here matches it, so its d= is not in the headers. RFC 6376 3.5 puts i= at or below d=, so relaxed alignment holds; strict alignment (adkim=s) cannot be judged.
+
+Limit 3, plain: The sender could have written these check results. They say the message carries a valid digital signature (DKIM), but the headers hold no signature to back that.
+
+Limit 3, technical: The only trusted Authentication-Results field (authserv-id mx.receiver.example) sits below the receiver's only Received stamp, where the sender could have written it. It reports dkim=pass, but the headers hold no DKIM-Signature, so nothing here backs that pass.
+
+## fail with DKIM known only by i=
+
+Plain headline: This message failed the sender check (DMARC) even though it was signed on behalf of mail.shop.example. The receiving system reported a failure the headers don't explain.
+
+Technical headline: DMARC at mx.receiver.example failed even though DKIM i=@mail.shop.example s=s1 passed and aligns with the From domain shop.example.
+
+Cause, plain: The headers don't show the exact domain the signature used. If the sender's DMARC setting demands an exact domain match, that would explain the failure.
+
+Cause, technical: The receiver reported dmarc=fail. The DKIM result names only i=@mail.shop.example, and no DKIM-Signature here matches it, so its d= is unknown. If d= is not exactly shop.example and the record sets adkim=s, that explains the failure; the headers show neither.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The message was signed on behalf of mail.shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for i=@mail.shop.example s=s1, which aligns with shop.example in relaxed mode. No DKIM-Signature here shows its d=, so strict mode cannot be judged.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Once the signature is fixed, you can also give the service that sends this mail a custom return address on shop.example. Services call it a custom return path or sending domain. It's optional.
+
+Fix 1, technical: Second, after DKIM: set a custom Return-Path (bounce) domain under shop.example at the sending service so SPF aligns too.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Limit 2, plain: The headers don't show the exact domain the signature used, only a name under it. It belongs to the sender's organization, so the usual, looser match holds.
+
+Limit 2, technical: The DKIM result names only i=@mail.shop.example, and no DKIM-Signature here matches it, so its d= is not in the headers. RFC 6376 3.5 puts i= at or below d=, so relaxed alignment holds; strict alignment (adkim=s) cannot be judged.
+
+Limit 3, plain: The sender could have written these check results. They say the message carries a valid digital signature (DKIM), but the headers hold no signature to back that.
+
+Limit 3, technical: The only trusted Authentication-Results field (authserv-id mx.receiver.example) sits below the receiver's only Received stamp, where the sender could have written it. It reports dkim=pass, but the headers hold no DKIM-Signature, so nothing here backs that pass.
+
+## pass by an rsa-sha1 signature
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example with an outdated method (rsa-sha1) that mail systems should no longer accept. That matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed (a=rsa-sha1, which RFC 8301 3.1 says verifiers must treat as failed), and it aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was. But the signature uses an outdated method (rsa-sha1), so mail systems that follow current rules would fail it.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body. The signature uses rsa-sha1, which RFC 8301 3.1 has verifiers treat as failed, so receivers that follow it would fail this message.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, but with an outdated method (rsa-sha1) that mail systems should no longer accept.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example, but the signature uses rsa-sha1. RFC 8301 3.1 says verifiers must not accept rsa-sha1, so a receiver that follows it would not count this pass.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask the service that sends this mail to sign with the current method (rsa-sha256). This message uses an old one (rsa-sha1) that mail systems following current rules no longer accept, so it may fail elsewhere.
+
+Fix 1, technical: Sign with rsa-sha256 at the sending service instead of rsa-sha1 for d=shop.example. RFC 8301 3.1 has verifiers treat rsa-sha1 as failed, so this pass may not hold at other receivers.
+
+Fix 2, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 2, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+## fail with a list claim and nothing from before the list
+
+Plain headline: This message failed the sender check (DMARC). It was signed by list.example and it came from a server that list.example allows. Neither of those is shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=list.example s=l1 passed and SPF passed for the Return-Path domain list.example (RFC5321.MailFrom), but neither aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The message says it came through the mailing list club.list.example. Anyone can write that, and the headers carry no record of the message before the list. The list may have broken the check, or the message may be forged to look like list mail.
+
+Cause, technical: The message names the mailing list club.list.example and passed only for list.example. The List-Id and that pass are all the sender's to write, and no record from before the list is in the headers. So the list may have broken DMARC, or this is a forgery that borrowed a list's headers.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The message was signed, but by list.example, not by the sender's own domain.
+
+Detail 1, technical: DKIM passed for d=list.example s=l1, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Detail 2, plain: The sending server is approved, but by list.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for list.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Don't trust this message on its word. Ask for a copy sent straight to you, without the list, and check that one. If nobody at shop.example sent it, treat it as forged.
+
+Fix 1, technical: Judge the sender by a copy delivered straight to the mailbox. Nothing from before the list shows a pass, so this failure could come from the list or from a forgery that borrowed a list's headers. If nobody at shop.example sent it, treat it as forged.
+
+Fix 2, plain: If you run the list and it did send this: have it send under its own address (it can keep the sender's name).
+
+Fix 2, technical: If you run club.list.example and it did carry this message: have the list rewrite the From address to its own, or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+## fail with a hidden character in the From domain
+
+Plain headline: This message failed the sender check (DMARC). It was signed by shop.example and it came from a server that bounce.mailer.example allows. Neither of those is sh<U+200B>op.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 passed and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), but neither aligns with the From domain sh<U+200B>op.example (RFC5322.From).
+
+Cause, plain: The sender's address only looks like shop.example. It hides a character, so no check that passed counts for it.
+
+Cause, technical: The From domain sh<U+200B>op.example only looks like shop.example: it holds a hidden character, so nothing that passed, for shop.example or any other domain, aligns with it.
+
+Policy, plain: sh<U+200B>op.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: sh<U+200B>op.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The message was signed, but by shop.example, not by the sender's own domain.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which does not align with sh<U+200B>op.example. A pass on another domain does not count for DMARC.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with sh<U+200B>op.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Treat this as a scam. The sender's address hides a character so it looks like shop.example. Report it as phishing and don't click its links or reply. If you copied the headers from a formatted view, copy the original message source and check again first.
+
+Fix 1, technical: Treat the message as phishing: the From domain holds a hidden character, so it is not shop.example and nobody can register it. If you copied these headers from a formatted view rather than the message source, copy the source and decode it again first.
+
+Flag 1, plain: The sender's address holds a hidden character, so it isn't shop.example even though it looks like it. No real address can be spelled that way, so this message is forged.
+
+Flag 1, technical: The From domain sh<U+200B>op.example holds U+200B, an invisible character, so it is not shop.example. IDNA (RFC 5892) does not allow it here, so no registered domain is spelled that way.
 
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 

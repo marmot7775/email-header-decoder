@@ -87,7 +87,7 @@ const CASES = [
   ['dmarc bestguesspass', rcv({ ar: 'spf=pass smtp.mailfrom=orders@shop.example; dmarc=bestguesspass header.from=shop.example' })],
   ['dmarc permerror', rcv({ ar: 'spf=pass smtp.mailfrom=orders@shop.example; dmarc=permerror header.from=shop.example' })],
   ['dmarc temperror', rcv({ ar: ESP_SPF + '; dmarc=temperror header.from=shop.example' })],
-  ['dmarc result outside RFC 7489', rcv({ ar: ESP_SPF + '; dmarc=policy header.from=shop.example' })],
+  ['dmarc result outside RFC 9989', rcv({ ar: ESP_SPF + '; dmarc=policy header.from=shop.example' })],
   ['forwarded with arc=pass', fwd('dkim=fail header.d=shop.example header.s=s1; arc=pass; spf=softfail smtp.mailfrom=orders@shop.example; ' + REJECT, PASS_PRE)],
   ['forwarded, noted but not relied on', fwd('dkim=fail header.d=shop.example header.s=s1; spf=softfail smtp.mailfrom=orders@shop.example; ' + REJECT, PASS_PRE)],
   ['forwarded, already failing before the forward', fwd('spf=pass smtp.mailfrom=srs@forward.example; arc=pass; ' + REJECT, 'spf=fail smtp.mailfrom=orders@shop.example; dmarc=fail header.from=shop.example')],
@@ -113,6 +113,12 @@ const CASES = [
   ['compauth 7xx, history pass', msFail(MS_SPF_FAIL, MS_NO_DKIM, 'none', 'pass reason=701')],
   ['compauth 8xx, not in the table', msFail(MS_SPF_FAIL, MS_NO_DKIM, 'quarantine', 'fail reason=801')],
   ['compauth 9xx, complex routing', msFail(MS_SPF_FAIL, MS_NO_DKIM, 'none', 'none reason=905')],
+  ['pass by SPF for the HELO identity, null Return-Path', rcv({ ar: 'spf=pass smtp.helo=o1.shop.example; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=shop.example', above: ['Return-Path: <>'] })],
+  ['pass by DKIM known only by i=', rcv({ ar: 'dkim=pass header.i=@mail.shop.example header.s=s1; ' + ESP_SPF + '; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=shop.example' })],
+  ['fail with DKIM known only by i=', rcv({ ar: 'dkim=pass header.i=@mail.shop.example header.s=s1; ' + ESP_SPF + '; ' + REJECT })],
+  ['pass by an rsa-sha1 signature', rcv({ ar: 'dkim=pass header.d=shop.example header.s=s1; ' + ESP_SPF + '; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=shop.example', above: ['DKIM-Signature: v=1; a=rsa-sha1; c=relaxed/relaxed; d=shop.example; s=s1; h=from:to:subject:date:message-id; bh=SyntheticBh=; b=s1SyntheticValue'] })],
+  ['fail with a list claim and nothing from before the list', rcv({ ar: 'dkim=pass header.d=list.example header.s=l1; spf=pass smtp.mailfrom=owner@list.example; ' + REJECT, sigs: [['list.example', 'l1']], extra: ['List-Id: <club.list.example>'] })],
+  ['fail with a hidden character in the From domain', rcv({ ar: 'dkim=pass header.d=shop.example header.s=s1; ' + ESP_SPF + '; dmarc=fail (p=REJECT sp=REJECT dis=REJECT) header.from=sh\u200bop.example', sigs: [['shop.example', 's1']], from: 'Shop <orders@sh\u200bop.example>' })],
 ];
 
 function run(name, text) {
@@ -192,11 +198,15 @@ function meanings() {
   return out;
 }
 
+// Invisible and direction control characters written as <U+200B>, as the page shows them.
+const HIDDEN_G = new RegExp(HA.psl.HIDDEN.source, 'g');
+const vis = (s) => String(s).replace(HIDDEN_G, c => '<U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') + '>');
+
 function render() {
   let md = '# Sentence inventory\n';
   for (const [name, text] of CASES) {
     md += '\n## ' + name + '\n\n';
-    md += lines(run(name, text)).map(([l, s]) => l + ': ' + s).join('\n\n') + '\n';
+    md += lines(run(name, text)).map(([l, s]) => l + ': ' + vis(s)).join('\n\n') + '\n';
   }
   md += '\n## Filter code meanings\n\n';
   md += meanings().map(([code, t, p]) => code + '. Technical: ' + t + ' Plain: ' + p).join('\n\n') + '\n';

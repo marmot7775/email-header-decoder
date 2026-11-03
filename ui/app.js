@@ -4,7 +4,11 @@
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Invisible and direction control characters show as <U+200B>, so what
+  // the reader sees is what the string holds (issue 31).
+  const HIDDEN_G = new RegExp(HA.psl.HIDDEN.source, 'g');
+  const vis = (s) => String(s === null || s === undefined ? '' : s).replace(HIDDEN_G, c => '<U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') + '>');
+  const esc = (s) => vis(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtDur = HA.received.fmtDur;
 
   // Delay bands, upper bounds in seconds. The colors are the --delay-*
@@ -18,7 +22,7 @@
   const STATES = { pass: ['✓', 'Pass'], caveat: ['!', 'Caveat'], fail: ['✕', 'Fail'], unknown: ['?', 'Unknown'], info: ['i', 'Info'] };
   // Filter items carry a level; each maps to a chip class and its word.
   const LEVELS = { pass: ['pass', 'Pass'], info: ['info', 'Info'], warn: ['caveat', 'Warn'], fail: ['fail', 'Fail'] };
-  const STATUS_WORD = { pass: 'Passed', fail: 'Failed', forwarded: 'Broken by a forward', none: 'No DMARC policy', error: 'DMARC error', unknown: 'Cannot judge' };
+  const STATUS_WORD = HA.finding.STATUS_WORD;
 
   let R = null;
   let sample = '';
@@ -72,7 +76,7 @@
   function tiles() {
     const rows = R.alignment.rows;
     const plain = true;
-    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? (plain ? 'Passed' : 'Pass, aligned') : x.state === 'caveat' ? (plain ? 'Passed for another domain' : 'Pass, not aligned') : x.result ? (plain && x.result === 'fail' ? 'Failed' : cap(x.result)) : 'Not reported';
+    const idWord = (x) => !x || x.absent ? 'Not recorded' : x.state === 'pass' ? (plain ? 'Passed' : 'Pass, aligned') : x.state === 'caveat' && x.sha1 && x.relaxed ? 'Passed, outdated signature' : x.state === 'caveat' ? (plain ? 'Passed for another domain' : 'Pass, not aligned') : x.result ? (plain && x.result === 'fail' ? 'Failed' : cap(x.result)) : 'Not reported';
     const idState = (x) => !x || x.absent ? 'unknown' : x.state;
     const spf = rows.find(x => x.kind === 'spf');
     const dkims = rows.filter(x => x.kind === 'dkim' && !x.absent).sort((a, b) => RANK[a.state] - RANK[b.state]);
@@ -157,7 +161,7 @@
     if (f.consequence) L.push('', 'What the DMARC setting did: ' + f.consequence.plain);
     if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
     L.push('', 'Decoded at headers.dns-audit.com.');
-    return L.join('\n');
+    return vis(L.join('\n'));
   }
   function copyText(text) {
     if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
@@ -221,7 +225,7 @@
   // Alignment picture: the From domain in the middle, DKIM d= on one
   // side, the SPF domain on the other, each connector styled by state.
   function alignNode(x) {
-    let inner = '<span class="k">' + (x.kind === 'dkim' ? 'DKIM signing domain' : 'SPF domain') + '</span>';
+    let inner = '<span class="k">' + (x.kind === 'dkim' ? (x.dFromI ? 'DKIM i= domain, d= unknown' : 'DKIM signing domain') : 'SPF domain') + '</span>';
     if (x.absent) inner += '<span class="d absent">' + (x.kind === 'dkim' ? 'No DKIM signature' : 'No SPF domain') + '</span>';
     else {
       inner += '<span class="d mono">' + esc(x.domain) + '</span>';
@@ -246,7 +250,7 @@
     const st = (x) => x.absent ? 'unknown' : x.state;
     const left = (dkim.length ? dkim : [{ kind: 'dkim', absent: true, src: [] }]).map(x => '<div class="arow ' + st(x) + '">' + alignNode(x) + connector(x) + '</div>').join('');
     const right = '<div class="arow ' + st(spf) + '">' + connector(spf) + alignNode(spf) + '</div>';
-    const showOrg = f.domain && a.rows.some(x => x.state === 'pass' && x.relaxedOnly);
+    const showOrg = f.domain && a.rows.some(x => x.passed && x.relaxedOnly);
     let center = '<span class="k">From domain</span>';
     if (f.domain) {
       center += '<span class="d mono">' + esc(f.domain) + '</span>';
@@ -288,7 +292,7 @@
     } else h += '<p class="absent">' + chip('unknown', 'Absent') + ' No Authentication-Results field in these headers.</p>';
     if (a.receivedSpf.length) {
       h += '<div class="arf"><div class="arh"><span class="who">Received-SPF</span>' + srcBtn(a.receivedSpf.flatMap(x => x.src)) + '</div><div class="ents">' +
-        a.receivedSpf.map(x => '<div class="ent"><span class="m">spf</span>' + chip(HA.auth.resultState(x.result), x.result || 'unreadable') + '<span class="id mono">' +
+        a.receivedSpf.map(x => '<div class="ent"><span class="m">spf</span>' + chip(HA.auth.resultState(x.result), x.result || 'unreadable') + chip(...(x.trusted ? TRUST.receiver : TRUST.unverified)) + '<span class="id mono">' +
           esc(['client-ip', 'envelope-from', 'helo', 'receiver'].filter(k => x.props[k]).map(k => k + '=' + x.props[k]).join(' ') || 'no details') + '</span></div>').join('') + '</div></div>';
     }
     // ARC chain, one row per instance.
@@ -520,6 +524,17 @@
     } catch (e) { /* never let the note break the page */ }
   }
 
+  // Screen readers hear each new result without focus moving (WCAG 2.2
+  // 4.1.3). The region is emptied first so a repeat of the same text is
+  // still announced (issue 41).
+  let liveTimer = null;
+  function announce(text) {
+    const live = $('live');
+    live.textContent = '';
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => { live.textContent = vis(text); }, 60);
+  }
+
   function run(scroll) {
     const text = $('headers').value;
     if (!text.trim()) { $('results').hidden = true; R = null; return; }
@@ -531,6 +546,7 @@
       $('read-as').textContent = '';
       $('finding').innerHTML = '<h2 id="h-finding">Could not read these headers</h2><p>Something in this paste stopped the page from reading it.</p>';
       ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).innerHTML = ''; $(id).hidden = true; });
+      announce('Could not read these headers.');
       return;
     }
     $('results').hidden = false;
@@ -538,10 +554,12 @@
       $('read-as').textContent = '';
       $('finding').innerHTML = '<h2 id="h-finding">Nothing to read</h2>' + says(R.input.notes);
       ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).innerHTML = ''; $(id).hidden = true; });
+      announce('Nothing to read. ' + R.input.notes.map(n => n.plain).join(' '));
       return;
     }
     ['filters', 'message', 'alignment', 'auth', 'path', 'raw'].forEach(id => { $(id).hidden = false; });
     renderAll();
+    announce(STATUS_WORD[R.finding.status] + ': ' + R.finding.headline.plain);
     note(text);
     if (scroll) $('results').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
@@ -586,17 +604,25 @@
   $('headers').addEventListener('paste', () => { sample = ''; setTimeout(() => run(true), 0); });
   $('headers').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run(true); });
 
+  // One reader for a dropped file and a chosen one (issue 40). Only the
+  // header block matters, so the first 2 MB is read and a large
+  // attachment cannot freeze the tab.
+  const MAX_READ = 2 * 1024 * 1024;
+  function loadFile(f) {
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => { $('headers').value = String(reader.result || ''); sample = ''; run(true); };
+    reader.readAsText(f.size > MAX_READ ? f.slice(0, MAX_READ) : f);
+  }
   const panel = $('input-panel');
   panel.addEventListener('dragover', (e) => { e.preventDefault(); panel.classList.add('drop'); });
   panel.addEventListener('dragleave', () => panel.classList.remove('drop'));
   panel.addEventListener('drop', (e) => {
     e.preventDefault(); panel.classList.remove('drop');
-    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => { $('headers').value = String(reader.result || ''); sample = ''; run(true); };
-    reader.readAsText(f);
+    loadFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
   });
+  const picker = $('eml-file');
+  picker.addEventListener('change', () => { loadFile(picker.files && picker.files[0]); picker.value = ''; });
 
   // A browser restoring form state can refill the box; read it if so.
   run(false);

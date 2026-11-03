@@ -209,6 +209,8 @@ button { font: inherit; cursor: pointer; }
 .btn:hover { background: var(--surface-hover); }
 .btn.primary { background: var(--primary-solid); border-color: var(--primary-solid); color: var(--on-solid); }
 .btn.primary:hover { background: var(--primary-solid-hover); }
+.file-btn { display: inline-flex; align-items: center; cursor: pointer; }
+.file-input:focus-visible + .file-btn { outline: 2px solid var(--primary); outline-offset: 2px; }
 .samples { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; font-size: var(--font-sm); color: var(--muted); }
 .link-btn { background: none; border: 0; padding: 6px 4px; min-height: 44px; color: var(--primary); font-size: var(--font-sm); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--primary-border); }
 .hint { margin: 10px 0 0; font-size: var(--font-sm); color: var(--muted); }
@@ -348,7 +350,7 @@ button { font: inherit; cursor: pointer; }
 details.raw > summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 details.raw > summary .count { font-weight: 400; color: var(--text-2); font-size: var(--font-sm); }
 .raw-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 8px; }
-.raw-tools input { font: inherit; font-size: var(--font-sm); flex: 1 1 14rem; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--code-bg); color: var(--text); min-height: 40px; }
+.raw-tools input { font: inherit; font-size: var(--font-sm); flex: 1 1 14rem; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--code-bg); color: var(--text); min-height: 44px; }
 .raw-tools .status { font-size: var(--font-sm); color: var(--muted); }
 .rawbox { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; font-family: var(--font-mono); font-size: var(--font-xs); line-height: 1.6; padding: 6px 0; }
 .rawbox .f { border-left: 3px solid transparent; }
@@ -517,10 +519,12 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
     <div class="input-head">
       <label for="headers">Raw headers or a whole .eml</label>
     </div>
-    <textarea id="headers" spellcheck="false" autocomplete="off" placeholder="Paste here, or drop a .eml file on this box."></textarea>
+    <textarea id="headers" spellcheck="false" autocomplete="off" placeholder="Paste here, or choose or drop a .eml file."></textarea>
     <div class="actions">
       <button class="btn primary" id="go" type="button">Decode</button>
       <button class="btn" id="clear" type="button">Clear</button>
+      <input class="sr-only file-input" id="eml-file" type="file" accept=".eml,.txt,message/rfc822">
+      <label class="btn file-btn" for="eml-file">Choose a file</label>
       <span class="spacer"></span>
       <span class="samples">Try a sample:
         <button class="link-btn" type="button" data-sample="gmail">Gmail pass</button>
@@ -573,7 +577,7 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <dt>Outlook and Outlook on the web</dt><dd>Open the message, select More actions, then View, then View message details. Copy everything in the box.</dd>
       <dt>Classic Outlook for Windows</dt><dd>Double-click the message to open it, then select File, then Properties. The headers are in the Internet headers box.</dd>
       <dt>Apple Mail</dt><dd>Select the message, then View, Message, Raw Source.</dd>
-      <dt>Any client</dt><dd>Save the message as an .eml file and drop it on the paste box. The page reads only the headers and ignores the body.</dd>
+      <dt>Any client</dt><dd>Save the message as an .eml file, then choose it with Choose a file or drop it on the paste box. The page reads only the headers and ignores the body.</dd>
     </dl>
     <p class="note-line">Use the copy the recipient received. A copy from the Sent folder never passed through the receiving server, so it carries no authentication results.</p>
 

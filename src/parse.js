@@ -27,9 +27,19 @@
     return String(text || '')
       .replace(/^﻿/, '')
       .replace(/\r\n?/g, '\n')
-      .replace(/ /g, ' ')
-      // Rich text copied from Outlook or a web page carries soft hyphens and zero width characters inside names.
-      .replace(/[\u00ad\u200b-\u200d\u2060]/g, '');
+      .replace(/ /g, ' ');
+  }
+
+  // Rich text copied from Outlook or a web page carries soft hyphens and
+  // zero width characters through every word, field names included. Only
+  // then are they paste noise, removed everywhere. Otherwise they are kept:
+  // a From domain with an invisible character is not the domain it looks
+  // like, and finding.js says so (issue 31).
+  const PASTE_NOISE = /[\u00ad\u200b-\u200d\u2060]/g;
+  const NOISY_NAME = /^[A-Za-z0-9_\u00ad\u200b-\u200d\u2060-]*[\u00ad\u200b-\u200d\u2060][A-Za-z0-9_\u00ad\u200b-\u200d\u2060-]*:/;
+  function stripPasteNoise(lines) {
+    if (!lines.some(l => NOISY_NAME.test(l))) return { lines, stripped: false };
+    return { lines: lines.map(l => l.replace(PASTE_NOISE, '')), stripped: true };
   }
 
   function isFieldStart(line) {
@@ -104,9 +114,11 @@
   // counted as repaired.
   // Every field keeps its index and the span of raw lines it came from.
   function parseHeaders(text) {
-    const lines = normalizeText(text).split('\n');
+    const noise = stripPasteNoise(normalizeText(text).split('\n'));
+    const lines = noise.lines;
     const block = locateHeaderBlock(lines);
     const notes = [];
+    if (noise.stripped) notes.push(sentence('caveat', 'The paste carried soft hyphens or zero width characters inside field names, as a rich text copy does, so they were removed everywhere before reading.', 'The copy carried invisible formatting characters, so they were removed before reading.', []));
     if (!block) {
       notes.push(sentence('unknown', 'No header block found: no line in the paste has the form Name: value with a field real mail carries.', 'This looks like the text of an email, not its headers. Copy the message source instead. The box below the paste area says where to find it.', []));
       return { fields: [], notes, block: null, format: 'none', bodyPresent: false, blockFound: false, repairedLines: 0 };
@@ -166,33 +178,53 @@
   }
 
   // RFC 2047 encoded words: =?charset?B|Q?text?=
+  // Adjacent encoded words separated only by WSP are joined (RFC 2047 6.2).
+  // A run of adjacent words in one charset and one encoding is decoded as
+  // one byte string: section 5 forbids splitting a character across words,
+  // but encoders do it, and mail clients read the run whole (issue 35).
   function decodeWords(value) {
     if (!/=\?[^?]+\?[bBqQ]\?[^?]*\?=/.test(value)) return value;
-    // Adjacent encoded words separated only by WSP are joined (RFC 2047 6.2).
-    const joined = value.replace(/(\?=)\s+(=\?)/g, '$1$2');
-    return joined.replace(/=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g, (all, charset, enc, text) => {
-      try {
-        let bytes;
-        if (enc.toUpperCase() === 'B') {
-          const bin = atobSafe(text);
-          bytes = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        } else {
-          const out = [];
-          for (let i = 0; i < text.length; i++) {
-            const c = text[i];
-            if (c === '_') out.push(0x20);
-            else if (c === '=' && /^[0-9A-Fa-f]{2}$/.test(text.substr(i + 1, 2))) { out.push(parseInt(text.substr(i + 1, 2), 16)); i += 2; }
-            else out.push(c.charCodeAt(0) & 0xff);
-          }
-          bytes = new Uint8Array(out);
-        }
-        const cs = charset.replace(/\*.*$/, '').toLowerCase(); // strip RFC 2231 language tag
-        return new TextDecoder(cs === 'us-ascii' ? 'utf-8' : cs).decode(bytes);
-      } catch (e) {
-        return all;
-      }
-    });
+    const WORD = /=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g;
+    let out = '', last = 0, run = null, m;
+    const flush = () => { if (run) out += decodeRun(run); run = null; };
+    while ((m = WORD.exec(value))) {
+      const gap = value.slice(last, m.index);
+      const cs = m[1].replace(/\*.*$/, '').toLowerCase(); // strip RFC 2231 language tag
+      const enc = m[2].toUpperCase();
+      const adjacent = run && /^\s*$/.test(gap);
+      if (adjacent && run.cs === cs && run.enc === enc) { run.parts.push(m[3]); run.raw += gap + m[0]; }
+      else { flush(); if (!adjacent) out += gap; run = { cs, enc, parts: [m[3]], raw: m[0] }; }
+      last = WORD.lastIndex;
+    }
+    flush();
+    return out + value.slice(last);
+  }
+
+  function wordBytes(enc, text) {
+    if (enc === 'B') {
+      const bin = atobSafe(text);
+      const bytes = [];
+      for (let i = 0; i < bin.length; i++) bytes.push(bin.charCodeAt(i));
+      return bytes;
+    }
+    const out = [];
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === '_') out.push(0x20);
+      else if (c === '=' && /^[0-9A-Fa-f]{2}$/.test(text.substr(i + 1, 2))) { out.push(parseInt(text.substr(i + 1, 2), 16)); i += 2; }
+      else out.push(c.charCodeAt(0) & 0xff);
+    }
+    return out;
+  }
+
+  function decodeRun(run) {
+    try {
+      const bytes = [];
+      for (const p of run.parts) for (const x of wordBytes(run.enc, p)) bytes.push(x);
+      return new TextDecoder(run.cs === 'us-ascii' ? 'utf-8' : run.cs).decode(new Uint8Array(bytes));
+    } catch (e) {
+      return run.raw;
+    }
   }
 
   function atobSafe(s) {
