@@ -22,7 +22,7 @@
   const STATES = { pass: ['✓', 'Pass'], caveat: ['!', 'Caveat'], fail: ['✕', 'Fail'], unknown: ['?', 'Unknown'], info: ['i', 'Info'] };
   // Filter items carry a level; each maps to a chip class and its word.
   const LEVELS = { pass: ['pass', 'Pass'], info: ['info', 'Info'], warn: ['caveat', 'Warn'], fail: ['fail', 'Fail'] };
-  const STATUS_WORD = { pass: 'Passed', fail: 'Failed', forwarded: 'Broken by a forward', none: 'No DMARC policy', error: 'DMARC error', unknown: 'Cannot judge' };
+  const STATUS_WORD = HA.finding.STATUS_WORD;
 
   let R = null;
   let sample = '';

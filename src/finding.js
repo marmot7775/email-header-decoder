@@ -21,6 +21,9 @@
   const SPF_CAUSES = new WeakSet(); // causes that already say what the SPF row says
 
   const STATE_OF = { pass: 'pass', fail: 'fail', forwarded: 'caveat', none: 'caveat', error: 'caveat', unknown: 'unknown' };
+  // The status chip beside the plain headline, so Simple words only. Kept
+  // here, not in ui/app.js, so the Simple word test covers it (issue 37).
+  const STATUS_WORD = { pass: 'Passed', fail: 'Failed', forwarded: 'Broken by a forward', none: 'No DMARC setting', error: 'DMARC error', unknown: 'Cannot judge' };
   const MAILBOX_OPERATORS = ['Google', 'Microsoft', 'Apple', 'Yahoo'];
   const LEVEL_STATE = { pass: 'pass', warn: 'caveat', fail: 'fail', info: 'unknown' };
   const uniq = (a) => Array.from(new Set(a.filter(i => i !== null && i !== undefined))).sort((x, y) => x - y);
@@ -650,7 +653,7 @@
     return cause;
   }
 
-  HA.finding = { build, forwardOf, joinList };
+  HA.finding = { build, forwardOf, joinList, STATUS_WORD };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.finding;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
