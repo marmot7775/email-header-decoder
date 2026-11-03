@@ -101,13 +101,16 @@
     const out = [];
     for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: 'DKIM d=' + k.domain + (k.selector ? ' s=' + k.selector : '') + ' passed', p: 'it was signed by ' + k.domain, d: k.domain, kind: 'dkim', relaxedOnly: k.relaxedOnly, src: k.src });
     const s = auth.spf;
-    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF passed for the Return-Path domain ' + s.domain + ' (RFC5321.MailFrom)', p: 'it came from a server that ' + s.domain + ' allows', d: s.domain, kind: 'spf', relaxedOnly: s.relaxedOnly, src: s.src });
+    // A null reverse path has SPF check the HELO identity (RFC 7208 2.4),
+    // worded as spfPiece words it.
+    const helo = /helo/i.test(s.identity);
+    if (s.result === 'pass' && s.relaxed) out.push({ t: 'SPF passed for ' + (helo ? 'the HELO identity ' + s.domain : 'the Return-Path domain ' + s.domain + ' (RFC5321.MailFrom)'), p: helo ? 'the sending server called itself ' + s.domain + ', and ' + s.domain + ' allows it' : 'it came from a server that ' + s.domain + ' allows', d: s.domain, kind: 'spf', helo, relaxedOnly: s.relaxedOnly, src: s.src });
     return out;
   }
   function passClause(pieces, from) {
     const relaxed = pieces.some(x => x.relaxedOnly) ? ' under relaxed alignment, through the organizational domain' : '';
     // Every pass is the From domain itself: name it once.
-    const own = !relaxed && pieces.every(x => x.d === from);
+    const own = !relaxed && pieces.every(x => x.d === from) && !pieces.some(x => x.helo);
     const both = pieces.length > 1;
     const ownP = both ? 'it was signed by ' + from + ', the domain in the From address, and came from a server it allows.'
       : pieces[0] && pieces[0].kind === 'spf' ? 'it came from a server allowed by ' + from + ', the domain in the From address.' : 'it was signed by ' + from + ', the domain in the From address.';
