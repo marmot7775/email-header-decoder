@@ -19,12 +19,20 @@ src/parse.js     Text in, field list out. Finds the header block
                  whole Show original page. Unfolds, repairs lost
                  indentation, decodes RFC 2047, parses addresses,
                  dates (RFC 5322 plus the obsolete zones), comments,
-                 and tag=value lists. Nothing downstream re-reads
-                 raw text.
+                 and tag=value lists. Adjacent encoded words in one
+                 charset decode as one byte string. Soft hyphens and
+                 zero width characters are removed only when they sit
+                 inside field names (a rich text copy); otherwise they
+                 are kept, so a From domain holding one is read as
+                 written. Nothing downstream re-reads raw text.
 src/psl.js       Organizational domain from an abbreviated public
-                 suffix list (RFC 7489 style). The DMARCbis tree
+                 suffix list (RFC 7489 style). The RFC 9989 tree
                  walk needs DNS, so this is the first release
-                 approximation and the page says so.
+                 approximation and the page says so. lookup() also
+                 gives the A-label forms (key, orgKey) that
+                 alignment compares, through the URL parser's IDNA;
+                 names with hidden characters or NFKC compatibility
+                 forms stay as written.
 src/received.js  Received fields into a chronological hop chain
                  with per hop delay, slowest hop, clock skew, TLS
                  evidence, and internal relay detection (two hosts
@@ -32,9 +40,12 @@ src/received.js  Received fields into a chronological hop chain
 src/auth.js      Authentication-Results per RFC 8601 (Google form
                  with authserv-id, Exchange Online form without),
                  Received-SPF, DKIM-Signature, the ARC set per RFC
-                 8617 with chain checks, and identifier alignment.
-                 Produces reported results and a computed DMARC
-                 result side by side.
+                 8617 with chain checks (at most 50 sets), and
+                 identifier alignment. SPF is the MAIL FROM result;
+                 a HELO result stands in only for a null reverse
+                 path. A DKIM result known only by i= has strict
+                 alignment null (unknown). Produces reported results
+                 and a computed DMARC result side by side.
 src/providers.js Decodes filter results (Microsoft SCL, BCL, CAT,
                  SFV, IPV, SFS, PCL, AuthAs, AuthSource,
                  compauth, with Mailbox-Delivery shown as written
@@ -52,7 +63,11 @@ src/finding.js   The finding, the one sentence result. Reads
                  and limits. Forwarded mail is
                  recognised from ARC and the pre-forward results are
                  quoted, so the failure is blamed on the forward
-                 when the receiver vouched for the ARC seals.
+                 when the receiver vouched for the ARC seals. A list
+                 claim with nothing from before the list and no
+                 broken author signature is one possible reason,
+                 beside a forgery. STATUS_WORD, the status chip
+                 words, lives here so the Simple word test reads it.
 src/analyze.js   analyze(text) returns one plain result object.
                  The page renders it; the tests assert on it.
 
@@ -66,7 +81,11 @@ ui/page.html     Markup and tokens. The shared site header,
                  headers, and the FAQ. Then the site footer.
 ui/app.js        Rendering only. No parsing logic lives here. The
                  tiles and the copied report read values already
-                 in the result; they decide nothing new. The raw
+                 in the result; they decide nothing new. Invisible
+                 and direction control characters print as <U+XXXX>.
+                 A dropped or chosen .eml goes through one reader
+                 (first 2 MB), and each result is announced in the
+                 polite live region. The raw
                  header list is drawn when opened, 200 fields at a
                  time, and a field over 2,000 characters shows
                  clipped with a button to show all of it.
@@ -101,10 +120,10 @@ input, message, finding, alignment (rows per identifier with
 aligned, strict, mode), auth (all A-R, primary, spf, dkim, dmarc,
 computed, arc, arcResult, compauth, unbackedDkim), chain (hops, totalSec,
 slowestIdx, clockSkew, originIp), decoded (filters, platform,
-list, notes), fields, flags.
+list, notes), fields, flags (hidden-characters among them).
 
 Parked for later releases
 DKIM key lookup through a DNS API. Bounce and SMTP code decoding.
-Full public suffix list or a DMARCbis tree walk via DNS. Link from a
+Full public suffix list or an RFC 9989 tree walk via DNS. Link from a
 failing From domain to its dns-audit.com audit. Compare two messages
 side by side.
