@@ -1,10 +1,10 @@
-// psl.js: organizational domain, RFC 7489 style, from an abbreviated
-// public suffix list. The full PSL is about 250 KB; this carries the
-// multi-label suffixes that show up in mail, plus a rule that any
-// unknown two-label name under a ccTLD with a known second level is a
-// suffix. RFC 9989 receivers find the organizational domain with a DNS
-// tree walk instead; that needs DNS, so this file is the first release
-// approximation and the UI says so.
+// psl.js: organizational domain from an abbreviated public suffix list,
+// the method of RFC 7489, which RFC 9989 obsoletes. The full PSL is about
+// 250 KB; this carries the multi-label suffixes that show up in mail,
+// plus a rule that any unknown two-label name under a ccTLD with a known
+// second level is a suffix. RFC 9989 receivers find the organizational
+// domain with a DNS tree walk instead; that needs DNS, so this file is the
+// first release approximation and the UI says so.
 (function (root) {
   'use strict';
   const HA = (root.HA = root.HA || {});
@@ -117,7 +117,8 @@ de nl be ch li lu se no dk fi is ie cz sk si ee lv lt bg rs eu io ai me tv cc ws
     return labels[labels.length - 1];
   }
 
-  // Organizational domain: public suffix plus one label (RFC 7489 3.2).
+  // Organizational domain: public suffix plus one label, the RFC 7489 3.2
+  // method. RFC 9989 replaces it with a DNS tree walk, which needs DNS.
   // approximate is true when the name has three or more labels and its
   // suffix is outside this list, so a longer suffix could exist.
   // domain and org keep the name as written, for display; key and orgKey

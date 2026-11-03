@@ -1,5 +1,6 @@
 // auth.js: Authentication-Results (RFC 8601), Received-SPF, DKIM-Signature,
-// the ARC set (RFC 8617), and DMARC identifier alignment (RFC 7489 3.1).
+// the ARC set (RFC 8617), and DMARC identifier alignment (RFC 9989 3.2 and
+// 4.4).
 // Nothing here verifies a signature or queries DNS. It reads what the
 // receiving systems reported and recomputes alignment from the
 // identifiers, so the page can show its own DMARC result beside theirs.

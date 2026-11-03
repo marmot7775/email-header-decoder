@@ -87,7 +87,7 @@ const CASES = [
   ['dmarc bestguesspass', rcv({ ar: 'spf=pass smtp.mailfrom=orders@shop.example; dmarc=bestguesspass header.from=shop.example' })],
   ['dmarc permerror', rcv({ ar: 'spf=pass smtp.mailfrom=orders@shop.example; dmarc=permerror header.from=shop.example' })],
   ['dmarc temperror', rcv({ ar: ESP_SPF + '; dmarc=temperror header.from=shop.example' })],
-  ['dmarc result outside RFC 7489', rcv({ ar: ESP_SPF + '; dmarc=policy header.from=shop.example' })],
+  ['dmarc result outside RFC 9989', rcv({ ar: ESP_SPF + '; dmarc=policy header.from=shop.example' })],
   ['forwarded with arc=pass', fwd('dkim=fail header.d=shop.example header.s=s1; arc=pass; spf=softfail smtp.mailfrom=orders@shop.example; ' + REJECT, PASS_PRE)],
   ['forwarded, noted but not relied on', fwd('dkim=fail header.d=shop.example header.s=s1; spf=softfail smtp.mailfrom=orders@shop.example; ' + REJECT, PASS_PRE)],
   ['forwarded, already failing before the forward', fwd('spf=pass smtp.mailfrom=srs@forward.example; arc=pass; ' + REJECT, 'spf=fail smtp.mailfrom=orders@shop.example; dmarc=fail header.from=shop.example')],

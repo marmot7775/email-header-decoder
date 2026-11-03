@@ -790,11 +790,11 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
-## dmarc result outside RFC 7489
+## dmarc result outside RFC 9989
 
 Plain headline: The receiving system recorded a sender check result this page doesn't know.
 
-Technical headline: mx.receiver.example reported dmarc=policy, a result outside RFC 7489, so it is shown as written.
+Technical headline: mx.receiver.example reported dmarc=policy, a result RFC 9989 does not define, so it is shown as written.
 
 Cause, plain: The details below show what was checked.
 

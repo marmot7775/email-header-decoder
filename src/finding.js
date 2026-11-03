@@ -531,7 +531,7 @@
     }
 
     if (result !== 'fail') {
-      return finish('unknown', say('unknown', receiver + ' reported dmarc=' + result + ', a result outside RFC 7489, so it is shown as written.', 'The receiving system recorded a sender check result this page does not know.', dm.src),
+      return finish('unknown', say('unknown', receiver + ' reported dmarc=' + result + ', a result RFC 9989 does not define, so it is shown as written.', 'The receiving system recorded a sender check result this page does not know.', dm.src),
         say('unknown', 'The identifiers are in the details below; the page does not guess what the receiver meant.', 'The details below show what was checked.', dm.src));
     }
 
