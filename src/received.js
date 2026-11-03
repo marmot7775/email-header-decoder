@@ -15,13 +15,16 @@
   // a host name are not an address: hosting providers write the address
   // reversed into reverse DNS names, and a name is not evidence of the
   // connection.
+  // Four numbers of 0 to 255; [999.1.1.1] is not an address (issue 43).
+  const v4ok = (ip) => ip.split('.').every(n => +n <= 255);
   function findIp(text) {
     if (!text) return '';
-    const lit = new RegExp('\\[(?:IPv6:)?(?:' + V4 + '|' + V6 + ')(?:%\\w+)?\\]', 'i').exec(text);
-    if (lit) return lit[1] || lit[2];
+    const litRe = new RegExp('\\[(?:IPv6:)?(?:' + V4 + '|' + V6 + ')(?:%\\w+)?\\]', 'gi');
+    let lit;
+    while ((lit = litRe.exec(text))) if (lit[2] || v4ok(lit[1])) return lit[1] || lit[2];
     for (const tok of String(text).split(/[\s,;()]+/)) {
       const t = tok.replace(/^IPv6:/i, '').replace(/%\w+$/, '');
-      if (new RegExp('^' + V4 + '$').test(t)) return t;
+      if (new RegExp('^' + V4 + '$').test(t)) { if (v4ok(t)) return t; continue; }
       if (t.includes(':') && !/^\d{1,2}:\d{2}(:\d{2})?$/.test(t) && new RegExp('^' + V6 + '$', 'i').test(t)) return t;
     }
     return '';
@@ -31,11 +34,17 @@
     return /^\[?(IPv6:)?[0-9a-f:.]+(%\d+)?\]?$/i.test(host || '') && /[:.]/.test(host);
   }
 
+  // Private, loopback, link local, this network (0.0.0.0/8), and the shared
+  // address space of carrier grade NAT (100.64.0.0/10, RFC 6598), also
+  // written as IPv4-mapped IPv6 (::ffff:10.0.0.1).
   function isPrivateIp(ip) {
     if (!ip) return false;
-    if (/^10\./.test(ip) || /^192\.168\./.test(ip) || /^127\./.test(ip) || /^169\.254\./.test(ip)) return true;
+    ip = ip.replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, '');
+    if (/^10\./.test(ip) || /^192\.168\./.test(ip) || /^127\./.test(ip) || /^169\.254\./.test(ip) || /^0\./.test(ip)) return true;
     const m = /^172\.(\d+)\./.exec(ip);
     if (m && +m[1] >= 16 && +m[1] <= 31) return true;
+    const cg = /^100\.(\d+)\./.exec(ip);
+    if (cg && +cg[1] >= 64 && +cg[1] <= 127) return true;
     if (/^(::1$|fe80:|fc|fd)/i.test(ip)) return true;
     return false;
   }
