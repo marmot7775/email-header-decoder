@@ -60,9 +60,11 @@
   // One phrase per identifier that did not carry DMARC, in both voices.
   // unaligned marks a pass on a domain that is not the From domain's.
   const SPF_WORD = { fail: 'failed', softfail: 'soft failed', neutral: 'was neutral', none: 'found no record', permerror: 'hit a permanent error in the record', temperror: 'hit a temporary DNS error', policy: 'was overridden by local policy' };
+  // A DKIM row read from i= has no known d= (issue 30).
+  const dkimId = (k, d) => 'DKIM ' + (k.dFromI ? 'i=@' : 'd=') + d + (k.selector ? ' s=' + k.selector : '');
   function dkimPiece(k) {
     const d = k.domain || 'an unnamed domain';
-    const id = 'DKIM d=' + d + (k.selector ? ' s=' + k.selector : '');
+    const id = dkimId(k, d);
     if (k.result === 'pass' && !k.relaxed) return { t: id + ' passed', p: 'it was signed by ' + d, unaligned: true, src: k.src };
     if (k.result === 'pass') return null;
     if (k.result === 'fail') return { t: id + ' failed verification', p: 'the signature from ' + d + ' did not check out', src: k.src };
@@ -99,7 +101,7 @@
   }
   function passPieces(auth) {
     const out = [];
-    for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: 'DKIM d=' + k.domain + (k.selector ? ' s=' + k.selector : '') + ' passed', p: 'it was signed by ' + k.domain, d: k.domain, kind: 'dkim', relaxedOnly: k.relaxedOnly, src: k.src });
+    for (const k of auth.dkim) if (k.result === 'pass' && k.relaxed) out.push({ t: dkimId(k, k.domain) + ' passed', p: (k.dFromI ? 'it was signed on behalf of ' : 'it was signed by ') + k.domain, d: k.domain, kind: 'dkim', dFromI: k.dFromI, relaxedOnly: k.relaxedOnly, src: k.src });
     const s = auth.spf;
     // A null reverse path has SPF check the HELO identity (RFC 7208 2.4),
     // worded as spfPiece words it.
@@ -108,9 +110,10 @@
     return out;
   }
   function passClause(pieces, from) {
-    const relaxed = pieces.some(x => x.relaxedOnly) ? ' under relaxed alignment, through the organizational domain' : '';
+    // An i= domain below the From domain is a relaxed match whatever d= is.
+    const relaxed = pieces.some(x => x.relaxedOnly || (x.dFromI && x.d !== from)) ? ' under relaxed alignment, through the organizational domain' : '';
     // Every pass is the From domain itself: name it once.
-    const own = !relaxed && pieces.every(x => x.d === from) && !pieces.some(x => x.helo);
+    const own = !relaxed && pieces.every(x => x.d === from) && !pieces.some(x => x.helo || x.dFromI);
     const both = pieces.length > 1;
     const ownP = both ? 'it was signed by ' + from + ', the domain in the From address, and came from a server it allows.'
       : pieces[0] && pieces[0].kind === 'spf' ? 'it came from a server allowed by ' + from + ', the domain in the From address.' : 'it was signed by ' + from + ', the domain in the From address.';
@@ -129,6 +132,7 @@
       const sel = r.selector ? ' s=' + r.selector : '';
       if (r.ambiguous) return say('unknown', 'A DKIM result for d=' + d + ' names neither s= nor b=, and two signatures carry d=' + d + ', so this page cannot tell which one it describes.', 'One signature result could belong to either of two signatures, so this page does not pick one.', r.src);
       if (!r.result) return say('unknown', 'DKIM-Signature d=' + d + sel + ' carries no result from the receiver.', 'One signature on the message was not checked by the receiver.', r.src);
+      if (r.result === 'pass' && r.dFromI && r.relaxed) return say('pass', 'DKIM passed for i=@' + d + sel + ', which aligns with ' + from + ' in relaxed mode. No DKIM-Signature here shows its d=, so strict mode cannot be judged.', 'The message was signed on behalf of ' + d + ', which belongs to the sender.', r.src);
       if (r.result === 'pass') return r.relaxed
         ? say('pass', 'DKIM passed for d=' + d + sel + ', which aligns with ' + from + (r.relaxedOnly ? ' in relaxed mode only.' : '.'), 'The message was signed by ' + d + ', which belongs to the sender.', r.src)
         : say('caveat', 'DKIM passed for d=' + d + sel + ', which does not align with ' + from + '. A pass on another domain does not count for DMARC.', 'The message was signed, but by ' + d + ', not by the sender\'s own domain.', r.src);

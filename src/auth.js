@@ -201,11 +201,20 @@
 
   // Alignment of one authenticated identifier with the From domain,
   // under both modes, plus the state its connector shows.
-  function alignRow(kind, domain, result, from) {
+  // fromI marks a DKIM domain read from i= because no d= is known. RFC
+  // 6376 3.5 puts the i= domain at or below d=, so relaxed alignment follows
+  // from it, but strict is known only when i= cannot sit below the From
+  // domain's own name: then it is false, or true when both are the
+  // organizational domain. Otherwise strict is null, unknown.
+  function alignRow(kind, domain, result, from, fromI) {
     const L = HA.psl.lookup(domain);
     // Compared as A-labels, so news@bücher.example aligns with d=xn--bcher-kva.example.
-    const strict = !!from.key && !!L.key && L.key === from.key;
+    let strict = !!from.key && !!L.key && L.key === from.key;
     const relaxed = strict || (!!from.orgKey && !!L.orgKey && L.orgKey === from.orgKey);
+    if (fromI && relaxed) {
+      const atOrBelow = L.key === from.key || L.key.endsWith('.' + from.key);
+      strict = !atOrBelow ? false : L.key === from.key && from.key === from.orgKey && !from.approximate ? true : null;
+    }
     const passed = result === 'pass';
     let state, word;
     if (!from.defined) {
@@ -216,7 +225,7 @@
     else if (strict) { state = 'pass'; word = 'Aligned'; }
     else if (relaxed) { state = 'pass'; word = 'Aligned, relaxed'; }
     else { state = 'caveat'; word = 'Passed, not aligned'; }
-    return { kind, domain: L.domain, org: L.org, approximate: L.approximate, result, passed, strict, relaxed, relaxedOnly: passed && relaxed && !strict, modes: { relaxed: passed && relaxed, strict: passed && strict }, aligned: relaxed, mode: strict ? 's' : relaxed ? 'r' : '', state, word };
+    return { kind, domain: L.domain, org: L.org, approximate: L.approximate, result, passed, strict, relaxed, relaxedOnly: passed && relaxed && strict === false, modes: { relaxed: passed && relaxed, strict: passed && strict }, aligned: relaxed, mode: strict ? 's' : relaxed ? 'r' : '', state, word, dFromI: !!fromI };
   }
 
   // DMARC policy as the receiver reported it. Google writes
@@ -410,10 +419,13 @@
       else if (d && sameD.length > 1) candidates = sameD;
       if (sig) used.add(sig);
       for (const c of candidates) used.add(c);
+      // No signature and no header.d: the domain comes from i=, and d= is
+      // unknown (issue 30).
+      let fromI = false;
       if (sig) d = sig.d;
-      else if (!d) { d = P.domainOf(e.ids['header.i'] || ''); if (d === 'none') d = ''; }
+      else if (!d) { d = P.domainOf(e.ids['header.i'] || ''); if (d === 'none') d = ''; fromI = !!d; }
       const ambiguous = candidates.length > 1;
-      return Object.assign(alignRow('dkim', d, e.result, from), { selector: s || (sig ? sig.s : ''), reason: e.reason, comments: e.comments, signature: sig ? signatures.indexOf(sig) : -1, matchedBy, ambiguous, candidates: candidates.map(c => signatures.indexOf(c)),
+      return Object.assign(alignRow('dkim', d, e.result, from, fromI), { selector: s || (sig ? sig.s : ''), reason: e.reason, comments: e.comments, signature: sig ? signatures.indexOf(sig) : -1, matchedBy, ambiguous, candidates: candidates.map(c => signatures.indexOf(c)),
         src: (sig ? [sig.src[0]] : candidates.map(c => c.src[0])).concat(e.src).sort((a, b) => a - b), absent: !d });
     }).filter(r => !(r.absent && r.result === 'none'));
     for (const sig of signatures) {
@@ -467,10 +479,11 @@
     if (!primary) { c.why = all.length ? 'no-trusted-results' : 'no-results'; return c; }
     const name = (r) => (r.kind === 'dkim' ? 'DKIM ' : 'SPF ') + r.domain;
     c.by.relaxed = rows.filter(r => r.modes.relaxed).map(name);
-    c.by.strict = rows.filter(r => r.modes.strict).map(name);
+    c.by.strict = rows.filter(r => r.modes.strict === true).map(name);
     c.relaxed = c.by.relaxed.length > 0;
-    c.strict = c.by.strict.length > 0;
-    c.differ = c.relaxed !== c.strict;
+    // null when the only relaxed pass has an unknown d= (a DKIM result read from i=).
+    c.strict = c.by.strict.length > 0 ? true : rows.some(r => r.modes.relaxed && r.modes.strict === null) ? null : false;
+    c.differ = c.relaxed && c.strict === false;
     c.result = c.relaxed ? 'pass' : 'fail';
     // The tags that decide it when the modes differ.
     if (c.differ) {
@@ -491,6 +504,10 @@
     if (rep === computed.result) return null;
     if (rep === 'fail' && computed.differ) {
       return { reason: 'strict-mode', state: 'caveat', technical: 'The receiver reported dmarc=fail and the identifiers align only in relaxed mode, so the record most likely sets ' + computed.tags.map(t => t + '=s').join(' and ') + '. The DMARC record decides; this page cannot read it without DNS.', plain: 'The sending domain\'s DMARC record probably demands an exact domain match, and this message only matches the wider organization.', src };
+    }
+    const iOnly = rows.find(r => r.dFromI && r.modes.relaxed && r.modes.strict === null);
+    if (rep === 'fail' && computed.strict === null && iOnly) {
+      return { reason: 'unknown-d', state: 'caveat', technical: 'The receiver reported dmarc=fail. The DKIM result names only i=@' + iOnly.domain + ', and no DKIM-Signature here matches it, so its d= is unknown. If d= is not exactly ' + from.domain + ' and the record sets adkim=s, that explains the failure; the headers show neither.', plain: 'The headers don\'t show the exact domain the signature used. If the sender\'s DMARC setting demands an exact domain match, that would explain the failure.', src };
     }
     const approx = rows.some(r => r.approximate) || from.approximate;
     const otherFrom = dmarc.headerFrom && HA.psl.ascii(dmarc.headerFrom) !== from.key;
@@ -514,6 +531,10 @@
       const r = rows.filter(x => x.state === 'pass' && x.relaxedOnly);
       notes.push(say('caveat', r.map(x => (x.kind === 'dkim' ? 'DKIM d=' : 'SPF ') + x.domain).join(' and ') + ' align' + (r.length === 1 ? 's' : '') + ' with ' + from.domain + ' only in relaxed mode, through the organizational domain ' + from.org + '. Under ' + (r.some(x => x.kind === 'dkim') ? 'adkim=s' : '') + (r.some(x => x.kind === 'dkim') && r.some(x => x.kind === 'spf') ? ' or ' : '') + (r.some(x => x.kind === 'spf') ? 'aspf=s' : '') + ' it would not count. The DMARC record decides.',
         'The signature belongs to the same organization as the sender but not to the exact same domain. That counts unless the domain\'s policy demands an exact match.', r.flatMap(x => x.src).concat(from.src)));
+    }
+    for (const x of rows.filter(r => r.dFromI && r.passed && r.relaxed && r.strict === null)) {
+      notes.push(say('unknown', 'The DKIM result names only i=@' + x.domain + ', and no DKIM-Signature here matches it, so its d= is unknown. RFC 6376 3.5 puts i= at or below d=, so relaxed alignment with ' + from.domain + ' holds; strict alignment cannot be judged.',
+        'The headers don\'t show the exact domain the signature used, only a name under it. It belongs to the sender\'s organization, so the usual, looser match holds.', x.src.concat(from.src)));
     }
     const approx = [from].concat(rows).filter(x => x.approximate && x.domain);
     if (approx.length) {

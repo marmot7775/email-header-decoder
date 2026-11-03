@@ -221,7 +221,7 @@
   // Alignment picture: the From domain in the middle, DKIM d= on one
   // side, the SPF domain on the other, each connector styled by state.
   function alignNode(x) {
-    let inner = '<span class="k">' + (x.kind === 'dkim' ? 'DKIM signing domain' : 'SPF domain') + '</span>';
+    let inner = '<span class="k">' + (x.kind === 'dkim' ? (x.dFromI ? 'DKIM i= domain, d= unknown' : 'DKIM signing domain') : 'SPF domain') + '</span>';
     if (x.absent) inner += '<span class="d absent">' + (x.kind === 'dkim' ? 'No DKIM signature' : 'No SPF domain') + '</span>';
     else {
       inner += '<span class="d mono">' + esc(x.domain) + '</span>';
