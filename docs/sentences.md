@@ -522,9 +522,9 @@ Detail 2, plain: The sending server is approved, but by list.example, not by the
 
 Detail 2, technical: SPF passed for list.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
 
-Fix 1, plain: If you sent this, your setup isn't the problem as far as these headers show. Lists that change messages break these checks.
+Fix 1, plain: If you sent this, your setup isn't the problem as far as these headers show. Lists that change messages break these checks. If you didn't send it, it may be forged to look like list mail.
 
-Fix 1, technical: Nothing to change at shop.example on the strength of this message. Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list's ARC seal.
+Fix 1, technical: Nothing to change at shop.example on the strength of this message. Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list's ARC seal. Nothing from before the list shows a pass, though, so if nobody at shop.example sent it, it is a forgery that borrowed a list's headers.
 
 Fix 2, plain: If you run the list: have it send under its own address (it can keep the sender's name), or stop it adding a subject tag and a footer.
 

@@ -275,9 +275,16 @@
       add('caveat', 'If the forward is not yours, authentication worked as designed. Judge the sender by a copy delivered straight to the mailbox.', 'If you did not set up this forward, there is nothing to change. Ask for a copy sent straight to you to check the sender.', fw.src);
       return f;
     }
+    if (ctx.list && ctx.list.unproven && status === 'fail') {
+      const L = ctx.list;
+      add('fail', 'Judge the sender by a copy delivered straight to the mailbox. Nothing from before the list shows a pass, so this failure could come from the list or from a forgery that borrowed a list\'s headers. If nobody at ' + from + ' sent it, treat it as forged.', 'Don\'t trust this message on its word. Ask for a copy sent straight to you, without the list, and check that one. If nobody at ' + from + ' sent it, treat it as forged.', L.src);
+      add('caveat', 'If you run ' + L.id + ' and it did carry this message: ' + (L.mailman ? 'in Mailman, set DMARC mitigation to replace the From address with the list\'s own for every post' : 'have the list rewrite the From address to its own') + ', or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.', 'If you run the list and it did send this: have it send under its own address (it can keep the sender\'s name).', L.src);
+      return f;
+    }
     if (ctx.list && ctx.list.take) {
       const L = ctx.list, ok = L.preResult === 'pass';
-      add('caveat', 'Nothing to change at ' + from + (ok ? ': its mail passed before the list.' : ' on the strength of this message.') + ' Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list\'s ARC seal.', 'If you sent this, your setup is not the problem as far as these headers show. Lists that change messages break these checks.', L.preSrc.concat(L.src));
+      const forgery = L.pre.length ? '' : ' Nothing from before the list shows a pass, though, so if nobody at ' + from + ' sent it, it is a forgery that borrowed a list\'s headers.';
+      add('caveat', 'Nothing to change at ' + from + (ok ? ': its mail passed before the list.' : ' on the strength of this message.') + ' Mail through a list that changes messages fails DMARC unless the list rewrites the From address or the receiver trusts the list\'s ARC seal.' + forgery, 'If you sent this, your setup is not the problem as far as these headers show. Lists that change messages break these checks.' + (forgery ? ' If you didn\'t send it, it may be forged to look like list mail.' : ''), L.preSrc.concat(L.src));
       add('caveat', 'If you run ' + L.id + ': ' + (L.mailman ? 'in Mailman, set DMARC mitigation to replace the From address with the list\'s own for every post, not only for domains with p=quarantine or p=reject' : 'have the list rewrite the From address to its own') + '; or stop tagging the subject and adding a footer; or ARC-seal outgoing mail so receivers that trust the seal see the result from before the list.', 'If you run the list: have it send under its own address (it can keep the sender\'s name), or stop it adding a subject tag and a footer.', L.src);
       return f;
     }
@@ -415,7 +422,14 @@
     // wins, and the seal's record stands in for the list's own.
     const vouched = fw.yes && fw.preResult === 'pass' && fw.intact && (fw.receiverArc === 'pass' || !!(auth.compauth && auth.compauth.reason === '130'));
     if (list.yes && fw.yes && !list.pre.length && fw.pre.length) Object.assign(list, { pre: fw.pre.filter(x => ['spf', 'dkim', 'dmarc'].includes(x.method)), preResult: fw.preResult, writer: fw.writer, origName: 'ARC-Authentication-Results', preSrc: fw.aarSrc });
-    list.take = list.yes && list.resent && !vouched && list.preResult !== 'fail';
+    // List-Id, the subject tag, and a pass for the list's domain are all the
+    // sender's to write. With no record from before the list and no broken
+    // signature from the From domain (what a list's changes leave behind),
+    // the list is one possible reason, and a forgery that borrowed a list's
+    // headers is the other (issue 32).
+    const listClaim = list.yes && list.resent && !vouched && list.preResult !== 'fail';
+    list.unproven = listClaim && !list.pre.length && !list.broken.some(k => k.relaxed);
+    list.take = listClaim && !list.unproven;
     const c = Object.assign({}, ctx, { receiver, svc, fw, dm, list });
     const out = { status: 'unknown', state: 'unknown', headline: null, cause: null, consequence: null, details: [], fixes: [], flags: [], limits: [], forwarded: { yes: fw.yes, by: fw.by, preForward: fw.yes ? { writer: fw.writer, result: fw.preResult, derived: !!fw.derived, text: preText(fw), src: fw.aarSrc } : null, src: fw.src } };
     const finish = (status, headline, cause) => {
@@ -553,7 +567,7 @@
           list.preResult === 'pass' ? 'Before the list, the list\'s own server recorded that the message passed. The sender\'s setup looks fine. The list broke the checks by changing the message' + howPlain : 'The list\'s own server kept a record of the checks before the list, but it does not show a clear pass. The list changed the message' + howPlain, uniq(list.preSrc.concat(list.src)))
         : say('caveat', 'No record from before the list is in the headers, so this page cannot show that the message passed before the list changed it.' + how, 'The headers carry no record of how the message looked before the list, so this page cannot confirm the sender\'s own setup. Lists break these checks by changing the message' + howPlain, list.src);
       return finish('fail', head, cause);
-    } else if (listId) {
+    } else if (listId && !list.unproven) {
       out.details.push(say('caveat', 'List-Id ' + listId.raw + ' shows the message came through a mailing list, and lists often change the subject or body. With no ARC record there is no result from before the list to compare with.', 'The message came through a mailing list, which can break these checks. The headers carry no record of how it looked before the list.', listId.src));
     }
 
@@ -570,6 +584,11 @@
     }
     const head = say('fail', lead + (computedOnly ? 'fails' : 'failed') + ' because ' + fcl.t, plainLead + (computedOnly ? 'fails' : 'failed') + ' the sender check (DMARC). ' + upFirst(fcl.p), uniq(fp.flatMap(x => x.src).concat(from.src, dm.src)));
     out.details = out.details.filter(s => s !== preFail);
+    if (list.unproven) {
+      const t = list.tag ? 'The List-Id, the subject tag ' + list.tag + ', and that pass' : 'The List-Id and that pass';
+      return finish('fail', head, say('fail', 'The message names the mailing list ' + list.id + ' and passed only for ' + list.org + '. ' + t + ' are all the sender\'s to write, and no record from before the list is in the headers. So the list may have broken DMARC, or this is a forgery that borrowed a list\'s headers.',
+        'The message says it came through the mailing list ' + list.id + '. Anyone can write that, and the headers carry no record of the message before the list. The list may have broken the check, or the message may be forged to look like list mail.', uniq(list.src.concat(auth.spf.src, auth.dkim.flatMap(k => k.src)))));
+    }
     return finish('fail', head, fw.yes && fw.preResult === 'fail'
       ? say('fail', 'The message was already failing before the forward: ' + fw.writer + ' recorded ' + (preText(fw) || 'no passing result') + '. ' + (auth.spf.result === 'pass' && !auth.spf.relaxed && auth.spf.domain ? 'SPF now passes only for the forwarder\'s domain ' + auth.spf.domain + ', which does not count for ' + fd + '.' : 'Nothing after the forward aligns with ' + fd + ' either.'), 'The message failed the check before it was ever forwarded, so the problem is with the sender, not the forward.', uniq(fw.aarSrc.concat(auth.spf.src)))
       : causeOfFail(auth, fd, receiver, svc));
