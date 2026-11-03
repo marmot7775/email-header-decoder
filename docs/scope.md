@@ -11,9 +11,12 @@ should earn a technical reader's respect and still make sense to
 the business owner who owns the domain.
 
 Decision: it runs entirely in the browser
-No backend. One static page. Reasons: pasted headers never leave
-the visitor's machine; no rate limiting, no logging policy, no
-load on the droplet. Nothing in the first release needs DNS.
+No backend. One static page. Reasons: pasted headers, addresses,
+and domains are never sent anywhere; no rate limiting, no load on
+the droplet. Nothing in the first release needs DNS. The page's one
+network call is a usage note to dns-audit.com/api/usage after each
+read, with four fields: the tool, the finding status, whether a
+built-in sample was read, and the host name of the linking site.
 
 Where it lives
 headers.dns-audit.com, a static site on Cloudflare, with the same
@@ -24,8 +27,9 @@ path was chosen for simplicity; dns-audit.com/headers through a
 Cloudflare route stays possible if search traffic becomes a goal.
 
 First release
-1. Paste box and .eml drop. Headers unfolded, encoded words
-   decoded, duplicates kept in order.
+1. Paste box, and an .eml read from a Choose a file button or
+   dropped on the box. Headers unfolded, encoded words decoded,
+   duplicates kept in order.
 2. Finding first. One sentence naming the cause, for example:
    DMARC failed because DKIM signed as mailer.example and SPF
    checked bounce.mailer.example, so neither aligned with the
@@ -34,8 +38,10 @@ First release
    delivery time, each with the question it answers. A forward the
    finding blames shows as failed after the forward, passed before.
 4. Alignment picture. From domain, Return-Path domain, every DKIM
-   d= with its selector and result, each marked aligned or not,
-   relaxed or strict as the DMARC policy would read it.
+   d= with its selector and result, each marked aligned or not.
+   Relaxed alignment, the DMARC default, decides the computed
+   result, with strict beside it: adkim and aspf live in the DMARC
+   record, which is not in the headers.
 5. Authentication-Results and ARC per RFC 8601, broken out per
    method with the host that wrote them, and the ARC chain with
    cv= so forwarded mail reads correctly.
@@ -47,8 +53,10 @@ First release
    SpamAssassin, and Rspamd.
 8. Raw headers collapsed under everything, searchable, drawn 200
    fields at a time with long fields clipped until expanded.
-9. Plain and technical wording, plain first. The switch changes
-   every sentence; Copy report carries both headlines.
+9. Plain and technical wording in one output, with no switch
+   (since 2026-10-28). The finding speaks plainly; Technical
+   details and the Full analysis carry the technical wording. Copy
+   report carries both headlines.
 10. Copy report: the finding, the tiles, and the fixes as plain
     text for a ticket or a client email.
 11. (Dropped 2026-10-28.) A line on the page saying nothing you
@@ -63,8 +71,8 @@ First release
 Parked
 DKIM public key lookup (needs DNS, can call the audit API later).
 Bounce and SMTP code decoding (separate tool).
-Shareable result links (conflicts with the privacy claim; Copy
-report covers the need without a server).
+Shareable result links (a link would have to carry the headers to
+a server; Copy report covers the need without one).
 Link from a failing domain to its dns-audit.com audit.
 Compare two messages side by side.
 
