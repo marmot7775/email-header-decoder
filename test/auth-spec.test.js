@@ -141,11 +141,18 @@ test('item 3: Received-SPF result, comment and pairs; it is the SPF source when 
   assert.ok(spf.src.includes(rs.src[0]));
 });
 
-test('item 3: Received-SPF with identity=helo checks the HELO domain', () => {
-  const text = fixture('received-spf-only.txt').replace('identity=mailfrom', 'identity=helo');
-  const spf = HA.analyze(text).auth.spf;
-  assert.equal(spf.domain, 'out.shop.example');
-  assert.equal(spf.identity, 'Received-SPF helo');
+// A HELO result counts for DMARC only when the reverse path is null
+// (RFC 7208 2.4, RFC 9989 3.2.4). With a real envelope sender it is not the
+// MAIL FROM result (issue 27).
+test('item 3: Received-SPF with identity=helo checks the HELO domain only for a null reverse path', () => {
+  const helo = fixture('received-spf-only.txt').replace('identity=mailfrom', 'identity=helo');
+  const real = HA.analyze(helo).auth.spf;
+  assert.equal(real.domain, 'mail.shop.example');
+  assert.equal(real.result, '');
+  const nul = HA.analyze(helo.replace('envelope-from=orders@mail.shop.example', 'envelope-from=<>').replace('Return-Path: <orders@mail.shop.example>', 'Return-Path: <>')).auth.spf;
+  assert.equal(nul.domain, 'out.shop.example');
+  assert.equal(nul.identity, 'Received-SPF helo');
+  assert.equal(nul.result, 'pass');
 });
 
 // 4. DKIM-Signature

@@ -347,11 +347,20 @@
     // The identifier is smtp.mailfrom, else the envelope-from (or helo)
     // Received-SPF names, else the Return-Path. A null reverse path means
     // SPF checked the HELO domain (RFC 7208 2.4).
-    const spfE = reported('spf')[0] || null;
-    const rspf = receivedSpf.find(x => x.trusted) || null;
+    // DMARC uses only the MAIL FROM check (RFC 9989 3.2.4), so a result for
+    // the HELO identity stands in only when the reverse path is null. A
+    // receiver that checks both writes two results, in either order.
     const rpF = fields.find(f => f.lower === 'return-path');
     const rp = rpF ? (P.parseAddresses(rpF.value)[0] || null) : null;
     const isNull = (v) => !v || /^<?\s*>?$/.test(v);
+    const rpNull = !!(rp && rp.empty);
+    const spfEs = reported('spf');
+    const heloOnlyE = (e) => !e.ids['smtp.mailfrom'] && !!e.ids['smtp.helo'];
+    const spfE = spfEs.find(e => !isNull(e.ids['smtp.mailfrom'])) || spfEs.find(e => e.ids['smtp.mailfrom'] !== undefined)
+      || spfEs.find(e => !heloOnlyE(e)) || (rpNull ? spfEs.find(heloOnlyE) : null) || null;
+    const rspfAll = receivedSpf.filter(x => x.trusted);
+    const rspfHelo = (x) => (x.props.identity || '').toLowerCase() === 'helo';
+    const rspf = rspfAll.find(x => !rspfHelo(x)) || (rspfAll.find(x => rspfHelo(x) && (rpNull || (!rp && isNull(x.props['envelope-from']))))) || null;
     let spfDomain = '', spfFrom = '', spfSrc = [], nullPath = false;
     const rspfId = rspf ? (rspf.props.identity || '').toLowerCase() : '';
     if (spfE && !isNull(spfE.ids['smtp.mailfrom'])) { spfDomain = P.domainOf(spfE.ids['smtp.mailfrom']); spfFrom = 'smtp.mailfrom'; spfSrc = spfE.src.slice(); }
