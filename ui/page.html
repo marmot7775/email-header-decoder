@@ -204,8 +204,15 @@ textarea::placeholder { color: var(--muted); }
 .input.drop textarea { border-color: var(--primary); background: var(--primary-subtle); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
 .actions .spacer { flex: 1 1 auto; }
+/* On a phone the paste box uses 16px, below which iOS Safari zooms in on
+   focus and leaves the page zoomed after a paste, and Analyze headers takes
+   a full width row right under the box. */
+@media (max-width: 640px) {
+  textarea { font-size: 16px; }
+  .actions #go { flex: 1 1 100%; }
+}
 button { font: inherit; cursor: pointer; }
-.btn { font-weight: 600; font-size: var(--font-sm); border-radius: var(--radius); border: 1px solid var(--border-strong); background: transparent; color: var(--text); padding: 8px 14px; min-height: 44px; }
+.btn { font-weight: 600; font-size: var(--font-sm); border-radius: var(--radius); border: 1px solid var(--border-strong); background: transparent; color: var(--text); padding: 8px 14px; min-height: 44px; touch-action: manipulation; }
 .btn:hover { background: var(--surface-hover); }
 .btn.primary { background: var(--primary-solid); border-color: var(--primary-solid); color: var(--on-solid); }
 .btn.primary:hover { background: var(--primary-solid-hover); }
@@ -521,7 +528,7 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
     </div>
     <textarea id="headers" spellcheck="false" autocomplete="off" placeholder="Paste here, or choose or drop a .eml file."></textarea>
     <div class="actions">
-      <button class="btn primary" id="go" type="button">Decode</button>
+      <button class="btn primary" id="go" type="button">Analyze headers</button>
       <button class="btn" id="clear" type="button">Clear</button>
       <input class="sr-only file-input" id="eml-file" type="file" accept=".eml,.txt,message/rfc822">
       <label class="btn file-btn" for="eml-file">Choose a file</label>
