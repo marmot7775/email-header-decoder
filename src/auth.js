@@ -340,7 +340,7 @@
     // field of the last hop before the receiver took custody, or, with no
     // hop before the receiver, above the receiver's own first stamp.
     const rspfFields = fields.filter(f => f.lower === 'received-spf');
-    const receivedSpf = rspfFields.map(f => Object.assign(parseReceivedSpf(f.value), { src: [f.index], trusted: b >= 0 && f.index < senderTop }));
+    const receivedSpf = rspfFields.map(f => Object.assign(parseReceivedSpf(f.value), { src: [f.index], trusted: b >= 0 && f.index < senderTop, noCustody: b < 0 }));
     const dkimFields = fields.filter(f => f.lower === 'dkim-signature');
     const signatures = dkimFields.map(f => Object.assign(parseDkimSignature(f.value), { src: [f.index] }));
     const arc = buildArc(fields, chain);
@@ -572,6 +572,11 @@
       if (r.matchedBy === 'position' && r.trust === 'receiver') {
         n.push(say('pass', 'Authentication-Results without an authserv-id (the Exchange Online form) sits beside the Received field of hop ' + (r.hopIdx + 1) + ', so ' + r.writer + ' wrote it. Microsoft names no host in this form, so the tie is by position.', 'Microsoft wrote these check results when the message arrived.', r.src));
       }
+    }
+    // Received-SPF below the receiver's stamp could be the sender's (issue 33).
+    for (const x of auth.receivedSpf.filter(r => !r.trusted)) {
+      n.push(say('unknown', 'Received-SPF reporting ' + (x.result || 'no readable result') + (x.noCustody ? ' cannot be tied to the receiver: no Received field shows where it took custody' : ' sits below the Received field of the last hop before the receiver took custody') + ', so the sender could have written it. It is ignored here. A hint, not a result.',
+        'One record of the sending server check sits where the sender could have written it, so it is ignored.', x.src));
     }
     const arc = auth.arc;
     for (const p of arc.problems) n.push(say('fail', p.text, 'The forwarding record on this message is broken or incomplete, so the results it carries cannot be relied on.', p.src));

@@ -292,7 +292,7 @@
     } else h += '<p class="absent">' + chip('unknown', 'Absent') + ' No Authentication-Results field in these headers.</p>';
     if (a.receivedSpf.length) {
       h += '<div class="arf"><div class="arh"><span class="who">Received-SPF</span>' + srcBtn(a.receivedSpf.flatMap(x => x.src)) + '</div><div class="ents">' +
-        a.receivedSpf.map(x => '<div class="ent"><span class="m">spf</span>' + chip(HA.auth.resultState(x.result), x.result || 'unreadable') + '<span class="id mono">' +
+        a.receivedSpf.map(x => '<div class="ent"><span class="m">spf</span>' + chip(HA.auth.resultState(x.result), x.result || 'unreadable') + chip(...(x.trusted ? TRUST.receiver : TRUST.unverified)) + '<span class="id mono">' +
           esc(['client-ip', 'envelope-from', 'helo', 'receiver'].filter(k => x.props[k]).map(k => k + '=' + x.props[k]).join(' ') || 'no details') + '</span></div>').join('') + '</div></div>';
     }
     // ARC chain, one row per instance.
