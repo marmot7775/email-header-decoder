@@ -4,7 +4,11 @@
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Invisible and direction control characters show as <U+200B>, so what
+  // the reader sees is what the string holds (issue 31).
+  const HIDDEN_G = new RegExp(HA.psl.HIDDEN.source, 'g');
+  const vis = (s) => String(s === null || s === undefined ? '' : s).replace(HIDDEN_G, c => '<U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') + '>');
+  const esc = (s) => vis(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtDur = HA.received.fmtDur;
 
   // Delay bands, upper bounds in seconds. The colors are the --delay-*
@@ -157,7 +161,7 @@
     if (f.consequence) L.push('', 'What the DMARC setting did: ' + f.consequence.plain);
     if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
     L.push('', 'Decoded at headers.dns-audit.com.');
-    return L.join('\n');
+    return vis(L.join('\n'));
   }
   function copyText(text) {
     if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);

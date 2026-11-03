@@ -27,9 +27,19 @@
     return String(text || '')
       .replace(/^﻿/, '')
       .replace(/\r\n?/g, '\n')
-      .replace(/ /g, ' ')
-      // Rich text copied from Outlook or a web page carries soft hyphens and zero width characters inside names.
-      .replace(/[\u00ad\u200b-\u200d\u2060]/g, '');
+      .replace(/ /g, ' ');
+  }
+
+  // Rich text copied from Outlook or a web page carries soft hyphens and
+  // zero width characters through every word, field names included. Only
+  // then are they paste noise, removed everywhere. Otherwise they are kept:
+  // a From domain with an invisible character is not the domain it looks
+  // like, and finding.js says so (issue 31).
+  const PASTE_NOISE = /[\u00ad\u200b-\u200d\u2060]/g;
+  const NOISY_NAME = /^[A-Za-z0-9_\u00ad\u200b-\u200d\u2060-]*[\u00ad\u200b-\u200d\u2060][A-Za-z0-9_\u00ad\u200b-\u200d\u2060-]*:/;
+  function stripPasteNoise(lines) {
+    if (!lines.some(l => NOISY_NAME.test(l))) return { lines, stripped: false };
+    return { lines: lines.map(l => l.replace(PASTE_NOISE, '')), stripped: true };
   }
 
   function isFieldStart(line) {
@@ -104,9 +114,11 @@
   // counted as repaired.
   // Every field keeps its index and the span of raw lines it came from.
   function parseHeaders(text) {
-    const lines = normalizeText(text).split('\n');
+    const noise = stripPasteNoise(normalizeText(text).split('\n'));
+    const lines = noise.lines;
     const block = locateHeaderBlock(lines);
     const notes = [];
+    if (noise.stripped) notes.push(sentence('caveat', 'The paste carried soft hyphens or zero width characters inside field names, as a rich text copy does, so they were removed everywhere before reading.', 'The copy carried invisible formatting characters, so they were removed before reading.', []));
     if (!block) {
       notes.push(sentence('unknown', 'No header block found: no line in the paste has the form Name: value with a field real mail carries.', 'This looks like the text of an email, not its headers. Copy the message source instead. The box below the paste area says where to find it.', []));
       return { fields: [], notes, block: null, format: 'none', bodyPresent: false, blockFound: false, repairedLines: 0 };

@@ -347,6 +347,35 @@
     return l;
   }
 
+  // Invisible and direction control characters in a domain the checks read
+  // (issue 31). IDNA (RFC 5892) disallows all of them except ZWNJ and ZWJ,
+  // which a few scripts need after particular letters, so a From domain
+  // whose visible text is plain ASCII, or that holds any other one of them,
+  // cannot be registered: it is forged.
+  const cp = (c) => 'U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+  function hiddenIn(message, auth) {
+    const G = new RegExp(HA.psl.HIDDEN.source, 'g');
+    const out = [];
+    const check = (what, plainWhat, d, src, from) => {
+      const found = Array.from(new Set(String(d || '').match(G) || []));
+      if (!found.length) return;
+      const seen = d.replace(G, '');
+      const forged = from && (/^[\x00-\x7f]+$/.test(seen) || found.some(c => c !== '\u200c' && c !== '\u200d'));
+      const codes = joinList(found.map(cp));
+      const bidi = found.filter(c => /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/.test(c)).length;
+      const kind = found.length === 1 ? (bidi ? 'a direction control character that reorders how text is shown' : 'an invisible character') : !bidi ? 'invisible characters' : bidi === found.length ? 'direction control characters that reorder how text is shown' : 'invisible and direction control characters';
+      out.push(Object.assign(say(from ? (forged ? 'fail' : 'caveat') : 'caveat',
+        'The ' + what + ' ' + d + ' holds ' + codes + ', ' + kind + ', so it is not ' + seen + '.' + (forged ? ' IDNA (RFC 5892) does not allow ' + (found.length === 1 ? 'it' : 'them') + ' here, so no registered domain is spelled that way.' : ''),
+        plainWhat + ' holds a hidden character, so it isn\'t ' + seen + ' even though it looks like it.' + (forged ? ' No real address can be spelled that way, so this message is forged.' : ''), src), { hidden: true, forged: !!forged, seen }));
+    };
+    const fa = message.from;
+    if (fa) check('From domain', 'The sender\'s address', fa.domain, fa.src, true);
+    const rp = message.returnPath;
+    if (rp) check('Return-Path domain', 'The hidden return address (Return-Path)', rp.domain, rp.src, false);
+    for (const sig of auth.signatures) check('DKIM d= domain', 'The domain that signed the message', sig.d, sig.src, false);
+    return out;
+  }
+
   function flagsOf(ctx) {
     const { message, auth, decoded, status } = ctx;
     const fl = [];
@@ -362,6 +391,7 @@
       const folded = fa.domain.normalize('NFKC').toLowerCase();
       if (folded !== fa.domain && /^[\x00-\x7f]+$/.test(folded)) fl.push(Object.assign(say('fail', 'The From domain ' + fa.domain + ' is written in look-alike characters that read as ' + folded + '. IDNA (RFC 5892) does not allow them, so no registered domain is spelled that way.', 'The sender\'s address uses special characters made to look like ' + folded + '. No real address can be spelled that way, so this message is forged.', fa.src), { lookalike: true }));
     }
+    for (const x of hiddenIn(message, auth)) fl.push(x);
     const untrustedPass = auth.all.filter(r => r.untrusted && r.entries.some(e => e.method === 'dmarc' && e.result === 'pass'));
     if (untrustedPass.length && status !== 'pass') fl.push(say('caveat', 'An Authentication-Results field the receiver did not write claims dmarc=pass. It is ignored here: the sender or a hop before the receiver could have written it.', 'One set of results in the headers claims the message passed, but the receiving system did not write it, so it is ignored.', untrustedPass.flatMap(r => r.src)));
     for (const it of decoded.list) if (it.key === 'Reply-To' && it.level === 'warn') fl.push(say('caveat', it.technical, it.plain, it.src));
@@ -400,6 +430,8 @@
       // A From domain that cannot exist has no owner to fix anything.
       const fake = out.flags.find(x => x.lookalike);
       if (fake) out.fixes = [say('fail', 'Treat the message as phishing: the From domain cannot be registered, so nobody owns it to set up DMARC. Report it to your mail provider and do not act on its links or requests.', 'Treat this as a scam. The sender\'s address is fake, so there is nothing to set up. Report it as phishing and don\'t click its links or reply.', fake.src)];
+      const hid = !fake && out.flags.find(x => x.hidden && x.forged);
+      if (hid) out.fixes = [say('fail', 'Treat the message as phishing: the From domain holds a hidden character, so it is not ' + hid.seen + ' and nobody can register it. If you copied these headers from a formatted view rather than the message source, copy the source and decode it again first.', 'Treat this as a scam. The sender\'s address hides a character so it looks like ' + hid.seen + '. Report it as phishing and don\'t click its links or reply. If you copied the headers from a formatted view, copy the original message source and check again first.', hid.src)];
       return out;
     };
 
