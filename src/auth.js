@@ -203,8 +203,9 @@
   // under both modes, plus the state its connector shows.
   function alignRow(kind, domain, result, from) {
     const L = HA.psl.lookup(domain);
-    const strict = !!from.domain && !!L.domain && L.domain === from.domain;
-    const relaxed = strict || (!!from.org && !!L.org && L.org === from.org);
+    // Compared as A-labels, so news@bücher.example aligns with d=xn--bcher-kva.example.
+    const strict = !!from.key && !!L.key && L.key === from.key;
+    const relaxed = strict || (!!from.orgKey && !!L.orgKey && L.orgKey === from.orgKey);
     const passed = result === 'pass';
     let state, word;
     if (!from.defined) {
@@ -256,13 +257,13 @@
   // undefined, and nothing is computed from any of them.
   function fromOf(message) {
     const src = message.from ? message.from.src.slice() : [];
-    const none = (why) => ({ domain: '', org: '', approximate: false, defined: false, why, src });
+    const none = (why) => ({ domain: '', org: '', key: '', orgKey: '', approximate: false, defined: false, why, src });
     if (message.fromCount > 1) return none('two-from');
     if (!message.from || !message.from.domain) return none('no-from');
     const domains = message.from.domains || [message.from.domain];
     if (domains.length > 1) return none('multi-domain');
     const L = HA.psl.lookup(message.from.domain);
-    return { domain: L.domain, org: L.org, approximate: L.approximate, defined: true, why: '', src };
+    return { domain: L.domain, org: L.org, key: L.key, orgKey: L.orgKey, approximate: L.approximate, defined: true, why: '', src };
   }
 
   function buildAuth(fields, chain, message) {
@@ -492,7 +493,7 @@
       return { reason: 'strict-mode', state: 'caveat', technical: 'The receiver reported dmarc=fail and the identifiers align only in relaxed mode, so the record most likely sets ' + computed.tags.map(t => t + '=s').join(' and ') + '. The DMARC record decides; this page cannot read it without DNS.', plain: 'The sending domain\'s DMARC record probably demands an exact domain match, and this message only matches the wider organization.', src };
     }
     const approx = rows.some(r => r.approximate) || from.approximate;
-    const otherFrom = dmarc.headerFrom && dmarc.headerFrom !== from.domain;
+    const otherFrom = dmarc.headerFrom && HA.psl.ascii(dmarc.headerFrom) !== from.key;
     if (rep === 'fail') {
       // computed pass
       if (otherFrom) return { reason: 'org-domain', state: 'caveat', technical: 'The receiver evaluated header.from=' + dmarc.headerFrom + ', not ' + from.domain + ', so it checked a different author domain.', plain: 'The receiving system checked a different sender domain than the one shown here.', src };
