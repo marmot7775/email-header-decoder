@@ -175,6 +175,11 @@
       }
     }
     const instances = Object.keys(sets).map(Number).sort((a, b) => a - b).map(i => sets[i]);
+    // RFC 8617 4.2.1 limits i= to 1 through 50, and 5.1.1 fails a chain with
+    // more than 50 sets.
+    const top = instances.length ? instances[instances.length - 1].i : 0;
+    if (instances.length > 50) problems.push({ i: top, text: 'The message carries ' + instances.length + ' ARC sets. RFC 8617 5.1.1 allows at most 50, and more than that fails the chain.', src: instances.filter(x => x.i > 50).flatMap(x => x.src) });
+    else if (top > 50) problems.push({ i: top, text: 'ARC instance i=' + top + ' is above 50, the largest RFC 8617 4.2.1 allows, so the chain fails.', src: sets[top].src.slice() });
     instances.forEach((set, idx) => {
       set.src.sort((a, b) => a - b);
       if (set.i !== idx + 1) problems.push({ i: set.i, text: 'ARC instances are not contiguous: i=' + set.i + ' follows ' + (idx ? 'i=' + instances[idx - 1].i : 'nothing') + '.', src: set.src });
