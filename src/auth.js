@@ -542,10 +542,6 @@
       notes.push(say('caveat', r.map(x => (x.kind === 'dkim' ? 'DKIM d=' : 'SPF ') + x.domain).join(' and ') + ' align' + (r.length === 1 ? 's' : '') + ' with ' + from.domain + ' only in relaxed mode, through the organizational domain ' + from.org + '. Under ' + (r.some(x => x.kind === 'dkim') ? 'adkim=s' : '') + (r.some(x => x.kind === 'dkim') && r.some(x => x.kind === 'spf') ? ' or ' : '') + (r.some(x => x.kind === 'spf') ? 'aspf=s' : '') + ' it would not count. The DMARC record decides.',
         'The signature belongs to the same organization as the sender but not to the exact same domain. That counts unless the domain\'s policy demands an exact match.', r.flatMap(x => x.src).concat(from.src)));
     }
-    for (const x of rows.filter(r => r.dFromI && r.passed && r.relaxed && r.strict === null)) {
-      notes.push(say('unknown', 'The DKIM result names only i=@' + x.domain + ', and no DKIM-Signature here matches it, so its d= is unknown. RFC 6376 3.5 puts i= at or below d=, so relaxed alignment with ' + from.domain + ' holds; strict alignment cannot be judged.',
-        'The headers don\'t show the exact domain the signature used, only a name under it. It belongs to the sender\'s organization, so the usual, looser match holds.', x.src.concat(from.src)));
-    }
     const approx = [from].concat(rows).filter(x => x.approximate && x.domain);
     if (approx.length) {
       notes.push(say('caveat', 'The organizational domain of ' + Array.from(new Set(approx.map(x => x.domain))).join(', ') + ' is an approximation without DNS: its suffix is outside this page\'s list, so a longer public suffix could apply and relaxed alignment could come out differently.', 'This page is not sure where the sender\'s organization begins for this kind of domain, so the relaxed match is a best guess.', from.src));

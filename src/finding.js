@@ -354,6 +354,11 @@
       l.push(say('unknown', 'The organizational domain' + (from.org ? ' ' + from.org : '') + ' comes from a short built in suffix list, not from DNS or the full Public Suffix List that receivers use' + (approx.length ? '; for ' + Array.from(new Set(approx.map(x => x.domain))).join(', ') + ' it is an approximation' : '') + '. Relaxed alignment here rests on it.', 'This page works out where the sender\'s organization begins from its own short list, so the looser domain match is its best reading, not a certainty.', from.src.concat(relaxedRows.flatMap(r => r.src))));
     }
     if (chain.trust.operator === 'Google') l.push(say('unknown', 'Gmail writes no spam, Promotions or inbox placement decision into headers, so these headers cannot show where the message landed.', 'Gmail does not record in the headers whether it put the message in spam. Only the mailbox shows that.', []));
+    // A DKIM result read from i= with no matching signature: d= is not here (issue 30).
+    for (const x of alignment.rows.filter(r => r.dFromI && r.passed && r.relaxed && r.strict === null)) {
+      l.push(say('unknown', 'The DKIM result names only i=@' + x.domain + ', and no DKIM-Signature here matches it, so its d= is not in the headers. RFC 6376 3.5 puts i= at or below d=, so relaxed alignment holds; strict alignment (adkim=s) cannot be judged.',
+        'The headers don\'t show the exact domain the signature used, only a name under it. It belongs to the sender\'s organization, so the usual, looser match holds.', x.src.concat(from.src)));
+    }
     const ub = auth.unbackedDkim;
     if (ub) l.push(say('caveat', 'The only trusted Authentication-Results field' + (ub.authserv ? ' (authserv-id ' + ub.authserv + ')' : '') + ' sits below the receiver\'s only Received stamp, where the sender could have written it. It reports dkim=pass, but the headers hold no DKIM-Signature, so nothing here backs that pass.', 'The sender could have written these check results. They say the message carries a valid digital signature (DKIM), but the headers hold no signature to back that.', ub.src));
     if (fw.yes) l.push(say('unknown', 'ARC seals are not verified here, so the results before the forward are the forwarder\'s own record' + (fw.receiverArc === 'pass' ? '; ' + ctx.receiver + ' reported arc=pass, which means it did verify them.' : '.'), 'This page can\'t confirm the forwarding service\'s own record, so what it saw before the forward is taken on its word.', fw.src));
@@ -451,6 +456,9 @@
       const fake = out.flags.find(x => x.lookalike);
       if (fake) out.fixes = [say('fail', 'Treat the message as phishing: the From domain cannot be registered, so nobody owns it to set up DMARC. Report it to your mail provider and do not act on its links or requests.', 'Treat this as a scam. The sender\'s address is fake, so there is nothing to set up. Report it as phishing and don\'t click its links or reply.', fake.src)];
       const hid = !fake && out.flags.find(x => x.hidden && x.forged);
+      // Nothing aligns because the From domain only looks like another one;
+      // that, not a sending service, is the cause.
+      if (hid && status === 'fail' && !out.forwarded.blamed) out.cause = say('fail', 'The From domain ' + fd + ' only looks like ' + hid.seen + ': it holds a hidden character, so nothing that passed, for ' + hid.seen + ' or any other domain, aligns with it.', 'The sender\'s address only looks like ' + hid.seen + '. It hides a character, so no check that passed counts for it.', uniq(hid.src.concat(out.cause ? out.cause.src : [])));
       if (hid) out.fixes = [say('fail', 'Treat the message as phishing: the From domain holds a hidden character, so it is not ' + hid.seen + ' and nobody can register it. If you copied these headers from a formatted view rather than the message source, copy the source and decode it again first.', 'Treat this as a scam. The sender\'s address hides a character so it looks like ' + hid.seen + '. Report it as phishing and don\'t click its links or reply. If you copied the headers from a formatted view, copy the original message source and check again first.', hid.src)];
       return out;
     };
@@ -505,7 +513,9 @@
         const head = say(computedOnly || sha1Only ? 'caveat' : 'pass', lead + (computedOnly ? 'passes' : 'passed') + ' because ' + cl.t, plainLead + 'passed the sender check (DMARC). ' + upFirst(cl.p), uniq(pp.flatMap(x => x.src).concat(from.src)));
         const dkimCarries = auth.dkim.some(k => k.result === 'pass' && k.relaxed), spfCarries = auth.spf.result === 'pass' && auth.spf.relaxed;
         const lasts = dkimCarries && spfCarries ? 'For ' + fd + ', both SPF and DKIM pass and align, so the message still passes after a forward that breaks SPF.' : dkimCarries ? 'For ' + fd + ', the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.' : 'For ' + fd + ', only SPF passes and aligns. A forward or a mailing list breaks it, because SPF checks whichever server hands the message over; aligned DKIM would still pass.';
-        const cause = say('pass', lasts + (computedOnly ? ' Worked out here; the receiver recorded no DMARC result.' : '') + (fw.yes ? ' The message was forwarded by ' + joinList(fw.by) + ' and still passed.' : ''), 'A message passes when it is signed by, or sent for, the domain in its From address, and this one was.', allSrc);
+        const sha1T = sha1Only ? ' The signature uses rsa-sha1, which RFC 8301 3.1 has verifiers treat as failed, so receivers that follow it would fail this message.' : '';
+        const sha1P = sha1Only ? ' But the signature uses an outdated method (rsa-sha1), so mail systems that follow current rules would fail it.' : '';
+        const cause = say(sha1Only ? 'caveat' : 'pass', lasts + (computedOnly ? ' Worked out here; the receiver recorded no DMARC result.' : '') + (fw.yes ? ' The message was forwarded by ' + joinList(fw.by) + ' and still passed.' : '') + sha1T, 'A message passes when it is signed by, or sent for, the domain in its From address, and this one was.' + sha1P, allSrc);
         const res = finish('pass', head, cause);
         if (sha1Only) res.state = 'caveat';
         return res;
