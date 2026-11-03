@@ -178,33 +178,53 @@
   }
 
   // RFC 2047 encoded words: =?charset?B|Q?text?=
+  // Adjacent encoded words separated only by WSP are joined (RFC 2047 6.2).
+  // A run of adjacent words in one charset and one encoding is decoded as
+  // one byte string: section 5 forbids splitting a character across words,
+  // but encoders do it, and mail clients read the run whole (issue 35).
   function decodeWords(value) {
     if (!/=\?[^?]+\?[bBqQ]\?[^?]*\?=/.test(value)) return value;
-    // Adjacent encoded words separated only by WSP are joined (RFC 2047 6.2).
-    const joined = value.replace(/(\?=)\s+(=\?)/g, '$1$2');
-    return joined.replace(/=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g, (all, charset, enc, text) => {
-      try {
-        let bytes;
-        if (enc.toUpperCase() === 'B') {
-          const bin = atobSafe(text);
-          bytes = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        } else {
-          const out = [];
-          for (let i = 0; i < text.length; i++) {
-            const c = text[i];
-            if (c === '_') out.push(0x20);
-            else if (c === '=' && /^[0-9A-Fa-f]{2}$/.test(text.substr(i + 1, 2))) { out.push(parseInt(text.substr(i + 1, 2), 16)); i += 2; }
-            else out.push(c.charCodeAt(0) & 0xff);
-          }
-          bytes = new Uint8Array(out);
-        }
-        const cs = charset.replace(/\*.*$/, '').toLowerCase(); // strip RFC 2231 language tag
-        return new TextDecoder(cs === 'us-ascii' ? 'utf-8' : cs).decode(bytes);
-      } catch (e) {
-        return all;
-      }
-    });
+    const WORD = /=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g;
+    let out = '', last = 0, run = null, m;
+    const flush = () => { if (run) out += decodeRun(run); run = null; };
+    while ((m = WORD.exec(value))) {
+      const gap = value.slice(last, m.index);
+      const cs = m[1].replace(/\*.*$/, '').toLowerCase(); // strip RFC 2231 language tag
+      const enc = m[2].toUpperCase();
+      const adjacent = run && /^\s*$/.test(gap);
+      if (adjacent && run.cs === cs && run.enc === enc) { run.parts.push(m[3]); run.raw += gap + m[0]; }
+      else { flush(); if (!adjacent) out += gap; run = { cs, enc, parts: [m[3]], raw: m[0] }; }
+      last = WORD.lastIndex;
+    }
+    flush();
+    return out + value.slice(last);
+  }
+
+  function wordBytes(enc, text) {
+    if (enc === 'B') {
+      const bin = atobSafe(text);
+      const bytes = [];
+      for (let i = 0; i < bin.length; i++) bytes.push(bin.charCodeAt(i));
+      return bytes;
+    }
+    const out = [];
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === '_') out.push(0x20);
+      else if (c === '=' && /^[0-9A-Fa-f]{2}$/.test(text.substr(i + 1, 2))) { out.push(parseInt(text.substr(i + 1, 2), 16)); i += 2; }
+      else out.push(c.charCodeAt(0) & 0xff);
+    }
+    return out;
+  }
+
+  function decodeRun(run) {
+    try {
+      const bytes = [];
+      for (const p of run.parts) for (const x of wordBytes(run.enc, p)) bytes.push(x);
+      return new TextDecoder(run.cs === 'us-ascii' ? 'utf-8' : run.cs).decode(new Uint8Array(bytes));
+    } catch (e) {
+      return run.raw;
+    }
   }
 
   function atobSafe(s) {
