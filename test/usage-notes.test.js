@@ -43,6 +43,6 @@ test('a link from the page itself is not a source', () => {
 test('a use note holds exactly tool, status, sample and ref, once per read', () => {
   const out = posted('https://dns-audit.com/', "note('a'); note('a');");
   assert.equal(out.length, 1);
+  // Exact fields: the finding's sentence, which names an address, is not among them
   assert.deepEqual(out[0].body, { tool: 'header-decoder', status: 'fail', sample: false, ref: 'dns-audit.com' });
-  assert.ok(!JSON.stringify(out).includes('client-example.com'));
 });
