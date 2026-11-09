@@ -16,11 +16,13 @@ two tests check for it on purpose.
 Everything runs in the visitor's browser, with no analytics
 scripts. Pasted headers, addresses, and domains are never sent
 anywhere, but the page no longer advertises that (Neil, 2026-10-28:
-not a selling point; he wants usage logs). The usage note to
-dns-audit.com is the page's only network call (Neil, 2026-10-28: he
-wants to see the tool is used): after each new read, ui/app.js posts
-to https://dns-audit.com/api/usage, the CSP's only connect-src. The
-note holds exactly four fields: tool ("header-decoder"), the finding
+not a selling point; he wants usage logs). The usage notes to
+dns-audit.com are the page's only network calls (Neil, 2026-10-28: he
+wants to see the tool is used), posted by ui/app.js to
+https://dns-audit.com/api/usage, the CSP's only connect-src. A visit
+note goes once per page load and holds two fields: tool and ref
+(2026-11-09, so a visitor who reads nothing still shows). After each
+new read a use note holds exactly four fields: tool ("header-decoder"), the finding
 status, whether a built-in sample was read, and ref, the host name of
 the site that linked to the page (never its path or query; absent for
 a direct visit or a link from this site). Neil kept ref on 2026-11-02.
