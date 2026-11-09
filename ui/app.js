@@ -508,20 +508,27 @@
     if (lit.length) highlight(lit);
   }
 
-  // One usage note per new read to dns-audit.com, so its maker can see the page is
-  // used: tool, finding status, sample or not, and the linking host; never header text. text/plain needs no CORS
-  // preflight; the reply is not read and a failure is ignored.
+  // Where the visitor came from, host only; a link within the site is not a source
+  function referrerHost() {
+    try { const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) return h; } catch (e) { /* no referrer */ }
+    return undefined;
+  }
+
+  // Usage notes to dns-audit.com, so its maker can see the page is used; never
+  // header text. text/plain needs no CORS preflight; the reply is not read and a
+  // failure is ignored.
+  function send(body) {
+    try {
+      fetch('https://dns-audit.com/api/usage', { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) }).catch(() => {});
+    } catch (e) { /* never let the note break the page */ }
+  }
+
+  // One note per new read: tool, finding status, sample or not, and the linking host.
   let noted = null;
   function note(text) {
     if (text === noted) return;
     noted = text;
-    // Where the visitor came from, host only; a link within the site is not a source
-    let ref;
-    try { const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) ref = h; } catch (e) { /* no referrer */ }
-    const body = { tool: 'header-decoder', status: (R.finding && R.finding.status) || 'unknown', sample: !!sample, ref };
-    try {
-      fetch('https://dns-audit.com/api/usage', { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) }).catch(() => {});
-    } catch (e) { /* never let the note break the page */ }
+    send({ tool: 'header-decoder', status: (R.finding && R.finding.status) || 'unknown', sample: !!sample, ref: referrerHost() });
   }
 
   // Screen readers hear each new result without focus moving (WCAG 2.2
@@ -623,6 +630,10 @@
   });
   const picker = $('eml-file');
   picker.addEventListener('change', () => { loadFile(picker.files && picker.files[0]); picker.value = ''; });
+
+  // One visit note per page load, before anything is read, so a visitor who
+  // leaves without pasting headers still shows. Tool and linking host only.
+  send({ tool: 'header-decoder', visit: true, ref: referrerHost() });
 
   // A browser restoring form state can refill the box; read it if so.
   run(false);

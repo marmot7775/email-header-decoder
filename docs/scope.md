@@ -13,9 +13,10 @@ the business owner who owns the domain.
 Decision: it runs entirely in the browser
 No backend. One static page. Reasons: pasted headers, addresses,
 and domains are never sent anywhere; no rate limiting, no load on
-the droplet. Nothing in the first release needs DNS. The page's one
-network call is a usage note to dns-audit.com/api/usage after each
-read, with four fields: the tool, the finding status, whether a
+the droplet. Nothing in the first release needs DNS. The page's only
+network calls are usage notes to dns-audit.com/api/usage: one when the
+page opens (tool and linking host), and one after each read, with four
+fields: the tool, the finding status, whether a
 built-in sample was read, and the host name of the linking site.
 
 Where it lives
