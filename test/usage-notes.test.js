@@ -44,5 +44,5 @@ test('a use note holds exactly tool, status, sample and ref, once per read', () 
   const out = posted('https://dns-audit.com/', "note('a'); note('a');");
   assert.equal(out.length, 1);
   assert.deepEqual(out[0].body, { tool: 'header-decoder', status: 'fail', sample: false, ref: 'dns-audit.com' });
-  assert.ok(!JSON.stringify(out).includes('client-example.com'));
+  assert.doesNotMatch(JSON.stringify(out), /client-example/);
 });
