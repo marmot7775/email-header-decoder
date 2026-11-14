@@ -113,6 +113,14 @@
   // CIP: line under X-Forefront-Antispam-Report. Each such line is
   // counted as repaired.
   // Every field keeps its index and the span of raw lines it came from.
+  // The lines as they were given, before any repair: only the byte order
+  // mark and the line ends are normalized. DKIM verification reads these,
+  // since a signature covers each field byte for byte. Same count and
+  // order as the repaired lines, so a field's line span indexes both.
+  function exactLines(text) {
+    return String(text || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n');
+  }
+
   function parseHeaders(text) {
     const noise = stripPasteNoise(normalizeText(text).split('\n'));
     const lines = noise.lines;
@@ -174,7 +182,7 @@
     });
     if (copies > 1) notes.unshift(sentence('caveat', 'The header block appears ' + (copies === 2 ? 'twice' : copies + ' times') + ' in the paste. One copy was read.', 'The headers were pasted ' + (copies === 2 ? 'twice' : copies + ' times') + '. Only one copy was read.', []));
     const bodyPresent = block.end < lines.length && lines.slice(block.end + 1).some(l => l.trim() !== '');
-    return { fields: out, notes, block: [block.start, block.end - 1], format: detectFormat(lines, block, bodyPresent), bodyPresent, blockFound: out.length > 0, repairedLines: repaired };
+    return { fields: out, notes, block: [block.start, block.end - 1], bodyStart: block.end < lines.length ? block.end + 1 : -1, format: detectFormat(lines, block, bodyPresent), bodyPresent, blockFound: out.length > 0, repairedLines: repaired };
   }
 
   // RFC 2047 encoded words: =?charset?B|Q?text?=
@@ -420,7 +428,7 @@
     return { tags, order };
   }
 
-  HA.parse = { parseHeaders, sentence, contract, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
+  HA.parse = { parseHeaders, exactLines, sentence, contract, decodeWords, stripComments, extractComments, parseAddresses, parseDate, parseTagList, domainOf, normalizeText };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.parse;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

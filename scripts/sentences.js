@@ -121,8 +121,47 @@ const CASES = [
   ['fail with a hidden character in the From domain', rcv({ ar: 'dkim=pass header.d=shop.example header.s=s1; ' + ESP_SPF + '; dmarc=fail (p=REJECT sp=REJECT dis=REJECT) header.from=sh\u200bop.example', sigs: [['shop.example', 's1']], from: 'Shop <orders@sh\u200bop.example>' })],
 ];
 
-function run(name, text) {
-  const r = HA.analyze(text);
+// The signature check, per outcome. Each check is written out by hand, in
+// the shape src/dkimkey.js returns, so no key is made and nothing is
+// looked up here. The first text has a signature the receiver failed, the
+// second one it passed.
+const KC_FAIL = rcv({ ar: 'dkim=fail header.d=shop.example header.s=s1; ' + ESP_SPF + '; ' + REJECT, sigs: [['shop.example', 's1']] });
+const KC_PASS = rcv({ ar: 'dkim=pass header.d=shop.example header.s=s1; ' + ESP_SPF + '; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=shop.example', sigs: [['shop.example', 's1']] });
+const KC_SHA1 = KC_PASS.replace('a=rsa-sha256', 'a=rsa-sha1');
+const KC_NAME = 's1._domainkey.shop.example';
+const kcDns = (status, o) => Object.assign({ status, cname: [], target: '', why: '', records: status === 'ok' ? 1 : 0 }, o);
+const kcOk = { dns: kcDns('ok'), k: 'rsa', bits: 2048, testing: false, c: 'relaxed/relaxed', signedCount: 5, listed: 5 };
+const kcBody = (matches) => ({ computed: 'SyntheticComputedBh=', matches, short: false, length: 120 });
+function kc(source, r, o) {
+  return Object.assign({ at: Date.UTC(2026, 10, 13, 12), day: 'November 13, 2026', source, truncated: false, bodyPresent: true, results: [Object.assign({ signature: 0, d: 'shop.example', s: 's1', a: 'rsa-sha256', l: null, name: KC_NAME }, r)] }, o);
+}
+const KEY_CASES = [
+  ['signature check: no key found', KC_FAIL, kc('paste', { outcome: 'no-key', dns: kcDns('nxdomain') })],
+  ['signature check: no key at the end of a CNAME', KC_FAIL, kc('paste', { outcome: 'no-key', dns: kcDns('nxdomain', { cname: ['s1.dkim.mailer.example'], target: 's1.dkim.mailer.example' }) })],
+  ['signature check: key revoked', KC_FAIL, kc('paste', { outcome: 'revoked', dns: kcDns('ok') })],
+  ['signature check: key written wrong', KC_FAIL, kc('paste', { outcome: 'malformed', why: 'p= is not base64', dns: kcDns('ok') })],
+  ['signature check: key too short', KC_FAIL, kc('file', { outcome: 'too-short', dns: kcDns('ok'), k: 'rsa', bits: 512, testing: false })],
+  ['signature check: no answer', KC_FAIL, kc('paste', { outcome: 'dns-failed', dns: kcDns('timeout') })],
+  ['signature check: checks out', KC_PASS, kc('file', Object.assign({ outcome: 'pass', body: kcBody(true) }, kcOk))],
+  ['signature check: checks out, key shorter than recommended', KC_PASS, kc('file', Object.assign({ outcome: 'pass', body: kcBody(true) }, kcOk, { bits: 1024 }))],
+  ['signature check: checks out now, failed on arrival', KC_FAIL, kc('file', Object.assign({ outcome: 'pass', body: kcBody(true) }, kcOk))],
+  ['signature check: text changed', KC_FAIL, kc('file', Object.assign({ outcome: 'body-mismatch', body: kcBody(false) }, kcOk))],
+  ['signature check: text not included', KC_FAIL, kc('paste', Object.assign({ outcome: 'no-body', body: null }, kcOk), { bodyPresent: false })],
+  ['signature check: file too large for the text', KC_FAIL, kc('file', Object.assign({ outcome: 'no-body', body: null }, kcOk), { truncated: true })],
+  ['signature check: signed detail changed', KC_FAIL, kc('file', Object.assign({ outcome: 'header-changed', body: kcBody(true) }, kcOk))],
+  ['signature check: wrong key', KC_FAIL, kc('file', Object.assign({ outcome: 'key-mismatch', body: kcBody(true) }, kcOk))],
+  ['signature check: cannot tell which (Ed25519)', KC_FAIL, kc('file', Object.assign({ outcome: 'ed25519-fail', body: kcBody(true) }, kcOk, { a: 'ed25519-sha256', k: 'ed25519', bits: 256 }))],
+  ['signature check: pasted text', KC_FAIL, kc('paste', Object.assign({ outcome: 'header-changed', body: kcBody(true) }, kcOk))],
+  ['signature check: passed on arrival, fails today', KC_PASS, kc('file', Object.assign({ outcome: 'key-mismatch', body: kcBody(true) }, kcOk))],
+  ['signature check: rsa-sha1 is not checked', KC_SHA1, kc('paste', { outcome: 'sha1', a: 'rsa-sha1' })],
+  ['signature check: unknown method', KC_PASS, kc('paste', { outcome: 'unknown-alg', a: 'rsa-sha512' })],
+  ['signature check: signature incomplete', KC_PASS, kc('paste', { outcome: 'incomplete' })],
+  ['signature check: browser without Ed25519', KC_PASS, kc('paste', { outcome: 'unsupported', a: 'ed25519-sha256', dns: kcDns('ok'), k: 'ed25519', bits: 256 })],
+];
+for (const c of KEY_CASES) CASES.push(c);
+
+function run(name, text, check) {
+  const r = HA.analyze(text, check ? { keyCheck: check } : undefined);
   if (!r.finding) throw new Error(name + ': no finding');
   return r.finding;
 }
@@ -138,6 +177,17 @@ function lines(f) {
   f.fixes.forEach((s, i) => pair('Fix ' + (i + 1), s));
   f.flags.forEach((s, i) => pair('Flag ' + (i + 1), s));
   f.limits.forEach((s, i) => pair('Limit ' + (i + 1), s));
+  if (f.keyCheck) {
+    pair('Signature check', f.keyCheck.intro);
+    f.keyCheck.results.forEach((x) => {
+      out.push(['Signature check label, plain', x.word]);
+      pair('Signature check, on arrival', x.recorded);
+      pair('Signature check, today', x.line);
+      if (x.who) pair('Signature check, who fixes it', x.who);
+      x.steps.forEach((s, i) => pair('Signature check step ' + (i + 1), s));
+      x.notes.forEach((s, i) => pair('Signature check note ' + (i + 1), s));
+    });
+  }
   return out;
 }
 
@@ -204,10 +254,12 @@ const vis = (s) => String(s).replace(HIDDEN_G, c => '<U+' + c.codePointAt(0).toS
 
 function render() {
   let md = '# Sentence inventory\n';
-  for (const [name, text] of CASES) {
+  for (const [name, text, check] of CASES) {
     md += '\n## ' + name + '\n\n';
-    md += lines(run(name, text)).map(([l, s]) => l + ': ' + vis(s)).join('\n\n') + '\n';
+    md += lines(run(name, text, check)).map(([l, s]) => l + ': ' + vis(s)).join('\n\n') + '\n';
   }
+  md += '\n## Signature check labels\n\n';
+  md += Object.keys(HA.finding.KEY_UI).map(k => k + ': ' + HA.finding.KEY_UI[k]).join('\n\n') + '\n';
   md += '\n## Filter code meanings\n\n';
   md += meanings().map(([code, t, p]) => code + '. Technical: ' + t + ' Plain: ' + p).join('\n\n') + '\n';
   return md;

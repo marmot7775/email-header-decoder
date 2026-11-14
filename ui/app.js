@@ -131,6 +131,7 @@
     if (f.fixes.length) h += '<h3>What to do</h3><ol class="steps">' + f.fixes.map(x => '<li><span class="txt">' + esc(x.plain) + '</span></li>').join('') + '</ol>';
     else if (f.state === 'pass') h += '<h3>What to do</h3><p class="fpara">Nothing to fix.</p>';
     h += '<h3>The checks</h3><div class="tiles">' + tiles().map(tileHtml).join('') + '</div>';
+    h += keyCheckHtml();
     if (f.cause) h += '<h3>Why</h3>' + para(f.cause);
     if (f.consequence) h += '<h3>What the DMARC setting did</h3>' + para(f.consequence);
     if (f.flags.length) h += '<h3>Also worth knowing</h3>' + says(f.flags, 'plain');
@@ -145,6 +146,60 @@
     $('finding').innerHTML = h;
   }
 
+  // The signature check: a button, then what it found. Nothing is looked
+  // up until the button is pressed, and never for a built-in sample. Every
+  // word comes from finding.js; this only lays it out.
+  const KEY_UI = HA.finding.KEY_UI;
+  let keyBusy = false, lastCheck = null, fileOf = null;
+  function keyCheckHtml() {
+    if (!R.auth.signatures.length) return '';
+    const kc = R.finding.keyCheck;
+    let h = '<h3 id="h-keycheck">The signature</h3>';
+    if (sample) return h + '<p class="fpara">' + esc(KEY_UI.sample) + '</p>';
+    if (kc) {
+      h += '<p class="fpara">' + esc(kc.intro.plain) + '</p>';
+      for (const x of kc.results) {
+        h += '<div class="kc s-' + x.state + '">' +
+          '<p class="kc-id">' + chip(x.state, x.word) + '<span class="mono">' + esc(x.d) + '</span></p>' +
+          '<dl class="kc-two"><dt>' + esc(KEY_UI.arrived) + '</dt><dd>' + esc(x.recorded.plain) + '</dd>' +
+          '<dt>' + esc(KEY_UI.today) + '</dt><dd>' + esc(x.line.plain) + '</dd></dl>';
+        if (x.who) h += '<p class="fpara"><strong>' + esc(KEY_UI.who) + ':</strong> ' + esc(x.who.plain) + '</p>';
+        // Steps the finding already lists under What to do are not said twice.
+        const listed = x.steps.length && x.steps.every(st => R.finding.fixes.some(fx => fx.plain === st.plain));
+        if (x.steps.length && !listed) h += '<ol class="steps">' + x.steps.map(st => '<li><span class="txt">' + esc(st.plain) + '</span></li>').join('') + '</ol>';
+        for (const n of x.notes) h += '<p class="fpara">' + esc(n.plain) + '</p>';
+        h += '<details class="more"><summary>Technical details</summary><p class="fpara">' + esc(kc.intro.technical) + '</p>' + says([x.recorded, x.line].concat(x.who ? [x.who] : [], x.steps, x.notes)) +
+          (x.facts.length ? '<dl class="meta kc-facts">' + x.facts.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd class="mono">' + esc(v) + '</dd>').join('') + '</dl>' : '') + '</details></div>';
+      }
+    }
+    const failed = R.auth.dkim.some(k => k.result && k.result !== 'pass');
+    h += '<div class="kc-go"><button type="button" class="btn' + (kc ? '' : ' primary') + '" id="key-check"' + (keyBusy ? ' disabled' : '') + '>' + esc(keyBusy ? KEY_UI.busy : kc ? KEY_UI.again : failed ? KEY_UI.failed : KEY_UI.check) + '</button>' +
+      '<p class="note-line">' + esc(KEY_UI.under) + '</p></div>';
+    return h;
+  }
+  // The text the check verifies: the file's own bytes when the box still
+  // holds what the file put there, else the box as it stands.
+  function runKeyCheck() {
+    if (!R || keyBusy || sample) return;
+    const text = $('headers').value;
+    const file = fileOf && fileOf.shown === text ? fileOf : null;
+    keyBusy = true;
+    renderFinding();
+    const done = (check) => {
+      keyBusy = false;
+      if ($('headers').value !== text || !R) return;
+      lastCheck = check ? { text, check } : null;
+      R = HA.analyze(text, lastCheck ? { keyCheck: lastCheck.check } : undefined);
+      renderAll();
+      const kc = R.finding.keyCheck;
+      if (kc && kc.results.length) announce(kc.results.map(x => x.word + ': ' + x.line.plain).join(' '));
+      const b = $('key-check');
+      if (b) b.focus({ preventScroll: true });
+    };
+    const subtle = typeof crypto !== 'undefined' && crypto.subtle ? crypto.subtle : null;
+    HA.dkimkey.checkAll(file ? file.exact : text, (u, o) => fetch(u, o), { source: file ? 'file' : 'paste', encoding: file ? 'latin1' : 'utf8', truncated: !!(file && file.truncated), subtle }).then(done, () => done(null));
+  }
+
   // A plain text report for a ticket or an email to a client.
   function reportText() {
     const f = R.finding, m = R.message, L = ['Email Header Decoder report (beta)'];
@@ -157,6 +212,16 @@
     else if (f.state === 'pass') L.push('', 'What to do: Nothing to fix.');
     L.push('', 'The checks:');
     for (const t of tiles()) L.push(t.k + ': ' + t.v + (t.d ? ' (' + t.d + ')' : ''));
+    if (f.keyCheck) {
+      L.push('', 'The signature: ' + f.keyCheck.intro.plain);
+      for (const x of f.keyCheck.results) {
+        L.push(x.d + ', ' + KEY_UI.arrived.toLowerCase() + ': ' + x.recorded.plain, x.d + ', ' + KEY_UI.today.toLowerCase() + ' (' + f.keyCheck.day + '): ' + x.line.plain);
+        if (x.who) L.push(KEY_UI.who + ': ' + x.who.plain);
+        x.steps.forEach(st => L.push('- ' + st.plain));
+        x.notes.forEach(n => L.push(n.plain));
+        L.push('Technical: ' + x.line.technical);
+      }
+    }
     if (f.cause) L.push('', 'Why: ' + f.cause.plain);
     if (f.consequence) L.push('', 'What the DMARC setting did: ' + f.consequence.plain);
     if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
@@ -414,7 +479,7 @@
     let h = '<details class="raw" id="raw-details"><summary>Raw headers <span class="count">' + fields.length + ' field' + (fields.length === 1 ? '' : 's') + (b ? ', lines ' + (b[0] + 1) + ' to ' + (b[1] + 1) + ' of the paste' : '') + '</span></summary>' +
       '<div class="raw-tools"><label class="sr-only" for="raw-filter">Search the headers</label><input id="raw-filter" type="search" placeholder="Search names and values" autocomplete="off"><button class="btn" type="button" id="raw-clear-hl">Clear highlight</button><span class="status" id="raw-status"></span></div>' +
       '<div class="rawbox" id="rawbox"></div></details>';
-    if (R.input.bodyPresent) h += '<p class="note-line">A message body followed the headers. It was not read.</p>';
+    if (R.input.bodyPresent) h += '<p class="note-line">A message body followed the headers. Only the signature check reads it.</p>';
     $('raw').innerHTML = h;
     rawLimit = RAW_CHUNK; rawFull = new Set(); rawDrawn = false;
     $('raw-details').addEventListener('toggle', (e) => { if (e.target.open && !rawDrawn) drawRaw($('raw-filter').value); });
@@ -467,6 +532,7 @@
   }
 
   document.addEventListener('click', (e) => {
+    if (e.target.closest('#key-check')) { runKeyCheck(); return; }
     const jump = e.target.closest('[data-jump]');
     if (jump && R) { if ($('analysis').contains($(jump.dataset.jump))) $('analysis').open = true; $(jump.dataset.jump).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); return; }
     const more = e.target.closest('[data-more], [data-expand]');
@@ -546,7 +612,8 @@
     const text = $('headers').value;
     if (!text.trim()) { $('results').hidden = true; R = null; return; }
     lit = [];
-    try { R = HA.analyze(text); } catch (e) {
+    if (lastCheck && lastCheck.text !== text) lastCheck = null;
+    try { R = HA.analyze(text, lastCheck ? { keyCheck: lastCheck.check } : undefined); } catch (e) {
       // Never leave the previous result on screen for a paste that failed.
       R = null;
       $('results').hidden = false;
@@ -612,14 +679,25 @@
   $('headers').addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run(true); });
 
   // One reader for a dropped file and a chosen one (issue 40). Only the
-  // header block matters, so the first 2 MB is read and a large
-  // attachment cannot freeze the tab.
-  const MAX_READ = 2 * 1024 * 1024;
+  // header block is shown and read, so the box takes the first 2 MB and a
+  // large attachment cannot freeze the tab. The signature check needs the
+  // body byte for byte, so the file's own bytes are kept beside it, one
+  // character per byte, up to 25 MB.
+  const MAX_READ = 2 * 1024 * 1024, MAX_VERIFY = 25 * 1024 * 1024;
   function loadFile(f) {
     if (!f) return;
     const reader = new FileReader();
-    reader.onload = () => { $('headers').value = String(reader.result || ''); sample = ''; run(true); };
-    reader.readAsText(f.size > MAX_READ ? f.slice(0, MAX_READ) : f);
+    reader.onload = () => {
+      let bytes = new Uint8Array(reader.result);
+      if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) bytes = bytes.subarray(3);
+      let exact = '';
+      for (let i = 0; i < bytes.length; i += 32768) exact += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));
+      $('headers').value = new TextDecoder().decode(bytes.subarray(0, MAX_READ));
+      fileOf = { shown: $('headers').value, exact, truncated: f.size > MAX_VERIFY };
+      sample = '';
+      run(true);
+    };
+    reader.readAsArrayBuffer(f.size > MAX_VERIFY ? f.slice(0, MAX_VERIFY) : f);
   }
   const panel = $('input-panel');
   panel.addEventListener('dragover', (e) => { e.preventDefault(); panel.classList.add('drop'); });

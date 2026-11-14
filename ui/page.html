@@ -286,6 +286,16 @@ button { font: inherit; cursor: pointer; }
 .steps { margin: 8px 0 0; padding-left: 1.4em; display: grid; gap: 8px; font-size: var(--font-base); max-width: 72ch; }
 .steps li::marker { color: var(--primary); font-weight: 700; }
 .steps .txt { overflow-wrap: anywhere; }
+.kc { margin: 12px 0 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); display: grid; gap: 10px; min-width: 0; }
+.kc-id { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--font-sm); overflow-wrap: anywhere; }
+.kc-two { margin: 0; display: grid; gap: 4px; max-width: 68ch; }
+.kc-two dt { font-size: var(--font-sm); font-weight: 600; color: var(--text); }
+.kc-two dd { margin: 0 0 6px; color: var(--text-2); line-height: 1.6; overflow-wrap: anywhere; }
+.kc .steps { margin-top: 0; }
+.kc-facts { margin-top: 10px; overflow-wrap: anywhere; }
+.kc-go { margin-top: 12px; }
+.kc-go .note-line { margin-top: 8px; }
+#key-check[disabled] { opacity: .7; cursor: progress; }
 .more { margin-top: 14px; border-top: 1px solid var(--border); }
 .more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--font-sm); color: var(--primary); }
 .analysis > summary { cursor: pointer; min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 0 16px; font-weight: 600; color: var(--primary); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
@@ -575,6 +585,7 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <li><strong>Forwarded mail</strong> often carries ARC headers that show what passed before the forward. The page uses them to say when a forward broke a message the sender set up correctly.</li>
       <li><strong>Every hop</strong> is listed in order, with its delay and whether it was encrypted. The page marks where the receiver took custody, since anything above that point could have been written by the sender.</li>
       <li><strong>Spam filter headers</strong> from Microsoft 365, Google, Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd are decoded in plain words, with the raw value beside each one.</li>
+      <li><strong>A DKIM signature</strong> can be checked again. Select the signature check and the page looks up the sender's published key, verifies the signature in your browser, and says why it failed.</li>
       <li><strong>The sending platform</strong> is named only when the evidence is strong. The unsubscribe headers are checked too, including RFC 8058 one-click.</li>
     </ul>
 
@@ -584,16 +595,17 @@ li.trust .sub { color: var(--muted); font-size: var(--font-xs); }
       <dt>Outlook and Outlook on the web</dt><dd>Open the message, select More actions, then View, then View message details. Copy everything in the box.</dd>
       <dt>Classic Outlook for Windows</dt><dd>Double-click the message to open it, then select File, then Properties. The headers are in the Internet headers box.</dd>
       <dt>Apple Mail</dt><dd>Select the message, then View, Message, Raw Source.</dd>
-      <dt>Any client</dt><dd>Save the message as an .eml file, then choose it with Choose a file or drop it on the paste box. The page reads only the headers and ignores the body.</dd>
+      <dt>Any client</dt><dd>Save the message as an .eml file, then choose it with Choose a file or drop it on the paste box. The finding reads only the headers. The signature check also reads the body, which is why a whole file gives it a firm answer.</dd>
     </dl>
     <p class="note-line">Use the copy the recipient received. A copy from the Sent folder never passed through the receiving server, so it carries no authentication results.</p>
 
     <h2 id="h-faq">Questions</h2>
     <div class="faq">
       <details><summary>Why did a forwarded message fail DMARC?</summary><p>A forward sends the message on from the forwarder's server, so SPF checks the forwarder's address instead of the original sender's. If the forwarder also changes the message, for example by adding a footer, the DKIM signature no longer matches. With both gone, DMARC fails even though the sender did nothing wrong. When the forwarder adds ARC headers, this page reads the results recorded before the forward and says so.</p></details>
-      <details><summary>How does it read the headers?</summary><p>It reads them as the receiving servers wrote them. Dates follow RFC 5322, and a time zone it can't trust is read as UTC and marked. Encryption is taken from what each server recorded. DMARC finds a domain's parent with a DNS lookup (RFC 9989), which this page can't make, so it uses a short built-in list and marks any guess. ARC records are checked for structure, but their seals aren't verified.</p></details>
+      <details><summary>How does it read the headers?</summary><p>It reads them as the receiving servers wrote them. Dates follow RFC 5322, and a time zone it can't trust is read as UTC and marked. Encryption is taken from what each server recorded. DMARC finds a domain's parent with a DNS lookup (RFC 9989), which this page doesn't make, so it uses a short built-in list and marks any guess. ARC records are checked for structure, but their seals aren't verified.</p></details>
       <details><summary>Why are there two DMARC results?</summary><p>The receiving server writes its DMARC result into the Authentication-Results header. This page also works the result out from the SPF and DKIM results and the domains involved. When the two differ, the page names the reason, such as a rule of the receiver's own that overrode the result.</p></details>
-      <details><summary>Why doesn't it verify DKIM signatures or look up DNS?</summary><p>Checking a signature again needs the message body exactly as sent and a DNS lookup of the public key. The receiving server already did that check at delivery, and its result is the one that decided where the message went. This page reads that result and makes no DNS lookups of its own.</p></details>
+      <details><summary>Does it verify DKIM signatures or look up DNS?</summary><p>Only when you select the signature check. The receiving server checked the signature at delivery, and its result decided where the message went, so the finding reads that result first. The signature check then looks up the sender's published DKIM key and verifies the signature again in your browser. It can tell a missing or wrong key from a message that changed after signing. It shows what is true today, which can differ from what the receiver saw.</p></details>
+      <details><summary>Why does the signature check ask for the message file?</summary><p>A signature covers the message byte for byte. Copying text out of a mail program can change spaces and line breaks, and that alone breaks a signature. So a failure from pasted text is reported as could not confirm. Save the message as an .eml file and drop it on the box, and the page checks the file's own bytes.</p></details>
       <details><summary>What does aligned mean?</summary><p>DMARC passes only when SPF or DKIM passes for a domain that matches the domain in the From address. A pass for some other domain, such as a mailing platform's own, isn't aligned, and it doesn't count toward DMARC.</p></details>
     </div>
   </section>

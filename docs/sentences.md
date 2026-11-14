@@ -1704,6 +1704,1166 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+## signature check: no key found
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): The signature from shop.example points to a published key (DKIM key) that isn't there for shop.example. Nobody can check the signature without it, so mail signed this way fails. Ask the service that sends this mail for the DNS setting to add.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The TXT query for s1._domainkey.shop.example returned NXDOMAIN, so no DKIM key record exists there. RFC 6376 6.1.2 has a verifier return PERMFAIL (no key for signature). SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The signature from shop.example points to a published key (DKIM key) that isn't there for shop.example. Nobody can check the signature without it, so mail signed this way fails. Ask the service that sends this mail for the DNS setting to add.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The TXT query for s1._domainkey.shop.example returned NXDOMAIN, so no DKIM key record exists there. RFC 6376 6.1.2 has a verifier return PERMFAIL (no key for signature).
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask the service that sends this mail for the DKIM setting for shop.example. It has a name and a value.
+
+Fix 1, technical: Get the DKIM key record for selector s1 from the sending service.
+
+Fix 2, plain: Ask whoever manages the DNS for shop.example to add it at the company that hosts the DNS.
+
+Fix 2, technical: Publish it as a TXT record, or as the CNAME the service gives, at s1._domainkey.shop.example.
+
+Fix 3, plain: Send a new message and check that one here.
+
+Fix 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The signature from shop.example points to a published key (DKIM key) that isn't there for shop.example. Nobody can check the signature without it, so mail signed this way fails. Ask the service that sends this mail for the DNS setting to add.
+
+Signature check, today, technical: The TXT query for s1._domainkey.shop.example returned NXDOMAIN, so no DKIM key record exists there. RFC 6376 6.1.2 has a verifier return PERMFAIL (no key for signature).
+
+Signature check, who fixes it, plain: Whoever manages the DNS for shop.example fixes this, with the setting from the service that sends this mail.
+
+Signature check, who fixes it, technical: Whoever manages the DNS for shop.example publishes the record, and the sending service supplies it.
+
+Signature check step 1, plain: Ask the service that sends this mail for the DKIM setting for shop.example. It has a name and a value.
+
+Signature check step 1, technical: Get the DKIM key record for selector s1 from the sending service.
+
+Signature check step 2, plain: Ask whoever manages the DNS for shop.example to add it at the company that hosts the DNS.
+
+Signature check step 2, technical: Publish it as a TXT record, or as the CNAME the service gives, at s1._domainkey.shop.example.
+
+Signature check step 3, plain: Send a new message and check that one here.
+
+Signature check step 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+## signature check: no key at the end of a CNAME
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): The signature from shop.example points to a published key (DKIM key) that isn't there for shop.example. Nobody can check the signature without it, so mail signed this way fails. Ask the service that sends this mail for the DNS setting to add.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The TXT query for s1._domainkey.shop.example returned NXDOMAIN, so no DKIM key record exists there. The name is a CNAME to s1.dkim.mailer.example. RFC 6376 6.1.2 has a verifier return PERMFAIL (no key for signature). SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The signature from shop.example points to a published key (DKIM key) that isn't there for shop.example. Nobody can check the signature without it, so mail signed this way fails. Ask the service that sends this mail for the DNS setting to add.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The TXT query for s1._domainkey.shop.example returned NXDOMAIN, so no DKIM key record exists there. The name is a CNAME to s1.dkim.mailer.example. RFC 6376 6.1.2 has a verifier return PERMFAIL (no key for signature).
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask the service that sends this mail for the DKIM setting for shop.example. It has a name and a value.
+
+Fix 1, technical: Get the DKIM key record for selector s1 from the sending service.
+
+Fix 2, plain: Ask whoever manages the DNS for shop.example to add it at the company that hosts the DNS.
+
+Fix 2, technical: s1._domainkey.shop.example is a CNAME to s1.dkim.mailer.example, which has no TXT record. The key belongs at that target, usually in the sending service's own zone.
+
+Fix 3, plain: Send a new message and check that one here.
+
+Fix 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The signature from shop.example points to a published key (DKIM key) that isn't there for shop.example. Nobody can check the signature without it, so mail signed this way fails. Ask the service that sends this mail for the DNS setting to add.
+
+Signature check, today, technical: The TXT query for s1._domainkey.shop.example returned NXDOMAIN, so no DKIM key record exists there. The name is a CNAME to s1.dkim.mailer.example. RFC 6376 6.1.2 has a verifier return PERMFAIL (no key for signature).
+
+Signature check, who fixes it, plain: Whoever manages the DNS for shop.example fixes this, with the setting from the service that sends this mail.
+
+Signature check, who fixes it, technical: Whoever manages the DNS for shop.example publishes the record, and the sending service supplies it.
+
+Signature check step 1, plain: Ask the service that sends this mail for the DKIM setting for shop.example. It has a name and a value.
+
+Signature check step 1, technical: Get the DKIM key record for selector s1 from the sending service.
+
+Signature check step 2, plain: Ask whoever manages the DNS for shop.example to add it at the company that hosts the DNS.
+
+Signature check step 2, technical: s1._domainkey.shop.example is a CNAME to s1.dkim.mailer.example, which has no TXT record. The key belongs at that target, usually in the sending service's own zone.
+
+Signature check step 3, plain: Send a new message and check that one here.
+
+Signature check step 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+## signature check: key revoked
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): The key for this signature from shop.example was switched off on purpose (revoked). Mail signed with it fails. Ask the service that sends this mail to sign with its current key.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The key record at s1._domainkey.shop.example has an empty p=, which RFC 6376 3.6.1 defines as a revoked key. A verifier returns PERMFAIL (key revoked). SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The key for this signature from shop.example was switched off on purpose (revoked). Mail signed with it fails. Ask the service that sends this mail to sign with its current key.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The key record at s1._domainkey.shop.example has an empty p=, which RFC 6376 3.6.1 defines as a revoked key. A verifier returns PERMFAIL (key revoked).
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask the service that sends this mail which key it signs mail from shop.example with now.
+
+Fix 1, technical: An empty p= at s1._domainkey.shop.example is deliberate. Find which selector the sending service signs shop.example with now.
+
+Fix 2, plain: If it gives you a new DNS setting, ask whoever manages the DNS for shop.example to add it.
+
+Fix 2, technical: Publish the record for the current selector if it is not in DNS yet.
+
+Fix 3, plain: Send a new message and check that one here.
+
+Fix 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The key for this signature from shop.example was switched off on purpose (revoked). Mail signed with it fails. Ask the service that sends this mail to sign with its current key.
+
+Signature check, today, technical: The key record at s1._domainkey.shop.example has an empty p=, which RFC 6376 3.6.1 defines as a revoked key. A verifier returns PERMFAIL (key revoked).
+
+Signature check, who fixes it, plain: The service that sends this mail fixes this, in its signing settings.
+
+Signature check, who fixes it, technical: The sending service chooses the key it signs with.
+
+Signature check step 1, plain: Ask the service that sends this mail which key it signs mail from shop.example with now.
+
+Signature check step 1, technical: An empty p= at s1._domainkey.shop.example is deliberate. Find which selector the sending service signs shop.example with now.
+
+Signature check step 2, plain: If it gives you a new DNS setting, ask whoever manages the DNS for shop.example to add it.
+
+Signature check step 2, technical: Publish the record for the current selector if it is not in DNS yet.
+
+Signature check step 3, plain: Send a new message and check that one here.
+
+Signature check step 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+## signature check: key written wrong
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): The published key (DKIM key) for shop.example is there but written wrong, so the signature can't be checked. Copy it again from the settings of the service that sends this mail.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The TXT record at s1._domainkey.shop.example is not a usable DKIM key record: p= is not base64. RFC 6376 6.1.2 has verifiers ignore malformed key records. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The published key (DKIM key) for shop.example is there but written wrong, so the signature can't be checked. Copy it again from the settings of the service that sends this mail.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The TXT record at s1._domainkey.shop.example is not a usable DKIM key record: p= is not base64. RFC 6376 6.1.2 has verifiers ignore malformed key records.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Open the settings of the service that sends this mail and copy the DKIM value for shop.example again, all of it.
+
+Fix 1, technical: Copy the key record for selector s1 from the sending service again, whole.
+
+Fix 2, plain: Ask whoever manages the DNS for shop.example to replace the value, with no extra spaces, quotation marks, or line breaks.
+
+Fix 2, technical: Replace the TXT value at s1._domainkey.shop.example. Common faults are a truncated p=, a pasted line break, stray quotation marks, and two records at one name.
+
+Fix 3, plain: Send a new message and check that one here.
+
+Fix 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The published key (DKIM key) for shop.example is there but written wrong, so the signature can't be checked. Copy it again from the settings of the service that sends this mail.
+
+Signature check, today, technical: The TXT record at s1._domainkey.shop.example is not a usable DKIM key record: p= is not base64. RFC 6376 6.1.2 has verifiers ignore malformed key records.
+
+Signature check, who fixes it, plain: Whoever manages the DNS for shop.example fixes this.
+
+Signature check, who fixes it, technical: Whoever manages the DNS for shop.example repairs the record.
+
+Signature check step 1, plain: Open the settings of the service that sends this mail and copy the DKIM value for shop.example again, all of it.
+
+Signature check step 1, technical: Copy the key record for selector s1 from the sending service again, whole.
+
+Signature check step 2, plain: Ask whoever manages the DNS for shop.example to replace the value, with no extra spaces, quotation marks, or line breaks.
+
+Signature check step 2, technical: Replace the TXT value at s1._domainkey.shop.example. Common faults are a truncated p=, a pasted line break, stray quotation marks, and two records at one name.
+
+Signature check step 3, plain: Send a new message and check that one here.
+
+Signature check step 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+## signature check: key too short
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): The published key (DKIM key) for shop.example is too short for mail systems to trust. Ask the service that sends this mail for a longer one.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The RSA key at s1._domainkey.shop.example is 512 bits. RFC 8301 3.2 says verifiers MUST NOT consider signatures using RSA keys of less than 1024 bits as valid. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The published key (DKIM key) for shop.example is too short for mail systems to trust. Ask the service that sends this mail for a longer one.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The RSA key at s1._domainkey.shop.example is 512 bits. RFC 8301 3.2 says verifiers MUST NOT consider signatures using RSA keys of less than 1024 bits as valid.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask the service that sends this mail to make a new, longer key for shop.example.
+
+Fix 1, technical: Generate a 2048-bit RSA key at the sending service under a new selector. RFC 8301 3.2 says signers SHOULD use at least 2048 bits.
+
+Fix 2, plain: Ask whoever manages the DNS for shop.example to add the new DNS setting it gives you.
+
+Fix 2, technical: Publish the new record, then retire s1._domainkey.shop.example.
+
+Fix 3, plain: Send a new message and check that one here.
+
+Fix 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The published key (DKIM key) for shop.example is too short for mail systems to trust. Ask the service that sends this mail for a longer one.
+
+Signature check, today, technical: The RSA key at s1._domainkey.shop.example is 512 bits. RFC 8301 3.2 says verifiers MUST NOT consider signatures using RSA keys of less than 1024 bits as valid.
+
+Signature check, who fixes it, plain: The service that sends this mail makes a new key, and whoever manages the DNS for shop.example adds it.
+
+Signature check, who fixes it, technical: The sending service generates the key, and whoever manages the DNS for shop.example publishes it.
+
+Signature check step 1, plain: Ask the service that sends this mail to make a new, longer key for shop.example.
+
+Signature check step 1, technical: Generate a 2048-bit RSA key at the sending service under a new selector. RFC 8301 3.2 says signers SHOULD use at least 2048 bits.
+
+Signature check step 2, plain: Ask whoever manages the DNS for shop.example to add the new DNS setting it gives you.
+
+Signature check step 2, technical: Publish the new record, then retire s1._domainkey.shop.example.
+
+Signature check step 3, plain: Send a new message and check that one here.
+
+Signature check step 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+## signature check: no answer
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The message was changed after it was signed, or the signature doesn't match the sender's published key.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example: something changed the signed part of the message after signing, or the key in DNS does not match. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave the service that sends this mail. That's the usual cause of a broken signature.
+
+Fix 1, technical: The signature from d=shop.example broke between signing and mx.receiver.example. Look for anything that edits mail after the sending service signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at s1._domainkey.shop.example is the one it signs with.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: No answer
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The lookup got no answer, so this check didn't run. Try again in a minute.
+
+Signature check, today, technical: The TXT query for s1._domainkey.shop.example over DNS over HTTPS returned no answer before the timeout. Nothing was verified, and this says nothing about the key.
+
+## signature check: checks out
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Checks out
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature passed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The signature from shop.example matches the key published today. The message wasn't changed after it was signed.
+
+Signature check, today, technical: DKIM d=shop.example s=s1 verifies: the rsa-sha256 signature over the header hash (c=relaxed/relaxed, 5 of the 5 names in h= present) checks against the 2048-bit RSA key at s1._domainkey.shop.example. The body hash matches bh=.
+
+## signature check: checks out, key shorter than recommended
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Checks out
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature passed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The signature from shop.example matches the key published today. The message wasn't changed after it was signed.
+
+Signature check, today, technical: DKIM d=shop.example s=s1 verifies: the rsa-sha256 signature over the header hash (c=relaxed/relaxed, 5 of the 5 names in h= present) checks against the 1024-bit RSA key at s1._domainkey.shop.example. The body hash matches bh=.
+
+Signature check note 1, plain: The key works, but it's shorter than mail systems now recommend. Ask the service that sends this mail for a longer one.
+
+Signature check note 1, technical: The RSA key at s1._domainkey.shop.example is 1024 bits. RFC 8301 3.2 says signers SHOULD use RSA keys of at least 2048 bits.
+
+## signature check: checks out now, failed on arrival
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The message was changed after it was signed, or the signature doesn't match the sender's published key.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example: something changed the signed part of the message after signing, or the key in DNS does not match. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave the service that sends this mail. That's the usual cause of a broken signature.
+
+Fix 1, technical: The signature from d=shop.example broke between signing and mx.receiver.example. Look for anything that edits mail after the sending service signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at s1._domainkey.shop.example is the one it signs with.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Checks out today
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The recipient's email provider recorded a failure when the message arrived, but this copy checks out today. This page can't show what was different then.
+
+Signature check, today, technical: DKIM d=shop.example s=s1 verifies: the rsa-sha256 signature over the header hash (c=relaxed/relaxed, 5 of the 5 names in h= present) checks against the 2048-bit RSA key at s1._domainkey.shop.example. The body hash matches bh=. mx.receiver.example recorded dkim=fail at delivery. The key in DNS or the message it saw may have differed, and this page does not say which.
+
+## signature check: text changed
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): The message text was changed after shop.example signed it, so the signature no longer matches. A forwarder, a mailing list, or a security filter that adds a footer or rewrites links can do that.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The rsa-sha256 signature over the header hash checks against the 2048-bit RSA key at s1._domainkey.shop.example, so the fields in h= and the key are intact. The body hash computed here, SyntheticComputedBh=, does not equal bh=. The body changed after signing (c=relaxed/relaxed, RFC 6376 3.7). SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The message text was changed after shop.example signed it, so the signature no longer matches. A forwarder, a mailing list, or a security filter that adds a footer or rewrites links can do that.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The rsa-sha256 signature over the header hash checks against the 2048-bit RSA key at s1._domainkey.shop.example, so the fields in h= and the key are intact. The body hash computed here, SyntheticComputedBh=, does not equal bh=. The body changed after signing (c=relaxed/relaxed, RFC 6376 3.7).
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave the service that sends this mail.
+
+Fix 1, technical: Look for anything that edits the body after the sending service signs it: a gateway footer, a disclaimer, or link rewriting.
+
+Fix 2, plain: If the message came through a forward or a mailing list, the change happened there. Your own setup isn't the problem.
+
+Fix 2, technical: If the message passed through a forwarder or a mailing list, the change happened there and nothing at shop.example needs fixing.
+
+Fix 3, plain: Send a message straight to a mailbox, save it as a file, and check that copy here.
+
+Fix 3, technical: Send a message straight to a mailbox with no forward and verify that copy from its file.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The message text was changed after shop.example signed it, so the signature no longer matches. A forwarder, a mailing list, or a security filter that adds a footer or rewrites links can do that.
+
+Signature check, today, technical: The rsa-sha256 signature over the header hash checks against the 2048-bit RSA key at s1._domainkey.shop.example, so the fields in h= and the key are intact. The body hash computed here, SyntheticComputedBh=, does not equal bh=. The body changed after signing (c=relaxed/relaxed, RFC 6376 3.7).
+
+Signature check, who fixes it, plain: Whoever manages your mail can find what changed it.
+
+Signature check, who fixes it, technical: Whoever runs the systems between the sending service and the mailbox.
+
+Signature check step 1, plain: Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave the service that sends this mail.
+
+Signature check step 1, technical: Look for anything that edits the body after the sending service signs it: a gateway footer, a disclaimer, or link rewriting.
+
+Signature check step 2, plain: If the message came through a forward or a mailing list, the change happened there. Your own setup isn't the problem.
+
+Signature check step 2, technical: If the message passed through a forwarder or a mailing list, the change happened there and nothing at shop.example needs fixing.
+
+Signature check step 3, plain: Send a message straight to a mailbox, save it as a file, and check that copy here.
+
+Signature check step 3, technical: Send a message straight to a mailbox with no forward and verify that copy from its file.
+
+## signature check: text not included
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The message was changed after it was signed, or the signature doesn't match the sender's published key.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example: something changed the signed part of the message after signing, or the key in DNS does not match. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave the service that sends this mail. That's the usual cause of a broken signature.
+
+Fix 1, technical: The signature from d=shop.example broke between signing and mx.receiver.example. Look for anything that edits mail after the sending service signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at s1._domainkey.shop.example is the one it signs with.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Partly checked
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The signed details at the top of the message are intact and the key matches. The message text wasn't included, so it couldn't be checked. Drop the whole message file on the box to check it.
+
+Signature check, today, technical: The rsa-sha256 signature over the header hash (c=relaxed/relaxed) checks against the 2048-bit RSA key at s1._domainkey.shop.example, so the fields in h= and the key are intact. No body followed the headers, so bh= was not compared.
+
+## signature check: file too large for the text
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The message was changed after it was signed, or the signature doesn't match the sender's published key.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example: something changed the signed part of the message after signing, or the key in DNS does not match. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave the service that sends this mail. That's the usual cause of a broken signature.
+
+Fix 1, technical: The signature from d=shop.example broke between signing and mx.receiver.example. Look for anything that edits mail after the sending service signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at s1._domainkey.shop.example is the one it signs with.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Partly checked
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The signed details at the top of the message are intact and the key matches. The message file is larger than this page reads, so the message text couldn't be checked.
+
+Signature check, today, technical: The rsa-sha256 signature over the header hash (c=relaxed/relaxed) checks against the 2048-bit RSA key at s1._domainkey.shop.example, so the fields in h= and the key are intact. The file is larger than this page reads, so bh= was not compared.
+
+## signature check: signed detail changed
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): A signed detail, such as the subject or the From line, was changed after shop.example signed the message. Something between the sender and the mailbox edited the message.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example yields valid PKCS #1 v1.5 padding (RFC 8017 9.2) around a different SHA-256 hash. The key is the one that signed, and a field listed in h=, or the DKIM-Signature field itself, changed after signing (c=relaxed/relaxed). The body hash matches bh=. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): A signed detail, such as the subject or the From line, was changed after shop.example signed the message. Something between the sender and the mailbox edited the message.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example yields valid PKCS #1 v1.5 padding (RFC 8017 9.2) around a different SHA-256 hash. The key is the one that signed, and a field listed in h=, or the DKIM-Signature field itself, changed after signing (c=relaxed/relaxed). The body hash matches bh=.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask whoever manages your mail whether anything changes the subject or the From line after messages leave the service that sends this mail, such as a tag added to the subject.
+
+Fix 1, technical: Look for anything that rewrites a field in h= after the sending service signs it, such as a subject tag or a From rewrite.
+
+Fix 2, plain: If the message came through a forward or a mailing list, the change happened there. Your own setup isn't the problem.
+
+Fix 2, technical: If the message passed through a forwarder or a mailing list, the change happened there and nothing at shop.example needs fixing.
+
+Fix 3, plain: Send a message straight to a mailbox, save it as a file, and check that copy here.
+
+Fix 3, technical: Send a message straight to a mailbox with no forward and verify that copy from its file.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: A signed detail, such as the subject or the From line, was changed after shop.example signed the message. Something between the sender and the mailbox edited the message.
+
+Signature check, today, technical: The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example yields valid PKCS #1 v1.5 padding (RFC 8017 9.2) around a different SHA-256 hash. The key is the one that signed, and a field listed in h=, or the DKIM-Signature field itself, changed after signing (c=relaxed/relaxed). The body hash matches bh=.
+
+Signature check, who fixes it, plain: Whoever manages your mail can find what changed it.
+
+Signature check, who fixes it, technical: Whoever runs the systems between the sending service and the mailbox.
+
+Signature check step 1, plain: Ask whoever manages your mail whether anything changes the subject or the From line after messages leave the service that sends this mail, such as a tag added to the subject.
+
+Signature check step 1, technical: Look for anything that rewrites a field in h= after the sending service signs it, such as a subject tag or a From rewrite.
+
+Signature check step 2, plain: If the message came through a forward or a mailing list, the change happened there. Your own setup isn't the problem.
+
+Signature check step 2, technical: If the message passed through a forwarder or a mailing list, the change happened there and nothing at shop.example needs fixing.
+
+Signature check step 3, plain: Send a message straight to a mailbox, save it as a file, and check that copy here.
+
+Signature check step 3, technical: Send a message straight to a mailbox with no forward and verify that copy from its file.
+
+## signature check: wrong key
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): The published key (DKIM key) for shop.example isn't the one that signed this message. Ask the service that sends this mail for its current DNS setting and compare the two.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example does not yield PKCS #1 v1.5 padding (RFC 8017 9.2), so that key did not produce this b= value. The key in DNS is not the key that signed. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The published key (DKIM key) for shop.example isn't the one that signed this message. Ask the service that sends this mail for its current DNS setting and compare the two.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example does not yield PKCS #1 v1.5 padding (RFC 8017 9.2), so that key did not produce this b= value. The key in DNS is not the key that signed.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask the service that sends this mail for its current DKIM setting for shop.example.
+
+Fix 1, technical: Get the key the sending service signs selector s1 with now.
+
+Fix 2, plain: Ask whoever manages the DNS for shop.example to compare it with the DNS setting for shop.example, and to replace the value if they differ.
+
+Fix 2, technical: Compare its p= with the record at s1._domainkey.shop.example and replace the stale one. A key rotated after this message was sent gives the same result.
+
+Fix 3, plain: Send a new message and check that one here.
+
+Fix 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The published key (DKIM key) for shop.example isn't the one that signed this message. Ask the service that sends this mail for its current DNS setting and compare the two.
+
+Signature check, today, technical: The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example does not yield PKCS #1 v1.5 padding (RFC 8017 9.2), so that key did not produce this b= value. The key in DNS is not the key that signed.
+
+Signature check, who fixes it, plain: Whoever manages the DNS for shop.example fixes this, with the setting from the service that sends this mail.
+
+Signature check, who fixes it, technical: Whoever manages the DNS for shop.example publishes the record, and the sending service supplies it.
+
+Signature check step 1, plain: Ask the service that sends this mail for its current DKIM setting for shop.example.
+
+Signature check step 1, technical: Get the key the sending service signs selector s1 with now.
+
+Signature check step 2, plain: Ask whoever manages the DNS for shop.example to compare it with the DNS setting for shop.example, and to replace the value if they differ.
+
+Signature check step 2, technical: Compare its p= with the record at s1._domainkey.shop.example and replace the stale one. A key rotated after this message was sent gives the same result.
+
+Signature check step 3, plain: Send a new message and check that one here.
+
+Signature check step 3, technical: Send a new message and verify it again. Receivers that already judged this one keep their result.
+
+## signature check: cannot tell which (Ed25519)
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The signature from shop.example didn't check out when the message arrived. Checked today (November 13, 2026): The signature from shop.example doesn't match. For this kind of signature the page can't tell whether the message changed or the key is wrong.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example. Checked today (November 13, 2026): The ed25519-sha256 signature (RFC 8463) does not verify against the key at s1._domainkey.shop.example. An Ed25519 failure does not show whether the signed data changed or the key differs. The body hash matches bh=. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The signature from shop.example doesn't match. For this kind of signature the page can't tell whether the message changed or the key is wrong.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The ed25519-sha256 signature (RFC 8463) does not verify against the key at s1._domainkey.shop.example. An Ed25519 failure does not show whether the signed data changed or the key differs. The body hash matches bh=.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask the service that sends this mail for its current DKIM setting for shop.example, and compare it with the DNS setting.
+
+Fix 1, technical: Compare the p= at s1._domainkey.shop.example with the key the sending service signs with.
+
+Fix 2, plain: If they match, ask whoever manages your mail whether anything changes messages after they are sent.
+
+Fix 2, technical: If they match, look for anything that edits the message after signing.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Cause found
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The signature from shop.example doesn't match. For this kind of signature the page can't tell whether the message changed or the key is wrong.
+
+Signature check, today, technical: The ed25519-sha256 signature (RFC 8463) does not verify against the key at s1._domainkey.shop.example. An Ed25519 failure does not show whether the signed data changed or the key differs. The body hash matches bh=.
+
+Signature check, who fixes it, plain: Start with the service that sends this mail.
+
+Signature check, who fixes it, technical: Start with the key, then the path.
+
+Signature check step 1, plain: Ask the service that sends this mail for its current DKIM setting for shop.example, and compare it with the DNS setting.
+
+Signature check step 1, technical: Compare the p= at s1._domainkey.shop.example with the key the sending service signs with.
+
+Signature check step 2, plain: If they match, ask whoever manages your mail whether anything changes messages after they are sent.
+
+Signature check step 2, technical: If they match, look for anything that edits the message after signing.
+
+## signature check: pasted text
+
+Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example failed because DKIM d=shop.example s=s1 failed verification and SPF passed for the Return-Path domain bounce.mailer.example (RFC5321.MailFrom), and nothing that passed aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: The message was changed after it was signed, or the signature doesn't match the sender's published key.
+
+Cause, technical: The DKIM signature from shop.example did not verify at mx.receiver.example: something changed the signed part of the message after signing, or the key in DNS does not match. SPF passed only for bounce.mailer.example, which is not shop.example.
+
+Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Detail 1, plain: The signature from shop.example didn't check out.
+
+Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave the service that sends this mail. That's the usual cause of a broken signature.
+
+Fix 1, technical: The signature from d=shop.example broke between signing and mx.receiver.example. Look for anything that edits mail after the sending service signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at s1._domainkey.shop.example is the one it signs with.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Could not confirm
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature failed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=fail for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: Copying can change spaces, so this check couldn't confirm the signature from pasted text. Drop the message file on the box for a firm answer.
+
+Signature check, today, technical: Verification from pasted text did not succeed, which a paste can cause by itself: copying can change the whitespace and line folds the canonicalization covers. Seen here: The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example yields valid PKCS #1 v1.5 padding (RFC 8017 9.2) around a different SHA-256 hash. The key is the one that signed, and a field listed in h=, or the DKIM-Signature field itself, changed after signing (c=relaxed/relaxed). The body hash matches bh=. Only the message file gives a firm result.
+
+## signature check: passed on arrival, fails today
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Doesn't check out today
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature passed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The recipient's email provider recorded that this signature passed when the message arrived, but it doesn't check out today. This page can't show what changed since then.
+
+Signature check, today, technical: mx.receiver.example recorded dkim=pass at delivery. Seen today: The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example does not yield PKCS #1 v1.5 padding (RFC 8017 9.2), so that key did not produce this b= value. The key in DNS is not the key that signed. The key in DNS or this copy may differ from what the receiver saw, and this page does not say which.
+
+## signature check: rsa-sha1 is not checked
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example with an outdated method (rsa-sha1) that mail systems should no longer accept. That matches shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed (a=rsa-sha1, which RFC 8301 3.1 says verifiers must treat as failed), and it aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was. But the signature uses an outdated method (rsa-sha1), so mail systems that follow current rules would fail it.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body. The signature uses rsa-sha1, which RFC 8301 3.1 has verifiers treat as failed, so receivers that follow it would fail this message.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, but with an outdated method (rsa-sha1) that mail systems should no longer accept.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example, but the signature uses rsa-sha1. RFC 8301 3.1 says verifiers must not accept rsa-sha1, so a receiver that follows it would not count this pass.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Ask the service that sends this mail to sign with the current method (rsa-sha256). This message uses an old one (rsa-sha1) that mail systems following current rules no longer accept, so it may fail elsewhere.
+
+Fix 1, technical: Sign with rsa-sha256 at the sending service instead of rsa-sha1 for d=shop.example. RFC 8301 3.1 has verifiers treat rsa-sha1 as failed, so this pass may not hold at other receivers.
+
+Fix 2, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 2, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Not checked
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature passed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: This signature uses an outdated method (rsa-sha1), so this page doesn't check it.
+
+Signature check, today, technical: a=rsa-sha1 is not verified here. RFC 8301 3.1 says rsa-sha1 MUST NOT be used for signing or verifying.
+
+## signature check: unknown method
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Not checked
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature passed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: This signature uses a method this page doesn't know, so it wasn't checked.
+
+Signature check, today, technical: a=rsa-sha512 is not rsa-sha256 or ed25519-sha256, so nothing was looked up or verified.
+
+## signature check: signature incomplete
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Not checked
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature passed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: The signature in these headers is missing parts, so it couldn't be checked. Copy the full headers again.
+
+Signature check, today, technical: The DKIM-Signature field lacks a usable d=, s=, h=, bh= or b=, so nothing was looked up or verified.
+
+## signature check: browser without Ed25519
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=shop.example s=s1 passed, and it aligns with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For shop.example, the pass comes from aligned DKIM, which still passes after a forward if nothing alters the signed headers or body.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
+
+Detail 2, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
+
+Fix 1, plain: Nothing needs fixing. If you want both checks to match, give the service that sends this mail a custom return address on shop.example (often called a custom return path).
+
+Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to align too, set a custom Return-Path domain under shop.example at the sending service.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
+
+Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
+
+Signature check label, plain: Not checked
+
+Signature check, on arrival, plain: The recipient's email provider recorded that this signature passed when the message arrived.
+
+Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass for d=shop.example s=s1 at delivery.
+
+Signature check, today, plain: This browser can't check this kind of signature. Try the current version of Chrome, Firefox, or Safari.
+
+Signature check, today, technical: This browser's WebCrypto has no Ed25519, so the ed25519-sha256 signature (RFC 8463) was not verified. The key at s1._domainkey.shop.example was found.
+
+## Signature check labels
+
+failed: Find out why the signature failed
+
+check: Check the signature
+
+again: Check again
+
+under: This looks up the sender's published key (DKIM key) and checks the signature again.
+
+busy: Checking the signature.
+
+sample: This check runs on your own messages, not on the samples.
+
+arrived: When the message arrived
+
+today: Checked today
+
+who: Who fixes it
+
 ## Filter code meanings
 
 Microsoft card note. Technical: Fields of X-Forefront-Antispam-Report that Microsoft does not document are left out; Microsoft says they are for its own diagnostics. In cloud organizations CAT, not SCL, says how the message was filtered. The tenant's threshold decides the BCL action (7 by default, 6 Standard, 5 Strict); it is not in the headers. Plain: Only the parts Microsoft explains publicly are shown. Microsoft's threat category (CAT), not its spam score (SCL), decides where the message went. Each organization sets its own limit for bulk mail, and the headers don't show it.

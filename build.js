@@ -2,7 +2,8 @@
 // build.js: inline src and ui into self-contained pages.
 // dist/index.html is a full document that opens from disk. Its
 // Content-Security-Policy lets the page connect only to dns-audit.com, for
-// the usage note after each read, and script-src allows only the hashes of
+// the usage note after each read, and to cloudflare-dns.com, for the DKIM
+// key lookup the reader starts, and script-src allows only the hashes of
 // the two inline scripts: the theme script in the head and the page script.
 // dist/artifact.html is the same body without the document shell, for
 // hosts that wrap the page themselves (the claude.ai preview).
@@ -17,8 +18,11 @@ const ROOT = __dirname;
 const SITE = 'https://headers.dns-audit.com/';
 // Where the page sends its usage note (POST /api/usage on the dns-audit.com server)
 const USAGE_ORIGIN = 'https://dns-audit.com';
+// Where the signature check looks up a DKIM key, and only when the reader
+// presses its button (src/dkimkey.js). The request carries the key name.
+const DOH_ORIGIN = 'https://cloudflare-dns.com';
 // Load order matters: each module reads the HA namespace the one before it filled.
-const SRC = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'providers.js', 'finding.js', 'analyze.js'];
+const SRC = ['parse.js', 'psl.js', 'received.js', 'auth.js', 'providers.js', 'dkimverify.js', 'dkimkey.js', 'finding.js', 'analyze.js'];
 // Fixtures shown as samples on the page. Synthetic only; never real headers.
 const SAMPLES = { gmail: 'gmail-show-original.txt', esp: 'esp-unaligned.txt', forwarded: 'forwarded.txt', exchange: 'exchange-online-inbound.txt', arc: 'arc-forwarded-i2.txt', twodkim: 'two-dkim.txt' };
 // Runs in the head so a saved theme applies before first paint, as
@@ -26,7 +30,7 @@ const SAMPLES = { gmail: 'gmail-show-original.txt', esp: 'esp-unaligned.txt', fo
 const THEME_SCRIPT = "try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}";
 // script-src names the sha256 of each inline script, so no other script runs.
 const sha = (s) => "'sha256-" + crypto.createHash('sha256').update(s, 'utf8').digest('base64') + "'";
-const cspFor = (...scripts) => "default-src 'none'; script-src " + scripts.map(sha).join(' ') + "; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src " + USAGE_ORIGIN + "; form-action 'none'; base-uri 'none'";
+const cspFor = (...scripts) => "default-src 'none'; script-src " + scripts.map(sha).join(' ') + "; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src " + USAGE_ORIGIN + ' ' + DOH_ORIGIN + "; form-action 'none'; base-uri 'none'";
 // Links the page may carry: dns-audit.com with its headers. and aprf.
 // hosts, Neil's LinkedIn profile, and his GitHub account. A link sends
 // nothing until someone follows it; the CSP still blocks every request the
@@ -112,6 +116,7 @@ function jsonLd(page) {
         'SPF, DKIM, and DMARC results with alignment against the From domain',
         'DMARC result computed independently beside the receiver\'s',
         'Forwarded mail read through the ARC chain',
+        'DKIM signature check against the published key, naming why a signature failed',
         'Hop timeline with delays, TLS, and the receiver custody point',
         'Spam filter headers decoded for Microsoft 365, Google, Proofpoint, Mimecast, Cisco, Barracuda, SpamAssassin, and Rspamd',
       ],

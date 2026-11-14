@@ -11,13 +11,15 @@ should earn a technical reader's respect and still make sense to
 the business owner who owns the domain.
 
 Decision: it runs entirely in the browser
-No backend. One static page. Reasons: pasted headers, addresses,
-and domains are never sent anywhere; no rate limiting, no load on
-the droplet. Nothing in the first release needs DNS. The page's only
-network calls are usage notes to dns-audit.com/api/usage: one when the
+No backend. One static page. Reasons: no rate limiting and no load on
+the droplet. The finding needs no DNS. The page makes two kinds of
+network call. Usage notes go to dns-audit.com/api/usage: one when the
 page opens (tool and linking host), and one after each read, with four
 fields: the tool, the finding status, whether a
 built-in sample was read, and the host name of the linking site.
+The signature check (2026-11-13) looks up a DKIM key at
+cloudflare-dns.com when the reader presses its button, and sends
+only the name selector._domainkey.domain.
 
 Where it lives
 headers.dns-audit.com, a static site on Cloudflare, with the same
@@ -68,9 +70,18 @@ First release
     from the page's own FAQ.
 13. Beta label on the page and in the README, with a line asking
     for messages it reads wrong.
+14. (Added 2026-11-13.) The signature check. One button under the
+    check tiles: Find out why the signature failed, or Check the
+    signature when DKIM did not fail. It looks up each DKIM key,
+    verifies each signature again in the browser, and names the
+    cause in plain words with who fixes it and numbered steps: no
+    key, revoked key, key written wrong, key too short, text
+    changed, signed detail changed, wrong key. The result is marked
+    as checked today and set beside what the receiver recorded. A
+    failure from pasted text is could not confirm; a message file
+    gives a firm answer. rsa-sha1 and ARC seals are not verified.
 
 Parked
-DKIM public key lookup (needs DNS, can call the audit API later).
 Bounce and SMTP code decoding (separate tool).
 Shareable result links (a link would have to carry the headers to
 a server; Copy report covers the need without one).
@@ -82,7 +93,10 @@ Node test suite. Synthetic fixtures for every RFC 8601 result and
 ARC state. Real headers Neil pastes from his own mailboxes, Gmail,
 Outlook, iCloud, and forwarded mail, are used for checking and
 never committed. Hostile input: folded garbage, missing Received,
-no Authentication-Results, two From headers. Browser check with
+no Authentication-Results, two From headers. The signature check is
+tested with RSA and Ed25519 keys made inside the tests, synthetic
+signed messages, the RFC 8463 Appendix A example, and a stand-in for
+fetch, so no test makes a DNS query. Browser check with
 Playwright at desktop and phone widths, dark and light.
 
 Build plan

@@ -127,7 +127,7 @@
   }
 
   // Per identifier, the longer statement the details list carries.
-  function rowSentence(r, from, via) {
+  function rowSentence(r, from, via, kc) {
     const forwarded = via === 'forward';
     const note = r.comments && r.comments[0] && r.comments[0].length <= 80 ? ' (' + r.comments[0] + ')' : '';
     if (r.kind === 'dkim') {
@@ -140,6 +140,9 @@
       if (r.result === 'pass') return r.relaxed
         ? say('pass', 'DKIM passed for d=' + d + sel + ', which aligns with ' + from + (r.relaxedOnly ? ' in relaxed mode only.' : '.'), 'The message was signed by ' + d + ', which belongs to the sender.', r.src)
         : say('caveat', 'DKIM passed for d=' + d + sel + ', which does not align with ' + from + '. A pass on another domain does not count for DMARC.', 'The message was signed, but by ' + d + ', not by the sender\'s own domain.', r.src);
+      // The cause the signature check found replaces the line that the
+      // headers cannot show which, marked as checked today.
+      if (r.result === 'fail' && kc) return say('fail', 'DKIM failed for d=' + d + sel + note + '. Checked today (' + kc.day + '): ' + kc.line.technical, 'The signature from ' + d + ' did not check out. Checked today (' + kc.day + '): ' + kc.line.plain, r.src);
       if (r.result === 'fail') return say('fail', 'DKIM failed for d=' + d + sel + note + '.' + (forwarded ? ' The message was forwarded, and forwarders often change it enough to break the signature.' : via === 'list' ? ' The message came through a mailing list, and lists change it enough to break the signature.' : ' Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.'), 'The signature from ' + d + ' did not check out' + (forwarded ? ', most likely because the forward changed the message.' : via === 'list' ? ', because the mailing list changed the message.' : '.'), r.src);
       return say(r.state, 'DKIM returned ' + r.result + ' for d=' + d + sel + note + '.', 'The signature from ' + d + ' could not be checked.', r.src);
     }
@@ -321,7 +324,9 @@
     if (!dkimAligned) {
       if (!auth.dkim.length) add(status === 'pass' ? 'caveat' : 'fail', (status === 'pass' ? 'DMARC depends on SPF alone, and a forward breaks SPF. ' : '') + 'Turn on DKIM signing for ' + from + ' at ' + svc.t + '. Aligned DKIM lets DMARC pass, including after a forward.', 'Turn on email signing (DKIM) for ' + from + ' in the settings of ' + svc.p + '. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.', auth.spf.src);
       else if (unaligned) add(status === 'pass' ? 'caveat' : 'fail', 'At ' + svc.t + ', set up domain authentication for ' + from + ' so the DKIM signature carries d=' + from + ' or a subdomain of it, instead of d=' + unaligned.domain + '.', 'In the settings of ' + svc.p + ', turn on domain authentication for ' + from + '. The service gives you a few DNS records to add, and after that your mail is signed with your own domain instead of ' + unaligned.domain + '.', unaligned.src);
-      if (failed && !fw.yes) add('fail', 'The signature from d=' + failed.domain + ' broke between signing and ' + receiver + '. Look for anything that edits mail after ' + svc.t + ' signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at ' + (failed.selector || '<selector>') + '._domainkey.' + failed.domain + ' is the one it signs with.', 'Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave ' + svc.p + '. That is the usual cause of a broken signature.', failed.src);
+      const fkc = failed && ctx.kcCause ? ctx.kcCause(failed.signature) : null;
+      if (fkc) for (const st of fkc.steps) add('fail', st.technical, st.plain, failed.src);
+      else if (failed && !fw.yes) add('fail', 'The signature from d=' + failed.domain + ' broke between signing and ' + receiver + '. Look for anything that edits mail after ' + svc.t + ' signs it (a gateway, footer, disclaimer, or link rewriting), and check that the key at ' + (failed.selector || '<selector>') + '._domainkey.' + failed.domain + ' is the one it signs with.', 'Ask whoever manages your mail whether anything adds a footer, a disclaimer, or tracking links after messages leave ' + svc.p + '. That is the usual cause of a broken signature.', failed.src);
       if (temp) add('caveat', 'A temperror on the key query says nothing about the key. If it repeats, check that the nameservers for ' + temp.domain + ' answer promptly and that ' + (temp.selector || '<selector>') + '._domainkey.' + temp.domain + ' resolves.', 'The key lookup failed for a temporary reason, which is not a setup fault. If it keeps happening, ask whoever hosts the DNS for ' + temp.domain + ' whether their servers were slow to answer.', temp.src);
       if (perm) add('fail', 'Publish or repair the DKIM key at ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + '; ' + receiver + ' could not use it.', 'The key that checks this signature could not be read. Ask whoever manages the DNS for ' + perm.domain + ' to compare the record named ' + (perm.selector || '<selector>') + '._domainkey.' + perm.domain + ' with what ' + svc.p + ' says it should be.', perm.src);
     }
@@ -416,6 +421,158 @@
     return fl;
   }
 
+  // The signature check the reader starts with a button (dkimkey.js). It
+  // looks up the DKIM key and verifies each signature again, today. What
+  // the receiver recorded at delivery and what this check found are two
+  // facts, stated side by side. Where they disagree the page gives no
+  // reason. A verification failure on pasted text is could not confirm,
+  // since copying can change whitespace; only a message file supports a
+  // failure. The words on the button live here so the Simple word test
+  // reads them.
+  const KEY_UI = {
+    failed: 'Find out why the signature failed',
+    check: 'Check the signature',
+    again: 'Check again',
+    under: 'This looks up the sender\'s published key (DKIM key) and checks the signature again.',
+    busy: 'Checking the signature.',
+    sample: 'This check runs on your own messages, not on the samples.',
+    arrived: 'When the message arrived',
+    today: 'Checked today',
+    who: 'Who fixes it',
+  };
+  const TEXT_FAILS = ['body-mismatch', 'header-changed', 'key-mismatch', 'ed25519-fail'];
+  const KEY_FAILS = ['no-key', 'revoked', 'malformed', 'too-short'];
+  const KEY_WORD = { pass: 'Checks out', 'pass-now': 'Checks out today', 'no-body': 'Partly checked', pasted: 'Could not confirm', 'passed-then': 'Doesn\'t check out today', 'no-answer': 'No answer', 'not-checked': 'Not checked' };
+
+  function keyResult(r, ctx, check) {
+    const { auth, receiver, svc } = ctx;
+    const row = auth.dkim.find(k => k.signature === r.signature) || null;
+    const src = auth.signatures[r.signature] ? auth.signatures[r.signature].src : [];
+    const rsrc = row ? uniq(row.src.concat(src)) : src;
+    const d = r.d || 'an unnamed domain';
+    const id = 'd=' + d + (r.s ? ' s=' + r.s : '');
+    const name = r.name || 'the key name';
+    const rcv = plainReceiver(receiver);
+    const Rcv = upFirst(rcv);
+    const got = row && row.result ? row.result : '';
+    const dnsOwner = 'whoever manages the DNS for ' + d;
+    const paste = check.source !== 'file';
+    const via = r.dns && r.dns.target ? ' The name is a CNAME to ' + r.dns.target + '.' : '';
+
+    // What the receiver recorded at delivery.
+    const note = row && row.comments && row.comments[0] && row.comments[0].length <= 80 ? ' (' + row.comments[0] + ')' : '';
+    const recorded = auth.primary < 0 ? say('unknown', 'No receiver\'s Authentication-Results is in these headers, so no result from delivery exists for ' + id + '.', 'These headers hold no record from a receiving mail system for this signature.', src)
+      : !got ? say('unknown', receiver + ' recorded no DKIM result for ' + id + ' at delivery.', Rcv + ' recorded no result for this signature when the message arrived.', rsrc)
+        : say(HA.auth.resultState(got), receiver + ' recorded dkim=' + got + ' for ' + id + note + ' at delivery.', Rcv + ({ pass: ' recorded that this signature passed', fail: ' recorded that this signature failed' }[got] || ' recorded that it could not check this signature') + ' when the message arrived.', rsrc);
+
+    // The raw observation, in the protocol's terms.
+    const bodyT = !r.body ? '' : r.body.matches ? ' The body hash matches bh=.' : r.body.short ? ' The body is shorter than l=' + r.l + ' octets, so the body hash cannot match bh=.' : ' The body hash computed here, ' + r.body.computed + ', does not equal bh=.';
+    const keyT = r.k === 'ed25519' ? 'Ed25519 key' : (r.bits || '') + '-bit RSA key';
+    const dnsT = r.dns ? ({ nxdomain: 'NXDOMAIN', nodata: 'no TXT answer', servfail: r.dns.why || 'SERVFAIL', timeout: 'no answer before the timeout', error: r.dns.why || 'no response', ok: 'a TXT answer' }[r.dns.status] || r.dns.status) : '';
+    const OBS = {
+      'no-key': 'The TXT query for ' + name + ' returned ' + dnsT + ', so no DKIM key record exists there.' + via + ' RFC 6376 6.1.2 has a verifier return PERMFAIL (no key for signature).',
+      revoked: 'The key record at ' + name + ' has an empty p=, which RFC 6376 3.6.1 defines as a revoked key.' + via + ' A verifier returns PERMFAIL (key revoked).',
+      malformed: 'The TXT record at ' + name + ' is not a usable DKIM key record: ' + (r.why || 'it does not parse') + '.' + via + ' RFC 6376 6.1.2 has verifiers ignore malformed key records.',
+      'too-short': 'The RSA key at ' + name + ' is ' + r.bits + ' bits.' + via + ' RFC 8301 3.2 says verifiers MUST NOT consider signatures using RSA keys of less than 1024 bits as valid.',
+      pass: 'DKIM ' + id + ' verifies: the ' + r.a + ' signature over the header hash (c=' + r.c + ', ' + r.signedCount + ' of the ' + r.listed + ' names in h= present) checks against the ' + keyT + ' at ' + name + '.' + bodyT + (r.l !== null && r.l !== undefined ? ' l=' + r.l + ' limits the body hash to that many octets.' : ''),
+      'no-body': 'The ' + r.a + ' signature over the header hash (c=' + r.c + ') checks against the ' + keyT + ' at ' + name + ', so the fields in h= and the key are intact. ' + (check.truncated ? 'The file is larger than this page reads, so bh= was not compared.' : 'No body followed the headers, so bh= was not compared.'),
+      'body-mismatch': 'The ' + r.a + ' signature over the header hash checks against the ' + keyT + ' at ' + name + ', so the fields in h= and the key are intact.' + bodyT + ' The body changed after signing (c=' + r.c + ', RFC 6376 3.7).',
+      'header-changed': 'The RSA public key operation with the ' + keyT + ' at ' + name + ' yields valid PKCS #1 v1.5 padding (RFC 8017 9.2) around a different SHA-256 hash. The key is the one that signed, and a field listed in h=, or the DKIM-Signature field itself, changed after signing (c=' + r.c + ').' + bodyT,
+      'key-mismatch': 'The RSA public key operation with the ' + keyT + ' at ' + name + ' does not yield PKCS #1 v1.5 padding (RFC 8017 9.2), so that key did not produce this b= value. The key in DNS is not the key that signed.',
+      'ed25519-fail': 'The ed25519-sha256 signature (RFC 8463) does not verify against the key at ' + name + '. An Ed25519 failure does not show whether the signed data changed or the key differs.' + bodyT,
+    };
+
+    let kind = r.outcome;
+    if (r.outcome === 'dns-failed') kind = 'no-answer';
+    else if (['sha1', 'unknown-alg', 'incomplete', 'unsupported'].includes(r.outcome)) kind = 'not-checked';
+    else if (r.outcome === 'pass') kind = got && got !== 'pass' ? 'pass-now' : 'pass';
+    else if (TEXT_FAILS.includes(r.outcome) && paste) kind = 'pasted';
+    else if (got === 'pass' && (TEXT_FAILS.includes(r.outcome) || KEY_FAILS.includes(r.outcome))) kind = 'passed-then';
+    const cause = TEXT_FAILS.includes(kind) || KEY_FAILS.includes(kind);
+    const state = cause ? 'fail' : kind === 'pass' ? 'pass' : kind === 'pass-now' || kind === 'no-body' ? 'caveat' : 'unknown';
+
+    const L = {
+      'no-key': ['The signature from ' + d + ' points to a published key (DKIM key) that is not there for ' + d + '. Nobody can check the signature without it, so mail signed this way fails. Ask ' + svc.p + ' for the DNS setting to add.'],
+      revoked: ['The key for this signature from ' + d + ' was switched off on purpose (revoked). Mail signed with it fails. Ask ' + svc.p + ' to sign with its current key.'],
+      malformed: ['The published key (DKIM key) for ' + d + ' is there but written wrong, so the signature cannot be checked. Copy it again from the settings of ' + svc.p + '.'],
+      'too-short': ['The published key (DKIM key) for ' + d + ' is too short for mail systems to trust. Ask ' + svc.p + ' for a longer one.'],
+      'no-answer': ['The lookup got no answer, so this check did not run. Try again in a minute.', 'The TXT query for ' + name + ' over DNS over HTTPS returned ' + dnsT + '. Nothing was verified, and this says nothing about the key.'],
+      pass: ['The signature from ' + d + ' matches the key published today. The message was not changed after it was signed.'],
+      'pass-now': [Rcv + ' recorded a failure when the message arrived, but this copy checks out today. This page cannot show what was different then.', OBS.pass + ' ' + receiver + ' recorded dkim=' + got + ' at delivery. The key in DNS or the message it saw may have differed, and this page does not say which.'],
+      'body-mismatch': ['The message text was changed after ' + d + ' signed it, so the signature no longer matches. A forwarder, a mailing list, or a security filter that adds a footer or rewrites links can do that.'],
+      'no-body': ['The signed details at the top of the message are intact and the key matches. ' + (check.truncated ? 'The message file is larger than this page reads, so the message text could not be checked.' : 'The message text was not included, so it could not be checked. Drop the whole message file on the box to check it.')],
+      'header-changed': ['A signed detail, such as the subject or the From line, was changed after ' + d + ' signed the message. Something between the sender and the mailbox edited the message.'],
+      'key-mismatch': ['The published key (DKIM key) for ' + d + ' is not the one that signed this message. Ask ' + svc.p + ' for its current DNS setting and compare the two.'],
+      'ed25519-fail': ['The signature from ' + d + ' does not match. For this kind of signature the page cannot tell whether the message changed or the key is wrong.'],
+      pasted: ['Copying can change spaces, so this check could not confirm the signature from pasted text. Drop the message file on the box for a firm answer.', 'Verification from pasted text did not succeed, which a paste can cause by itself: copying can change the whitespace and line folds the canonicalization covers. Seen here: ' + (OBS[r.outcome] || '') + ' Only the message file gives a firm result.'],
+      'passed-then': [Rcv + ' recorded that this signature passed when the message arrived, but it does not check out today. This page cannot show what changed since then.', receiver + ' recorded dkim=pass at delivery. Seen today: ' + (OBS[r.outcome] || '') + ' The key in DNS or this copy may differ from what the receiver saw, and this page does not say which.'],
+      'not-checked': {
+        sha1: ['This signature uses an outdated method (rsa-sha1), so this page does not check it.', 'a=' + r.a + ' is not verified here. RFC 8301 3.1 says rsa-sha1 MUST NOT be used for signing or verifying.'],
+        'unknown-alg': ['This signature uses a method this page does not know, so it was not checked.', 'a=' + (r.a || '(none)') + ' is not rsa-sha256 or ed25519-sha256, so nothing was looked up or verified.'],
+        incomplete: ['The signature in these headers is missing parts, so it could not be checked. Copy the full headers again.', 'The DKIM-Signature field lacks a usable d=, s=, h=, bh= or b=, so nothing was looked up or verified.'],
+        unsupported: ['This browser cannot check this kind of signature. Try the current version of Chrome, Firefox, or Safari.', 'This browser\'s WebCrypto has no Ed25519, so the ed25519-sha256 signature (RFC 8463) was not verified. The key at ' + name + ' was found.'],
+      }[r.outcome],
+    }[kind];
+    const line = say(state, L[1] || OBS[kind], L[0], src);
+
+    // Who fixes it, then the steps. Only a cause gets them.
+    const mailOwner = 'whoever manages your mail';
+    const again = ['Send a new message and verify it again. Receivers that already judged this one keep their result.', 'Send a new message and check that one here.'];
+    const fromSvc = [dnsOwner + ' publishes the record, and ' + svc.t + ' supplies it.', upFirst(dnsOwner) + ' fixes this, with the setting from ' + svc.p + '.'];
+    const moved = ['If the message passed through a forwarder or a mailing list, the change happened there and nothing at ' + d + ' needs fixing.', 'If the message came through a forward or a mailing list, the change happened there. Your own setup is not the problem.'];
+    const direct = ['Send a message straight to a mailbox with no forward and verify that copy from its file.', 'Send a message straight to a mailbox, save it as a file, and check that copy here.'];
+    const W = {
+      'no-key': [fromSvc, [
+        ['Get the DKIM key record for ' + (r.s ? 'selector ' + r.s : 'this selector') + ' from ' + svc.t + '.', 'Ask ' + svc.p + ' for the DKIM setting for ' + d + '. It has a name and a value.'],
+        [r.dns && r.dns.target ? name + ' is a CNAME to ' + r.dns.target + ', which has no TXT record. The key belongs at that target, usually in the sending service\'s own zone.' : 'Publish it as a TXT record, or as the CNAME the service gives, at ' + name + '.', 'Ask ' + dnsOwner + ' to add it at the company that hosts the DNS.'], again]],
+      revoked: [[svc.t + ' chooses the key it signs with.', upFirst(svc.p) + ' fixes this, in its signing settings.'], [
+        ['An empty p= at ' + name + ' is deliberate. Find which selector ' + svc.t + ' signs ' + d + ' with now.', 'Ask ' + svc.p + ' which key it signs mail from ' + d + ' with now.'],
+        ['Publish the record for the current selector if it is not in DNS yet.', 'If it gives you a new DNS setting, ask ' + dnsOwner + ' to add it.'], again]],
+      malformed: [[dnsOwner + ' repairs the record.', upFirst(dnsOwner) + ' fixes this.'], [
+        ['Copy the key record for ' + (r.s ? 'selector ' + r.s : 'this selector') + ' from ' + svc.t + ' again, whole.', 'Open the settings of ' + svc.p + ' and copy the DKIM value for ' + d + ' again, all of it.'],
+        ['Replace the TXT value at ' + name + '. Common faults are a truncated p=, a pasted line break, stray quotation marks, and two records at one name.', 'Ask ' + dnsOwner + ' to replace the value, with no extra spaces, quotation marks, or line breaks.'], again]],
+      'too-short': [[svc.t + ' generates the key, and ' + dnsOwner + ' publishes it.', upFirst(svc.p) + ' makes a new key, and ' + dnsOwner + ' adds it.'], [
+        ['Generate a 2048-bit RSA key at ' + svc.t + ' under a new selector. RFC 8301 3.2 says signers SHOULD use at least 2048 bits.', 'Ask ' + svc.p + ' to make a new, longer key for ' + d + '.'],
+        ['Publish the new record, then retire ' + name + '.', 'Ask ' + dnsOwner + ' to add the new DNS setting it gives you.'], again]],
+      'body-mismatch': [['Whoever runs the systems between ' + svc.t + ' and the mailbox.', upFirst(mailOwner) + ' can find what changed it.'], [
+        ['Look for anything that edits the body after ' + svc.t + ' signs it: a gateway footer, a disclaimer, or link rewriting.', 'Ask ' + mailOwner + ' whether anything adds a footer, a disclaimer, or tracking links after messages leave ' + svc.p + '.'], moved, direct]],
+      'header-changed': [['Whoever runs the systems between ' + svc.t + ' and the mailbox.', upFirst(mailOwner) + ' can find what changed it.'], [
+        ['Look for anything that rewrites a field in h= after ' + svc.t + ' signs it, such as a subject tag or a From rewrite.', 'Ask ' + mailOwner + ' whether anything changes the subject or the From line after messages leave ' + svc.p + ', such as a tag added to the subject.'], moved, direct]],
+      'key-mismatch': [fromSvc, [
+        ['Get the key ' + svc.t + ' signs ' + (r.s ? 'selector ' + r.s : 'this selector') + ' with now.', 'Ask ' + svc.p + ' for its current DKIM setting for ' + d + '.'],
+        ['Compare its p= with the record at ' + name + ' and replace the stale one. A key rotated after this message was sent gives the same result.', 'Ask ' + dnsOwner + ' to compare it with the DNS setting for ' + d + ', and to replace the value if they differ.'], again]],
+      'ed25519-fail': [['Start with the key, then the path.', 'Start with ' + svc.p + '.'], [
+        ['Compare the p= at ' + name + ' with the key ' + svc.t + ' signs with.', 'Ask ' + svc.p + ' for its current DKIM setting for ' + d + ', and compare it with the DNS setting.'],
+        ['If they match, look for anything that edits the message after signing.', 'If they match, ask ' + mailOwner + ' whether anything changes messages after they are sent.']]],
+    }[kind];
+    const who = W ? say(state, upFirst(W[0][0]), W[0][1], src) : null;
+    const steps = W ? W[1].map(x => say(state, x[0], x[1], src)) : [];
+
+    // A working key under 2048 bits is a caveat, not a failure.
+    const notes = [];
+    if (r.k === 'rsa' && r.bits >= 1024 && r.bits < 2048 && ['pass', 'pass-now', 'no-body'].includes(kind)) notes.push(say('caveat', 'The RSA key at ' + name + ' is ' + r.bits + ' bits. RFC 8301 3.2 says signers SHOULD use RSA keys of at least 2048 bits.', 'The key works, but it is shorter than mail systems now recommend. Ask ' + svc.p + ' for a longer one.', src));
+
+    // Plain values for the Technical details fold.
+    const facts = [];
+    if (r.name) facts.push(['Key name', r.name]);
+    if (r.dns) facts.push(['Lookup', dnsT + (r.dns.cname.length ? ', through CNAME ' + r.dns.cname.join(', then ') : '') + (r.dns.records > 1 ? ', ' + r.dns.records + ' TXT records' : '')]);
+    if (r.k) facts.push(['Key', (r.k === 'ed25519' ? 'k=ed25519' : 'k=rsa, ' + r.bits + ' bits') + (r.testing ? ', t=y' : '')]);
+    if (r.a) facts.push(['Signature', 'a=' + r.a + (r.c ? ', c=' + r.c : '') + (r.l !== null && r.l !== undefined ? ', l=' + r.l : '')]);
+    if (r.listed) facts.push(['Signed fields', r.signedCount + ' of the ' + r.listed + ' names in h= are present']);
+    if (r.body) facts.push(['Body hash', r.body.matches ? 'matches bh=' : r.body.short ? 'body shorter than l=' : 'computed ' + r.body.computed + ', which is not bh=']);
+
+    return { signature: r.signature, d: r.d, s: r.s, outcome: r.outcome, kind, state, cause, received: got, word: KEY_WORD[kind] || (cause ? 'Cause found' : 'Not checked'), line, recorded, who, steps, notes, facts, src };
+  }
+
+  function keyCheckOf(ctx, check) {
+    if (!check || !Array.isArray(check.results) || !check.results.length) return null;
+    const rcv = plainReceiver(ctx.receiver);
+    const intro = say('unknown',
+      'Checked ' + check.day + ' from ' + (check.source === 'file' ? 'the message file' : 'the pasted text') + '. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results ' + ctx.receiver + ' recorded at delivery are a separate fact and are not changed by this check.',
+      'Checked today, ' + check.day + '. What ' + rcv + ' recorded when the message arrived is shown separately.', []);
+    return { at: check.at, day: check.day, source: check.source === 'file' ? 'file' : 'paste', intro, results: check.results.filter(r => ctx.auth.signatures[r.signature]).map(r => keyResult(r, ctx, check)) };
+  }
+
   function build(ctx) {
     const { message, chain, auth, alignment, decoded } = ctx;
     const from = alignment.from;
@@ -441,8 +598,11 @@
     const listClaim = list.yes && list.resent && !vouched && list.preResult !== 'fail';
     list.unproven = listClaim && !list.pre.length && !list.broken.some(k => k.relaxed);
     list.take = listClaim && !list.unproven;
-    const c = Object.assign({}, ctx, { receiver, svc, fw, dm, list });
-    const out = { status: 'unknown', state: 'unknown', headline: null, cause: null, consequence: null, details: [], fixes: [], flags: [], limits: [], forwarded: { yes: fw.yes, by: fw.by, preForward: fw.yes ? { writer: fw.writer, result: fw.preResult, derived: !!fw.derived, text: preText(fw), src: fw.aarSrc } : null, src: fw.src } };
+    const kc = keyCheckOf({ auth, receiver, svc }, ctx.keyCheck);
+    // A signature the receiver failed, with a cause this check found.
+    const kcCause = (i) => { const x = kc && kc.results.find(r => r.signature === i); return x && x.cause && x.received === 'fail' ? Object.assign({ day: kc.day }, x) : null; };
+    const c = Object.assign({}, ctx, { receiver, svc, fw, dm, list, kcCause });
+    const out = { keyCheck: kc, status: 'unknown', state: 'unknown', headline: null, cause: null, consequence: null, details: [], fixes: [], flags: [], limits: [], forwarded: { yes: fw.yes, by: fw.by, preForward: fw.yes ? { writer: fw.writer, result: fw.preResult, derived: !!fw.derived, text: preText(fw), src: fw.aarSrc } : null, src: fw.src } };
     const finish = (status, headline, cause) => {
       out.status = status;
       out.state = status === 'pass' && dm.disagreement ? 'caveat' : STATE_OF[status];
@@ -489,7 +649,7 @@
     }
 
     const via = list.take ? 'list' : fw.yes ? 'forward' : '';
-    for (const k of auth.dkim) out.details.push(rowSentence(k, fd, via));
+    for (const k of auth.dkim) out.details.push(rowSentence(k, fd, via, kcCause(k.signature)));
     const spfRow = rowSentence(auth.spf, fd, via);
     out.details.push(spfRow);
     const allSrc = uniq(dm.src.concat(auth.computed.src));
@@ -611,7 +771,7 @@
     }
     return finish('fail', head, fw.yes && fw.preResult === 'fail'
       ? say('fail', 'The message was already failing before the forward: ' + fw.writer + ' recorded ' + (preText(fw) || 'no passing result') + '. ' + (auth.spf.result === 'pass' && !auth.spf.relaxed && auth.spf.domain ? 'SPF now passes only for the forwarder\'s domain ' + auth.spf.domain + ', which does not count for ' + fd + '.' : 'Nothing after the forward aligns with ' + fd + ' either.'), 'The message failed the check before it was ever forwarded, so the problem is with the sender, not the forward.', uniq(fw.aarSrc.concat(auth.spf.src)))
-      : causeOfFail(auth, fd, receiver, svc));
+      : causeOfFail(auth, fd, receiver, svc, kcCause));
   }
 
   // Microsoft's composite authentication is its own stated reason, so the
@@ -624,7 +784,7 @@
   }
 
   // The mechanism behind a failure, in a sentence or two.
-  function causeOfFail(auth, fd, receiver, svc) {
+  function causeOfFail(auth, fd, receiver, svc, kcCause) {
     const src = uniq(auth.dkim.flatMap(k => k.src).concat(auth.spf.src));
     const passedElsewhere = auth.dkim.filter(k => k.result === 'pass' && !k.relaxed).map(k => k.domain).concat(auth.spf.result === 'pass' && !auth.spf.relaxed && auth.spf.domain ? [auth.spf.domain] : []);
     const failedSig = auth.dkim.find(k => k.result === 'fail');
@@ -643,14 +803,17 @@
     if (!auth.dkim.length) parts.push('There is no DKIM signature, so DMARC depends on SPF alone.');
     const elsewhere = auth.dkim.filter(k => k.result === 'pass' && !k.relaxed).map(k => k.domain);
     if (elsewhere.length) parts.push('DKIM passed only for ' + joinList(elsewhere) + ', which is not ' + fd + '.');
-    if (failedSig) parts.push('The DKIM signature from ' + failedSig.domain + ' did not verify at ' + receiver + (failedSig.comments && failedSig.comments[0] ? ' (' + failedSig.comments[0] + ')' : '') + ': something changed the signed part of the message after signing, or the key in DNS does not match.');
+    const kc = failedSig && kcCause ? kcCause(failedSig.signature) : null;
+    if (kc) parts.push('The DKIM signature from ' + failedSig.domain + ' did not verify at ' + receiver + (failedSig.comments && failedSig.comments[0] ? ' (' + failedSig.comments[0] + ')' : '') + '. Checked today (' + kc.day + '): ' + kc.line.technical);
+    else if (failedSig) parts.push('The DKIM signature from ' + failedSig.domain + ' did not verify at ' + receiver + (failedSig.comments && failedSig.comments[0] ? ' (' + failedSig.comments[0] + ')' : '') + ': something changed the signed part of the message after signing, or the key in DNS does not match.');
     if (dkimErr) parts.push({ permerror: 'The DKIM signature from ' + dkimErr.domain + ' could not be checked at ' + receiver + ' (dkim=permerror): the key at ' + (dkimErr.selector || '<selector>') + '._domainkey.' + dkimErr.domain + ' is missing or unreadable, or the signature itself is malformed.', temperror: 'The DKIM signature from ' + dkimErr.domain + ' could not be checked at ' + receiver + ' (dkim=temperror): a temporary DNS error kept it from fetching the key.' }[dkimErr.result] || 'DKIM for ' + dkimErr.domain + ' returned ' + dkimErr.result + ' at ' + receiver + ', which is not a pass.');
     if (spf.result === 'fail') parts.push('The server that handed the message over' + ip + ' is not authorized by the SPF record of ' + spf.domain + ', as ' + receiver + ' reported.');
     if (spf.result === 'softfail') parts.push('The SPF record of ' + spf.domain + ' does not authorize the server that handed the message over' + ip + ' and asks receivers to treat it as suspicious rather than fail it outright (softfail), as ' + receiver + ' reported.');
     if (spfErr) parts.push({ none: spf.domain + ' publishes no SPF record, so SPF could not pass.', neutral: 'The SPF record of ' + spf.domain + ' makes no statement about the server that handed the message over (neutral), so SPF did not pass.', permerror: 'The SPF record of ' + spf.domain + ' could not be evaluated (permerror): it has a syntax error or needs more than 10 DNS lookups.', temperror: 'A temporary DNS error kept ' + receiver + ' from evaluating the SPF record of ' + spf.domain + ' (temperror).' }[spf.result]);
     if (spf.result === 'pass' && !spf.relaxed && spf.domain) parts.push('SPF passed only for ' + (/helo/i.test(spf.identity) ? 'the server name ' : '') + spf.domain + ', which is not ' + fd + '.');
     if (!parts.length) parts.push('Neither SPF nor DKIM produced a pass on a domain that aligns with ' + fd + '.');
-    const plain = failedSig ? 'The message was changed after it was signed, or the signature does not match the sender\'s published key.'
+    const plain = kc ? 'The signature from ' + failedSig.domain + ' did not check out when the message arrived. Checked today (' + kc.day + '): ' + kc.line.plain
+      : failedSig ? 'The message was changed after it was signed, or the signature does not match the sender\'s published key.'
       : dkimErr ? 'The signature on the message could not be checked, and nothing else proves it came from ' + fd + '.'
         : spf.result === 'softfail' ? 'The server that sent this is not on the sender\'s list of approved servers (SPF), and the list asks receivers to treat that as suspicious rather than refuse it.'
         : spfFailed ? 'The server that sent this is not on the sender\'s list of approved servers (SPF).'
@@ -663,7 +826,7 @@
     return cause;
   }
 
-  HA.finding = { build, forwardOf, joinList, STATUS_WORD };
+  HA.finding = { build, forwardOf, joinList, keyCheckOf, STATUS_WORD, KEY_UI };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.finding;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
