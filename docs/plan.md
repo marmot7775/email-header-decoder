@@ -157,7 +157,8 @@ is handed out only after that. Status as of 2026-11-13.
    case, with three new cases. Tests 266 to 269. Not done, by the
    doc's own order: its step 2 (a delivery sentence per case, for
    Neil to read) and step 3 (counting unread fields and hops over
-   the two real mail sets).
+   the two real mail sets). PR 54, main 49e6b7b, live 2026-11-13
+   as Worker version 2d813aba.
 
 7  The delivery sentence.                                   DONE
    From the next steps doc of 2026-11-13, its step 2. What the
@@ -172,7 +173,9 @@ is handed out only after that. Status as of 2026-11-13.
    to 276. Browser check in Chromium at 1280 and 375px, light and
    dark: no page errors, no sideways scroll, no new requests. Not
    done: the doc's step 3 (counting unread fields and hops over the
-   two real mail sets).
+   two real mail sets). PR 55, main 336c3dd, live 2026-11-13 as
+   Worker version fb13a7ac. The live page matched the build byte
+   for byte.
 
 Decisions
 
