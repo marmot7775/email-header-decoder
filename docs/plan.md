@@ -1,6 +1,6 @@
 Email Header Decoder, plan
 
-Five steps. Each ends with a report and a commit, and the next prompt
+Six steps. Each ends with a report and a commit, and the next prompt
 is handed out only after that. Status as of 2026-11-13.
 
 1  Repo, parser, hop timeline, page skeleton, tests, build.    DONE
@@ -144,6 +144,20 @@ is handed out only after that. Status as of 2026-11-13.
    main bcbda03, live 2026-11-13 as Worker version b3656417; the
    live page matched the build byte for byte and made one real
    lookup per press.
+
+6  Warnings under the headline.                             DONE
+   From the next steps doc of 2026-11-13, its step 1. A message
+   with a forged display name and a reply address at another
+   company read Passed and Nothing to fix, with the warnings five
+   headings down, and a spam rating sat inside two closed folds.
+   finding.signals now answers two questions right under the
+   headline: is the sender who it appears to be, and did the
+   receiving system treat it as spam. Copy report and Technical
+   details carry it, and docs/sentences.md lists it under every
+   case, with three new cases. Tests 266 to 269. Not done, by the
+   doc's own order: its step 2 (a delivery sentence per case, for
+   Neil to read) and step 3 (counting unread fields and hops over
+   the two real mail sets).
 
 Decisions
 
@@ -473,3 +487,20 @@ Decisions
             (KEY_UI) so the Simple word test reads them. The raw
             headers note now says only the signature check reads
             the body.
+2026-11-13  Signals block. Sender signals are the DMARC status (fail,
+            no record, error, or no single From domain) and every
+            flag; a forward the receiver vouched for is not one.
+            Spam signals are warn and fail items from filter groups
+            on the receiver's side. Left out: fields written before
+            custody, which the sender's side could write, and
+            Microsoft compauth, which is an authentication result.
+            No percentage and no score. Gmail writes no placement,
+            and a filter that left only values the page does not
+            rate has not answered, so both read cannot say. With no
+            receiver's results neither question is answered. The
+            nothing fired line says it covers the headers only and
+            that the page does not judge the message text, links, or
+            attachments; the doc's wording was reads no body, which
+            the signature check made untrue. Also worth knowing is
+            gone, since the flags now show in the block. The status
+            chip, the headline, and Nothing to fix are unchanged.

@@ -118,6 +118,17 @@
       '<span class="tv"><span class="sym" aria-hidden="true">' + (STATES[t.state] || STATES.unknown)[0] + '</span>' + esc(t.v) + '</span>' + (t.d ? '<span class="td">' + esc(t.d) + '</span>' : '') + '</button>';
   }
 
+  // Two questions under the headline, answered from the result: is the
+  // sender who it appears to be, and did the receiving system treat it as
+  // spam. Each signal is listed with its reason. Words come from finding.js.
+  const SIGNAL_UI = HA.finding.SIGNAL_UI;
+  function signalsHtml(sg) {
+    if (!sg) return '';
+    const row = (q, x) => '<div class="sig ' + x.state + '"><p class="sig-q">' + esc(q) + '</p><p class="sig-a"><span class="sym" aria-hidden="true">' + (STATES[x.state] || STATES.unknown)[0] + '</span>' + esc(x.answer.plain) + '</p>' +
+      (x.items.length ? '<ul class="sig-items">' + x.items.map(i => '<li>' + esc(i.plain) + '</li>').join('') + '</ul>' : '') + '</div>';
+    return '<div class="signals">' + row(SIGNAL_UI.sender, sg.sender) + row(SIGNAL_UI.spam, sg.spam) + '</div>' + (sg.scope ? '<p class="fpara sig-scope">' + esc(sg.scope.plain) + '</p>' : '');
+  }
+
   // The finding, top down: what happened, what to do, the four checks, why,
   // and what the DMARC setting did. Each part sits under a label that says
   // what it is. The evidence and the limits fold away under it.
@@ -128,19 +139,20 @@
     let h = '<h2 id="h-finding">Finding</h2><div class="fhead">' + chip(f.state, STATUS_WORD[f.status]) +
       '<p class="headline">' + esc(f.headline.plain) + '</p>' +
       '</div>';
+    h += signalsHtml(f.signals);
     if (f.fixes.length) h += '<h3>What to do</h3><ol class="steps">' + f.fixes.map(x => '<li><span class="txt">' + esc(x.plain) + '</span></li>').join('') + '</ol>';
     else if (f.state === 'pass') h += '<h3>What to do</h3><p class="fpara">Nothing to fix.</p>';
     h += '<h3>The checks</h3><div class="tiles">' + tiles().map(tileHtml).join('') + '</div>';
     h += keyCheckHtml();
     if (f.cause) h += '<h3>Why</h3>' + para(f.cause);
     if (f.consequence) h += '<h3>What the DMARC setting did</h3>' + para(f.consequence);
-    if (f.flags.length) h += '<h3>Also worth knowing</h3>' + says(f.flags, 'plain');
     // The same finding in the protocol's terms, with the lines it came from.
     const tp = (s) => s ? '<p class="fpara">' + esc(s.technical) + srcBtn(s.src) + '</p>' : '';
     h += '<details class="more" id="finding-more"><summary>Technical details</summary>';
     h += tp(f.headline) + tp(f.cause) + tp(f.consequence);
     if (f.fixes.length) h += '<h3>Fixes</h3>' + says(f.fixes);
     if (f.details.length) h += '<h3>Evidence</h3>' + says(f.details);
+    if (f.signals) h += '<h3>Sender and spam signals</h3>' + says([f.signals.sender.answer].concat(f.signals.sender.items, [f.signals.spam.answer], f.signals.spam.items));
     if (f.limits.length) h += '<h3>What these headers cannot show</h3>' + says(f.limits);
     h += '</details>';
     $('finding').innerHTML = h;
@@ -208,6 +220,8 @@
     if (m.date) L.push('Date: ' + m.date.text);
     L.push('', STATUS_WORD[f.status] + ': ' + f.headline.plain);
     if (f.headline.technical !== f.headline.plain) L.push('Technical: ' + f.headline.technical);
+    if (f.signals) for (const [q, x] of [[SIGNAL_UI.sender, f.signals.sender], [SIGNAL_UI.spam, f.signals.spam]]) { L.push('', q + ' ' + x.answer.plain); x.items.forEach(i => L.push('- ' + i.plain)); }
+    if (f.signals && f.signals.scope) L.push('', f.signals.scope.plain);
     if (f.fixes.length) { L.push('', 'What to do:'); f.fixes.forEach(x => L.push('- ' + x.plain)); }
     else if (f.state === 'pass') L.push('', 'What to do: Nothing to fix.');
     L.push('', 'The checks:');

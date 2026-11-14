@@ -30,6 +30,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 ## pass by SPF
 
 Plain headline: This message passed the sender check (DMARC). It came from a server allowed by shop.example, the domain in the From address.
@@ -55,6 +67,18 @@ Fix 1, technical: DMARC depends on SPF alone, and a forward breaks SPF. Turn on 
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 ## pass by both
 
@@ -86,6 +110,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 ## pass reported with nothing aligned
 
 Plain headline: This message passed the sender check (DMARC), but its own checks don't match shop.example. The receiving system passed it for a reason the headers don't show.
@@ -111,6 +147,18 @@ Fix 1, technical: DMARC depends on SPF alone, and a forward breaks SPF. Turn on 
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 ## pass computed, no DMARC result reported
 
@@ -142,6 +190,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 ## fail with no DKIM signature
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sender's list of approved servers gave no clear answer. Nothing proved it came from shop.example.
@@ -163,6 +223,18 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## fail with DKIM unaligned
 
@@ -198,6 +270,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail with DKIM broken in transit
 
 Plain headline: This message failed the sender check (DMARC). The signature didn't check out and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
@@ -227,6 +311,18 @@ Fix 1, technical: The signature from d=shop.example broke between signing and mx
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## fail with SPF for the bounce domain only
 
@@ -258,6 +354,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail with SPF for HELO only
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server called itself o1.mailer.example. Nothing that checked out matches shop.example, the domain in the From address.
@@ -283,6 +391,18 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## fail with SPF fail
 
@@ -310,6 +430,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail with SPF softfail
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -335,6 +467,18 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## fail with SPF none
 
@@ -362,6 +506,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail with SPF permerror
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sender's list of approved servers is set up wrong, so it couldn't be read. Nothing proved it came from shop.example.
@@ -388,6 +544,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail with SPF temperror
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sender's list of approved servers couldn't be read this time. Nothing proved it came from shop.example.
@@ -409,6 +577,18 @@ Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. 
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## fail with DKIM permerror
 
@@ -440,6 +620,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail with DKIM temperror
 
 Plain headline: This message failed the sender check (DMARC). The signature couldn't be checked and it came from a server that bounce.mailer.example allows. Nothing that checked out matches shop.example, the domain in the From address.
@@ -470,6 +662,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail computed, no DMARC result reported
 
 Plain headline: The receiving system didn't record the sender check, so this page worked it out. This message fails the sender check (DMARC). It was signed by mailer.example and shop.example publishes no list of approved servers. Nothing that checked out matches shop.example, the domain in the From address.
@@ -499,6 +703,18 @@ Fix 2, technical: Publish an SPF record for shop.example that lists the servers 
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## fail through a mailing list
 
@@ -534,6 +750,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail through a mailing list that kept its record
 
 Plain headline: This message failed the sender check (DMARC) because it came through the mailing list club.list.example. The list changed the message, which broke the sender's signature, and sent it on under its own domain, list.example, not shop.example.
@@ -568,6 +796,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail with the receiver judging differently
 
 Plain headline: This message failed the sender check (DMARC) even though it was signed by shop.example. The receiving system reported a failure the headers don't explain.
@@ -597,6 +837,18 @@ Fix 1, technical: Nothing in these headers points at a single change. Compare wi
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## strict alignment suspected
 
@@ -632,6 +884,18 @@ Limit 2, plain: This page works out where the sender's organization begins from 
 
 Limit 2, technical: The organizational domain shop.example comes from a short built in suffix list, not from DNS or the full Public Suffix List that receivers use. Relaxed alignment here rests on it.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## dmarc none, would pass
 
 Plain headline: shop.example has no DMARC setting, so the sender check didn't apply. With one, this message would pass.
@@ -665,6 +929,18 @@ Fix 2, technical: Second, after DKIM: set a custom Return-Path (bounce) domain u
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: There's a reason to look twice.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: shop.example has no DMARC setting, so the headers can't prove the message came from shop.example.
+
+Sender signal 1, technical: shop.example publishes no DMARC record, so no receiver is told to tie SPF or DKIM to the From domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## dmarc none, would fail
 
@@ -700,6 +976,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: There's a reason to look twice.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: shop.example has no DMARC setting, so the headers can't prove the message came from shop.example.
+
+Sender signal 1, technical: shop.example publishes no DMARC record, so no receiver is told to tie SPF or DKIM to the From domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## dmarc bestguesspass
 
 Plain headline: shop.example has no DMARC setting, so the sender check didn't apply. The message would pass if the domain had one.
@@ -730,6 +1018,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: There's a reason to look twice.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: shop.example has no DMARC setting, so the headers can't prove the message came from shop.example.
+
+Sender signal 1, technical: shop.example publishes no DMARC record, so no receiver is told to tie SPF or DKIM to the From domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## dmarc permerror
 
 Plain headline: The sender check couldn't run because the DMARC record of shop.example is written wrong.
@@ -757,6 +1057,18 @@ Fix 2, technical: Turn on DKIM signing for shop.example at the sending service. 
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: There's a reason to look twice.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: The sender check (DMARC) couldn't run for shop.example, so the headers can't prove who sent this.
+
+Sender signal 1, technical: DMARC could not be evaluated for shop.example, so the result says nothing about the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## dmarc temperror
 
@@ -790,6 +1102,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: There's a reason to look twice.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: The sender check (DMARC) couldn't run for shop.example, so the headers can't prove who sent this.
+
+Sender signal 1, technical: DMARC could not be evaluated for shop.example, so the result says nothing about the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## dmarc result outside RFC 9989
 
 Plain headline: The receiving system recorded a sender check result this page doesn't know.
@@ -813,6 +1137,14 @@ Fix 1, technical: Get the same message from a Gmail or Microsoft 365 mailbox; bo
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: These headers can't say. They hold no check results from a receiving mail system.
+
+Sender signals, technical: No receiver's results are in these headers, so nothing here speaks for or against the author.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## forwarded with arc=pass
 
@@ -852,6 +1184,18 @@ Limit 2, plain: This page can't confirm the forwarding service's own record, so 
 
 Limit 2, technical: ARC seals are not verified here, so the results before the forward are the forwarder's own record; mx.receiver.example reported arc=pass, which means it did verify them.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed before the forward for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 ## forwarded, noted but not relied on
 
 Plain headline: This message failed the sender check (DMARC). The signature didn't check out and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -890,6 +1234,18 @@ Limit 2, plain: This page can't confirm the forwarding service's own record, so 
 
 Limit 2, technical: ARC seals are not verified here, so the results before the forward are the forwarder's own record.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## forwarded, already failing before the forward
 
 Plain headline: This message failed the sender check (DMARC). The signature wasn't checked and it came from a server that forward.example allows. Nothing that checked out matches shop.example, the domain in the From address.
@@ -924,6 +1280,18 @@ Limit 2, plain: This page can't confirm the forwarding service's own record, so 
 
 Limit 2, technical: ARC seals are not verified here, so the results before the forward are the forwarder's own record; mx.receiver.example reported arc=pass, which means it did verify them.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## pass reported with DKIM nothing backs
 
 Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address, and came from a server it allows.
@@ -954,6 +1322,18 @@ Limit 2, plain: The sender could have written these check results. They say the 
 
 Limit 2, technical: The only trusted Authentication-Results field (authserv-id mx.receiver.example) sits below the receiver's only Received stamp, where the sender could have written it. It reports dkim=pass, but the headers hold no DKIM-Signature, so nothing here backs that pass.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 ## no Authentication-Results
 
 Plain headline: The receiving mail system didn't record its checks in these headers.
@@ -974,6 +1354,14 @@ Fix 1, plain: Send the same message to a Gmail or Outlook mailbox and copy the h
 
 Fix 1, technical: Get the same message from a Gmail or Microsoft 365 mailbox; both record SPF, DKIM and DMARC results.
 
+Sender signals, plain: These headers can't say. They hold no check results from a receiving mail system.
+
+Sender signals, technical: No receiver's results are in these headers, so nothing here speaks for or against the author.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## Authentication-Results with no results
 
 Plain headline: The receiving mail system recorded no checks for this message.
@@ -993,6 +1381,14 @@ Fix 1, technical: Get the same message from a Gmail or Microsoft 365 mailbox; bo
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: These headers can't say. They hold no check results from a receiving mail system.
+
+Sender signals, technical: No receiver's results are in these headers, so nothing here speaks for or against the author.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## untrusted Authentication-Results claims a pass
 
@@ -1028,6 +1424,22 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: Two signals say the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Sender signal 2, plain: One set of results in the headers claims the message passed, but the receiving system didn't write it, so it's ignored.
+
+Sender signal 2, technical: An Authentication-Results field the receiver did not write claims dmarc=pass. It is ignored here: the sender or a hop before the receiver could have written it.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## no Received
 
 Plain headline: This is the sender's own copy, so no mail system has checked it yet.
@@ -1048,6 +1460,14 @@ Fix 1, plain: These headers come from a sent or draft copy. Open the message in 
 
 Fix 1, technical: Paste the headers of the copy the recipient received. This copy did not pass through a receiving server, so nothing was checked.
 
+Sender signals, plain: These headers can't say. They hold no check results from a receiving mail system.
+
+Sender signals, technical: No receiver's results are in these headers, so nothing here speaks for or against the author.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## two From fields
 
 Plain headline: This page can't check who sent the message, because the message names more than one sender.
@@ -1063,6 +1483,18 @@ Policy: none written
 Fix 1, plain: Don't trust this message. It names more than one sender, which is a common trick in forged mail.
 
 Fix 1, technical: Treat the message as suspicious: with no single From domain, DMARC cannot protect the recipient.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: The message names more than one sender, which is a common trick in forged mail.
+
+Sender signal 1, technical: There is no single From domain, so DMARC protects no author domain here.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## From naming two domains
 
@@ -1080,6 +1512,18 @@ Fix 1, plain: Don't trust this message. It names more than one sender, which is 
 
 Fix 1, technical: Treat the message as suspicious: with no single From domain, DMARC cannot protect the recipient.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: The message names more than one sender, which is a common trick in forged mail.
+
+Sender signal 1, technical: There is no single From domain, so DMARC protects no author domain here.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## no From
 
 Plain headline: This page can't check who sent the message, because the sender's address is missing.
@@ -1095,6 +1539,14 @@ Policy: none written
 Fix 1, plain: The sender's address is missing, so copy the full headers again and make sure the From line is included.
 
 Fix 1, technical: Paste the complete header block; there is no usable From address to check against.
+
+Sender signals, plain: These headers can't say. They hold no check results from a receiving mail system.
+
+Sender signals, technical: No receiver's results are in these headers, so nothing here speaks for or against the author.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## display name impersonation
 
@@ -1126,6 +1578,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: The name shown for the sender contains an address at bank.example, but the message comes from notify.example. Forged mail often does this.
+
+Sender signal 1, technical: The display name shows an address at bank.example, while the real From domain is notify.example. That is a common impersonation layout.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## Microsoft action oreject
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1151,6 +1615,18 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## Microsoft action quarantine
 
@@ -1186,6 +1662,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## Microsoft action none
 
 Plain headline: This message failed the sender check (DMARC). It was signed by mailer.example and it came from a server that bounce.mailer.example allows. Neither of those is shop.example, the domain in the From address.
@@ -1220,6 +1708,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## compauth 0xx, explicit fail
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1246,6 +1746,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## compauth 1xx, pass
 
 Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address, and came from a server it allows.
@@ -1271,6 +1783,18 @@ Detail 2, technical: SPF passed for shop.example, which aligns with shop.example
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 ## compauth 2xx, soft pass
 
@@ -1306,6 +1830,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: There's a reason to look twice.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: shop.example has no DMARC setting, so the headers can't prove the message came from shop.example.
+
+Sender signal 1, technical: shop.example publishes no DMARC record, so no receiver is told to tie SPF or DKIM to the From domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## compauth 3xx, not checked
 
 Plain headline: shop.example has no DMARC setting, so the sender check didn't apply. With one, this message would fail.
@@ -1340,6 +1876,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: There's a reason to look twice.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: shop.example has no DMARC setting, so the headers can't prove the message came from shop.example.
+
+Sender signal 1, technical: shop.example publishes no DMARC record, so no receiver is told to tie SPF or DKIM to the From domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## compauth 4xx, bypassed
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1365,6 +1913,18 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## compauth 5xx, bounce not enforced
 
@@ -1392,6 +1952,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## compauth 6xx, implicit fail
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1417,6 +1989,18 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## compauth 7xx, history pass
 
@@ -1444,6 +2028,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## compauth 8xx, not in the table
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1470,6 +2066,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## compauth 9xx, complex routing
 
 Plain headline: This message failed the sender check (DMARC). It carried no signature and the sending server isn't on the sender's list of approved servers. Nothing proved it came from shop.example.
@@ -1495,6 +2103,18 @@ Fix 2, technical: If this is your mail, add the sending service to the SPF recor
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 ## pass by SPF for the HELO identity, null Return-Path
 
@@ -1525,6 +2145,18 @@ Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, wi
 Limit 2, plain: This page works out where the sender's organization begins from its own short list, so the looser domain match is its best reading, not a certainty.
 
 Limit 2, technical: The organizational domain shop.example comes from a short built in suffix list, not from DNS or the full Public Suffix List that receivers use. Relaxed alignment here rests on it.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 ## pass by DKIM known only by i=
 
@@ -1564,6 +2196,18 @@ Limit 3, plain: The sender could have written these check results. They say the 
 
 Limit 3, technical: The only trusted Authentication-Results field (authserv-id mx.receiver.example) sits below the receiver's only Received stamp, where the sender could have written it. It reports dkim=pass, but the headers hold no DKIM-Signature, so nothing here backs that pass.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 ## fail with DKIM known only by i=
 
 Plain headline: This message failed the sender check (DMARC) even though it was signed on behalf of mail.shop.example. The receiving system reported a failure the headers don't explain.
@@ -1602,6 +2246,18 @@ Limit 3, plain: The sender could have written these check results. They say the 
 
 Limit 3, technical: The only trusted Authentication-Results field (authserv-id mx.receiver.example) sits below the receiver's only Received stamp, where the sender could have written it. It reports dkim=pass, but the headers hold no DKIM-Signature, so nothing here backs that pass.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## pass by an rsa-sha1 signature
 
 Plain headline: This message passed the sender check (DMARC). It was signed by shop.example with an outdated method (rsa-sha1) that mail systems should no longer accept. That matches shop.example, the domain in the From address.
@@ -1635,6 +2291,18 @@ Fix 2, technical: Alignment comes from DKIM alone, which is enough. For SPF to a
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 ## fail with a list claim and nothing from before the list
 
@@ -1670,6 +2338,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 ## fail with a hidden character in the From domain
 
 Plain headline: This message failed the sender check (DMARC). It was signed by shop.example and it came from a server that bounce.mailer.example allows. Neither of those is sh<U+200B>op.example, the domain in the From address.
@@ -1703,6 +2383,164 @@ Flag 1, technical: The From domain sh<U+200B>op.example holds U+200B, an invisib
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: Two signals say the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from sh<U+200B>op.example.
+
+Sender signal 1, technical: DMARC failed for the From domain sh<U+200B>op.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Sender signal 2, plain: The sender's address holds a hidden character, so it isn't shop.example even though it looks like it. No real address can be spelled that way, so this message is forged.
+
+Sender signal 2, technical: The From domain sh<U+200B>op.example holds U+200B, an invisible character, so it is not shop.example. IDNA (RFC 5892) does not allow it here, so no registered domain is spelled that way.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+## signals: pass with a forged display name and a reply address elsewhere
+
+Plain headline: This message passed the sender check (DMARC). It was signed by notify.example, the domain in the From address, and came from a server it allows.
+
+Technical headline: DMARC at mx.receiver.example passed because DKIM d=notify.example s=n1 passed and SPF passed for the Return-Path domain notify.example (RFC5321.MailFrom), and both align with the From domain notify.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was.
+
+Cause, technical: For notify.example, both SPF and DKIM pass and align, so the message still passes after a forward that breaks SPF.
+
+Policy, plain: The headers don't say what notify.example asks mail providers to do with fake mail.
+
+Policy, technical: mx.receiver.example did not quote the DMARC policy of notify.example, so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.
+
+Detail 1, plain: The message was signed by notify.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=notify.example s=n1, which aligns with notify.example.
+
+Detail 2, plain: The sending server is approved by notify.example, which belongs to the sender.
+
+Detail 2, technical: SPF passed for notify.example, which aligns with notify.example.
+
+Flag 1, plain: The name shown for the sender contains an address at bank.example, but the message comes from notify.example. Forged mail often does this.
+
+Flag 1, technical: The display name shows an address at bank.example, while the real From domain is notify.example. That is a common impersonation layout.
+
+Flag 2, plain: Replies go to a different company than the one in the From address. Check that you expected that.
+
+Flag 2, technical: Replies go to other.example, a different organization from notify.example. Normal for some platforms and help desks; a phishing sign when unexpected.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: Two signals say the author may not be who the From line shows.
+
+Sender signal 1, plain: The name shown for the sender contains an address at bank.example, but the message comes from notify.example. Forged mail often does this.
+
+Sender signal 1, technical: The display name shows an address at bank.example, while the real From domain is notify.example. That is a common impersonation layout.
+
+Sender signal 2, plain: Replies go to a different company than the one in the From address. Check that you expected that.
+
+Sender signal 2, technical: Replies go to other.example, a different organization from notify.example. Normal for some platforms and help desks; a phishing sign when unexpected.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+## signals: pass that Microsoft rated as spam
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address, and came from a server it allows.
+
+Technical headline: DMARC at Microsoft 365 passed because DKIM d=shop.example passed and SPF passed for the Return-Path domain shop.example (RFC5321.MailFrom), and both align with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was. Microsoft's own sender check still passed it.
+
+Cause, technical: For shop.example, both SPF and DKIM pass and align, so the message still passes after a forward that breaks SPF. Microsoft recorded compauth=pass reason=100, meaning SPF or DKIM passed and aligns with the From domain.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: Microsoft recorded action=none; the message passed, so no action was needed.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved by shop.example, which belongs to the sender.
+
+Detail 2, technical: SPF passed for shop.example, which aligns with shop.example.
+
+Detail 3, plain: Microsoft 365: Filed as spam.
+
+Detail 3, technical: Microsoft 365, CAT SPM: Threat category: Spam.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: Yes. The receiving system's filter rated it as spam or as a risk.
+
+Spam signals, technical: Microsoft 365 recorded three results against this message.
+
+Spam signal 1, plain: Microsoft 365: Filed as spam.
+
+Spam signal 1, technical: Microsoft 365, CAT SPM: Threat category: Spam.
+
+Spam signal 2, plain: Microsoft 365: Microsoft's spam filter decided this is spam.
+
+Spam signal 2, technical: Microsoft 365, SFV SPM: Spam filtering marked it as spam.
+
+Spam signal 3, plain: Microsoft 365: Rated as spam.
+
+Spam signal 3, technical: Microsoft 365, SCL 5: Spam confidence level 5: spam.
+
+## signals: pass with a filter result and nothing against it
+
+Plain headline: This message passed the sender check (DMARC). It was signed by shop.example, the domain in the From address, and came from a server it allows.
+
+Technical headline: DMARC at Microsoft 365 passed because DKIM d=shop.example passed and SPF passed for the Return-Path domain shop.example (RFC5321.MailFrom), and both align with the From domain shop.example (RFC5322.From).
+
+Cause, plain: A message passes when it's signed by, or sent for, the domain in its From address, and this one was. Microsoft's own sender check still passed it.
+
+Cause, technical: For shop.example, both SPF and DKIM pass and align, so the message still passes after a forward that breaks SPF. Microsoft recorded compauth=pass reason=100, meaning SPF or DKIM passed and aligns with the From domain.
+
+Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
+
+Policy, technical: Microsoft recorded action=none; the message passed, so no action was needed.
+
+Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
+
+Detail 1, technical: DKIM passed for d=shop.example, which aligns with shop.example.
+
+Detail 2, plain: The sending server is approved by shop.example, which belongs to the sender.
+
+Detail 2, technical: SPF passed for shop.example, which aligns with shop.example.
+
+Detail 3, plain: Microsoft 365: No threat was detected.
+
+Detail 3, technical: Microsoft 365, CAT NONE: Threat category: No threat policy applied.
+
+Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
+
+Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: No. The receiving system's filter recorded nothing against it.
+
+Spam signals, technical: Microsoft 365 recorded no spam, bulk or phishing result against this message.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 ## signature check: no key found
 
@@ -1741,6 +2579,18 @@ Fix 3, technical: Send a new message and verify it again. Receivers that already
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -1810,6 +2660,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -1877,6 +2739,18 @@ Fix 3, technical: Send a new message and verify it again. Receivers that already
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -1946,6 +2820,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2014,6 +2900,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2074,6 +2972,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2118,6 +3028,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2161,6 +3083,18 @@ Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to a
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -2209,6 +3143,18 @@ Fix 1, technical: The signature from d=shop.example broke between signing and mx
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -2261,6 +3207,18 @@ Fix 3, technical: Send a message straight to a mailbox with no forward and verif
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -2322,6 +3280,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2365,6 +3335,18 @@ Fix 1, technical: The signature from d=shop.example broke between signing and mx
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -2417,6 +3399,18 @@ Fix 3, technical: Send a message straight to a mailbox with no forward and verif
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -2486,6 +3480,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2550,6 +3556,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the message file. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2606,6 +3624,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Maybe not. Treat this message with care.
+
+Sender signals, technical: One signal says the author may not be who the From line shows.
+
+Sender signal 1, plain: This message failed the sender check (DMARC), so nothing proves it came from shop.example.
+
+Sender signal 1, technical: DMARC failed for the From domain shop.example (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2649,6 +3679,18 @@ Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to a
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -2698,6 +3740,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2741,6 +3795,18 @@ Fix 1, technical: Alignment comes from DKIM alone, which is enough. For SPF to a
 Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMARC setting can demand an exact match, and the headers don't show that setting.
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
+
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
 
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
@@ -2786,6 +3852,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2830,6 +3908,18 @@ Limit 1, plain: This page assumes the usual, looser domain match. A domain's DMA
 
 Limit 1, technical: Alignment is computed in relaxed mode, the DMARC default, with strict mode beside it. adkim and aspf are set in the DMARC record, which is not in the headers.
 
+Sender signals, plain: Yes, as far as the headers show.
+
+Sender signals, technical: No flag fired: DMARC passed for shop.example, and the display name, Reply-To, and From domain raise nothing.
+
+Spam signals, plain: These headers can't say. They carry no spam rating from the receiving system that this page can read.
+
+Spam signals, technical: No spam filter result that this page can read was written by the receiver.
+
+Signals, nothing fired, plain: Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn't judge the message text, links, or attachments.
+
+Signals, nothing fired, technical: Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.
+
 Signature check, plain: Checked today, November 13, 2026. What the recipient's email provider recorded when the message arrived is shown separately.
 
 Signature check, technical: Checked November 13, 2026 from the pasted text. Each key was looked up over DNS over HTTPS at cloudflare-dns.com, and each signature was verified in this browser (RFC 6376 3.7). The results mx.receiver.example recorded at delivery are a separate fact and are not changed by this check.
@@ -2843,6 +3933,12 @@ Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass f
 Signature check, today, plain: This browser can't check this kind of signature. Try the current version of Chrome, Firefox, or Safari.
 
 Signature check, today, technical: This browser's WebCrypto has no Ed25519, so the ed25519-sha256 signature (RFC 8463) was not verified. The key at s1._domainkey.shop.example was found.
+
+## Signal questions
+
+sender: Is the sender who it appears to be?
+
+spam: Did the receiving system treat it as spam?
 
 ## Signature check labels
 

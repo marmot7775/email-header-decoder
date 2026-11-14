@@ -133,7 +133,8 @@ src/dkimkey.js    The signature check: the DKIM key lookup over DNS
 src/finding.js    The sentence. Status, headline, cause, policy
                   consequence, details, fixes, flags, and limits.
                   Also every word of the signature check result
-                  (keyCheckOf) and its button (KEY_UI).
+                  (keyCheckOf) and its button (KEY_UI), and the two
+                  questions under the headline (signalsOf).
 src/analyze.js    analyze(text, opts) returns one plain result
                   object. The page renders it; the tests assert on
                   it. opts.keyCheck carries a signature check.
@@ -257,6 +258,18 @@ mailbox provider.
 
 RFC 8058 one-click passes only when a passing DKIM signature
 lists both List-Unsubscribe fields in h=.
+
+The signals block (2026-11-13) sits under the headline and answers
+two questions from results the page already has: is the sender who
+it appears to be (the DMARC status and the flags), and did the
+receiving system treat it as spam (warn and fail items from the
+receiver's own filter). Each signal is named with its reason, and
+there is no score. Filter fields written before custody and
+Microsoft compauth are left out of the spam question. Gmail, or a
+filter that left nothing this page rates, is cannot say, not a
+clean result. When nothing fires the block says nothing in the
+headers points to forgery or spam, and that it covers the headers
+only. The flags show there and no longer under Also worth knowing.
 
 The signature check (2026-11-13). The button reads Find out why the
 signature failed when the receiver recorded a DKIM result that is

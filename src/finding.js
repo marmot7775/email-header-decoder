@@ -573,6 +573,51 @@
     return { at: check.at, day: check.day, source: check.source === 'file' ? 'file' : 'paste', intro, results: check.results.filter(r => ctx.auth.signatures[r.signature]).map(r => keyResult(r, ctx, check)) };
   }
 
+  // The block under the headline. It answers two questions from results
+  // the page already has, so a forged display name or a spam rating does
+  // not sit under a Passed headline. Is the sender who it appears to be
+  // (the DMARC status and the flags)? Did the receiving system treat it
+  // as spam (what the receiver's own filter recorded)? Each signal is
+  // named with its reason. No score. Filter fields written before the
+  // receiver took custody are the sender's side's to write and are left
+  // out, and Microsoft compauth is an authentication result, not a spam
+  // rating. The questions live here so the Simple word test reads them.
+  const SIGNAL_UI = { sender: 'Is the sender who it appears to be?', spam: 'Did the receiving system treat it as spam?' };
+  function signalsOf(ctx, status, flags) {
+    const { decoded, chain, alignment } = ctx;
+    const fd = alignment.from.domain;
+    const who = [];
+    if (status === 'fail') who.push(say('fail', 'DMARC failed for the From domain ' + fd + ' (RFC5322.From), so no aligned SPF or DKIM pass vouches for the author domain.', 'This message failed the sender check (DMARC), so nothing proves it came from ' + fd + '.', ctx.dm.src));
+    else if (status === 'none') who.push(say('caveat', fd + ' publishes no DMARC record, so no receiver is told to tie SPF or DKIM to the From domain.', fd + ' has no DMARC setting, so the headers can\'t prove the message came from ' + fd + '.', ctx.dm.src));
+    else if (status === 'error') who.push(say('caveat', 'DMARC could not be evaluated for ' + fd + ', so the result says nothing about the author domain.', 'The sender check (DMARC) couldn\'t run for ' + fd + ', so the headers can\'t prove who sent this.', ctx.dm.src));
+    else if (status === 'unknown' && (ctx.why === 'two-from' || ctx.why === 'multi-domain')) who.push(say('fail', 'There is no single From domain, so DMARC protects no author domain here.', 'The message names more than one sender, which is a common trick in forged mail.', alignment.from.src));
+    for (const x of flags) who.push(x);
+    const blind = status === 'unknown' && !who.length;
+    const worst = (list) => ['fail', 'caveat'].find(st => list.some(x => x.state === st)) || 'unknown';
+    const sender = who.length
+      ? { state: worst(who), answer: say(worst(who), numWord(who.length).replace(/^./, c => c.toUpperCase()) + ' signal' + (who.length === 1 ? ' says' : 's say') + ' the author may not be who the From line shows.', who.some(x => x.state === 'fail') ? 'Maybe not. Treat this message with care.' : 'There is a reason to look twice.', uniq(who.flatMap(x => x.src))), items: who }
+      : blind ? { state: 'unknown', answer: say('unknown', 'No receiver\'s results are in these headers, so nothing here speaks for or against the author.', 'These headers can\'t say. They hold no check results from a receiving mail system.', []), items: [] }
+        : { state: 'pass', answer: say('pass', 'No flag fired: DMARC ' + (status === 'forwarded' ? 'passed before the forward' : 'passed') + ' for ' + fd + ', and the display name, Reply-To, and From domain raise nothing.', 'Yes, as far as the headers show.', alignment.from.src), items: [] };
+
+    const mine = decoded.filters.filter(g => g.side === 'receiver');
+    const hits = mine.flatMap(g => g.items.filter(i => (i.level === 'warn' || i.level === 'fail') && i.key !== 'compauth').map(i => say(LEVEL_STATE[i.level], g.name + ', ' + i.key + ' ' + i.raw + ': ' + i.technical, g.name + ': ' + i.plain, i.src)));
+    const names = joinList(Array.from(new Set(mine.filter(g => g.items.some(i => (i.level === 'warn' || i.level === 'fail') && i.key !== 'compauth')).map(g => g.name))));
+    // A filter that left only values this page gives no rating to has not
+    // answered the question.
+    const rated = mine.some(g => g.items.some(i => i.key !== 'compauth' && i.level !== 'info'));
+    const gmail = chain.trust.operator === 'Google';
+    const spam = hits.length
+      ? { state: worst(hits), answer: say(worst(hits), names + ' recorded ' + numWord(hits.length) + ' result' + (hits.length === 1 ? '' : 's') + ' against this message.', hits.some(x => x.state === 'fail') ? 'Yes. The receiving system\'s filter rated it as spam or as a risk.' : 'Partly. The receiving system\'s filter marked it, but not as spam outright.', uniq(hits.flatMap(x => x.src))), items: hits }
+      : gmail ? { state: 'unknown', answer: say('unknown', 'Gmail writes no spam, Promotions or inbox placement decision into headers.', 'These headers can\'t say. Gmail doesn\'t record in the headers whether it put a message in spam.', []), items: [] }
+        : !rated ? { state: 'unknown', answer: say('unknown', 'No spam filter result that this page can read was written by the receiver.', 'These headers can\'t say. They carry no spam rating from the receiving system that this page can read.', []), items: [] }
+          : { state: 'pass', answer: say('pass', joinList(mine.map(g => g.name)) + ' recorded no spam, bulk or phishing result against this message.', 'No. The receiving system\'s filter recorded nothing against it.', uniq(mine.flatMap(g => g.src))), items: [] };
+
+    // Nothing fired: say so, and say how far that reaches.
+    const quiet = !who.length && !hits.length && !blind;
+    const scope = quiet ? say('unknown', 'Nothing in the headers points to forgery or spam. That is a statement about the headers only: the body, links and attachments are not examined.', 'Nothing in the headers points to forgery or spam. That covers the headers only, because this page doesn\'t judge the message text, links, or attachments.', []) : null;
+    return { sender, spam, scope };
+  }
+
   function build(ctx) {
     const { message, chain, auth, alignment, decoded } = ctx;
     const from = alignment.from;
@@ -612,6 +657,7 @@
       out.fixes = fixesOf(status, c);
       out.limits = from.defined && auth.primary >= 0 ? limitsOf(c) : [];
       out.flags = flagsOf(Object.assign({ status }, c));
+      out.signals = signalsOf(c, status, out.flags);
       // A From domain that cannot exist has no owner to fix anything.
       const fake = out.flags.find(x => x.lookalike);
       if (fake) out.fixes = [say('fail', 'Treat the message as phishing: the From domain cannot be registered, so nobody owns it to set up DMARC. Report it to your mail provider and do not act on its links or requests.', 'Treat this as a scam. The sender\'s address is fake, so there is nothing to set up. Report it as phishing and don\'t click its links or reply.', fake.src)];
@@ -826,7 +872,7 @@
     return cause;
   }
 
-  HA.finding = { build, forwardOf, joinList, keyCheckOf, STATUS_WORD, KEY_UI };
+  HA.finding = { build, forwardOf, joinList, keyCheckOf, STATUS_WORD, KEY_UI, SIGNAL_UI };
   // Node: require() returns this layer; the browser reads HA instead.
   if (typeof module !== 'undefined' && module.exports) module.exports = HA.finding;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -17,6 +17,11 @@ Live at https://headers.dns-audit.com, part of
 
 - **The finding comes first.** One sentence names the cause, then
   the fix follows as steps. A pass says there's nothing to fix.
+- **Warnings sit under the headline.** Two questions are answered
+  there from the headers: is the sender who it appears to be, and
+  did the receiving system treat it as spam. A forged display name
+  or a spam rating shows even when DMARC passed. There's no score,
+  and each signal comes with its reason.
 - **One output, two depths.** The finding is in everyday words and
   names each term it uses. Technical details under it give the same
   finding in the protocol's own terms, with the raw lines it came
