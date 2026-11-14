@@ -37,6 +37,9 @@ First release
    DMARC failed because DKIM signed as mailer.example and SPF
    checked bounce.mailer.example, so neither aligned with the
    From domain. Then the fix in plain words, as numbered steps.
+   Under the cause, what the DMARC setting did to this message,
+   then what the result means for mail from here on, written only
+   where an RFC or a provider's published sender rules say so.
 3. Four check tiles under the finding: SPF, DKIM, DMARC, and
    delivery time, each with the question it answers. A forward the
    finding blames shows as failed after the forward, passed before.

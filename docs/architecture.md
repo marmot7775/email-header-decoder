@@ -95,8 +95,11 @@ src/dkimkey.js   The signature check. lookup() asks
                  name that is not DNS labels is never sent.
 src/finding.js   The finding, the one sentence result. Reads
                  everything above and writes status, headline,
-                 cause, policy consequence, details, fixes, flags,
-                 and limits. Forwarded mail is
+                 cause, policy consequence, delivery, details, fixes,
+                 flags, and limits. delivery (deliveryOf) says what
+                 the result means for mail from here on, only where
+                 an RFC or a mailbox provider's published sender
+                 rules cover it, and is null otherwise. Forwarded mail is
                  recognised from ARC and the pre-forward results are
                  quoted, so the failure is blamed on the forward
                  when the receiver vouched for the ARC seals. A list

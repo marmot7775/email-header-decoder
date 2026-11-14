@@ -9,7 +9,7 @@ const run = (name) => HA.analyze(fixture(name));
 const STATES = ['pass', 'caveat', 'fail', 'unknown'];
 const STATUSES = ['pass', 'fail', 'forwarded', 'none', 'error', 'unknown'];
 const FIXTURES = fs.readdirSync(path.join(__dirname, 'fixtures')).filter(f => f.endsWith('.txt')).sort();
-const sentences = (f) => [f.headline, f.cause].concat(f.consequence ? [f.consequence] : [], f.details, f.fixes, f.flags, f.limits);
+const sentences = (f) => [f.headline, f.cause].concat(f.consequence ? [f.consequence] : [], f.delivery ? [f.delivery] : [], f.details, f.fixes, f.flags, f.limits);
 
 // One fixture per status.
 test('status pass: the headline names the aligned identifiers and the From domain', () => {
@@ -310,7 +310,7 @@ test('Simple wording uses none of the technical words', () => {
   for (const name of FIXTURES) {
     const r = HA.analyze(fixture(name));
     const f = r.finding;
-    const all = [].concat(f ? [f.headline, f.cause, f.consequence].concat(f.details, f.fixes, f.flags, f.limits) : [], r.input.notes, r.message.notes || [], r.decoded.notes || [], (r.decoded.filters || []).flatMap(g => g.items || []), r.decoded.list || [], r.decoded.platform && r.decoded.platform.statement ? [r.decoded.platform.statement] : [], r.chain.notes || [], r.auth.notes || []).filter(Boolean);
+    const all = [].concat(f ? [f.headline, f.cause, f.consequence, f.delivery].concat(f.details, f.fixes, f.flags, f.limits) : [], r.input.notes, r.message.notes || [], r.decoded.notes || [], (r.decoded.filters || []).flatMap(g => g.items || []), r.decoded.list || [], r.decoded.platform && r.decoded.platform.statement ? [r.decoded.platform.statement] : [], r.chain.notes || [], r.auth.notes || []).filter(Boolean);
     // Microsoft's own setting name is quoted so an admin can find it.
     for (const x of all) if (x.plain && (SIMPLE_BANNED.test(x.plain.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')) || x.plain.includes(';'))) bad.push(name + ': ' + x.plain);
   }

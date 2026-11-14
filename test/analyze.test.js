@@ -106,7 +106,7 @@ test('every sentence in the result carries both readers and provenance', () => {
   for (const name of ['gmail-show-original.txt', 'exchange-online-inbound.txt', 'exchange-online-internal.txt', 'icloud.txt', 'forwarded.txt', 'folded-garbage.txt', 'missing-received.txt', 'two-from.txt', 'no-header-block.txt']) {
     const r = HA.analyze(fixture(name));
     const f = r.finding;
-    const fs = f ? [f.headline, f.cause].concat(f.consequence ? [f.consequence] : [], f.details, f.fixes, f.flags, f.limits) : [];
+    const fs = f ? [f.headline, f.cause].concat(f.consequence ? [f.consequence] : [], f.delivery ? [f.delivery] : [], f.details, f.fixes, f.flags, f.limits) : [];
     for (const s of [].concat(r.input.notes, r.message.notes, r.chain.notes, fs, r.decoded.notes, [r.decoded.platform.statement])) {
       assertSentence(s, name);
       for (const i of s.src) assert.ok(r.fields[i], name + ' src ' + i);

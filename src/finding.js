@@ -4,7 +4,7 @@
 // show something (adkim and aspf, the organizational domain, Gmail's
 // spam decision) the finding says so instead of assuming a default.
 //
-// finding = { status, state, headline, cause, consequence, details,
+// finding = { status, state, headline, cause, consequence, delivery, details,
 //   fixes, flags, limits, forwarded }
 //   status is pass | fail | forwarded | none | error | unknown:
 //     forwarded  failed here, but the forwarder's record shows a pass
@@ -12,7 +12,8 @@
 //     none       the From domain has no DMARC record
 //     error      the receiver could not read the DMARC record
 //     unknown    the headers hold nothing to judge by
-//   headline, cause and consequence are Sentences; the rest are lists.
+//   headline, cause, consequence and delivery are Sentences (the last two
+//   may be null); the rest are lists.
 (function (root) {
   'use strict';
   const HA = (root.HA = root.HA || {});
@@ -647,7 +648,7 @@
     // A signature the receiver failed, with a cause this check found.
     const kcCause = (i) => { const x = kc && kc.results.find(r => r.signature === i); return x && x.cause && x.received === 'fail' ? Object.assign({ day: kc.day }, x) : null; };
     const c = Object.assign({}, ctx, { receiver, svc, fw, dm, list, kcCause });
-    const out = { keyCheck: kc, status: 'unknown', state: 'unknown', headline: null, cause: null, consequence: null, details: [], fixes: [], flags: [], limits: [], forwarded: { yes: fw.yes, by: fw.by, preForward: fw.yes ? { writer: fw.writer, result: fw.preResult, derived: !!fw.derived, text: preText(fw), src: fw.aarSrc } : null, src: fw.src } };
+    const out = { keyCheck: kc, status: 'unknown', state: 'unknown', headline: null, cause: null, consequence: null, delivery: null, details: [], fixes: [], flags: [], limits: [], forwarded: { yes: fw.yes, by: fw.by, preForward: fw.yes ? { writer: fw.writer, result: fw.preResult, derived: !!fw.derived, text: preText(fw), src: fw.aarSrc } : null, src: fw.src } };
     const finish = (status, headline, cause) => {
       out.status = status;
       out.state = status === 'pass' && dm.disagreement ? 'caveat' : STATE_OF[status];
@@ -658,6 +659,7 @@
       out.limits = from.defined && auth.primary >= 0 ? limitsOf(c) : [];
       out.flags = flagsOf(Object.assign({ status }, c));
       out.signals = signalsOf(c, status, out.flags);
+      out.delivery = deliveryOf(status, c, out.flags);
       // A From domain that cannot exist has no owner to fix anything.
       const fake = out.flags.find(x => x.lookalike);
       if (fake) out.fixes = [say('fail', 'Treat the message as phishing: the From domain cannot be registered, so nobody owns it to set up DMARC. Report it to your mail provider and do not act on its links or requests.', 'Treat this as a scam. The sender\'s address is fake, so there is nothing to set up. Report it as phishing and don\'t click its links or reply.', fake.src)];
@@ -818,6 +820,102 @@
     return finish('fail', head, fw.yes && fw.preResult === 'fail'
       ? say('fail', 'The message was already failing before the forward: ' + fw.writer + ' recorded ' + (preText(fw) || 'no passing result') + '. ' + (auth.spf.result === 'pass' && !auth.spf.relaxed && auth.spf.domain ? 'SPF now passes only for the forwarder\'s domain ' + auth.spf.domain + ', which does not count for ' + fd + '.' : 'Nothing after the forward aligns with ' + fd + ' either.'), 'The message failed the check before it was ever forwarded, so the problem is with the sender, not the forward.', uniq(fw.aarSrc.concat(auth.spf.src)))
       : causeOfFail(auth, fd, receiver, svc, kcCause));
+  }
+
+  // What the result means for mail sent this way from here on, where an
+  // RFC or a mailbox provider's published sender rules say so. Where
+  // neither covers it the page says nothing, so this returns null: a
+  // temporary error, a result the headers do not explain, a message that
+  // may be forged, or results the sender could have written. The sources
+  // are RFC 9989, RFC 7960, RFC 8301, Google's Email sender guidelines,
+  // Yahoo's Sender Best Practices, and Microsoft's Outlook.com
+  // requirements for high volume senders (read 2026-11-13; listed with
+  // their addresses in docs/sentences.md).
+  const RULES_T = 'Google\'s Email sender guidelines, Yahoo\'s Sender Best Practices, and Microsoft\'s Outlook.com requirements for high volume senders all say so.';
+  const LINE_T = 'Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.';
+  const LINE_P = 'Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.';
+  const BIG3 = 'Gmail, Yahoo, and Microsoft\'s Outlook.com';
+
+  // The policy a failure falls under, as far as the receiver quoted it.
+  // Microsoft's pct.* and none actions name no policy this page can use.
+  function askedOf(dm, from, org) {
+    const pol = dm.policy, disp = dm.disposition;
+    if (pol.action) {
+      const pv = { quarantine: 'quarantine', reject: 'reject', oreject: 'reject' }[pol.action];
+      return pv ? { pv, owner: from, t: 'Microsoft\'s action=' + pol.action + ' shows that ' + from + ' publishes a ' + pv + ' policy' } : null;
+    }
+    if (!pol.p) return null;
+    const subOrg = !!pol.sp && !!org && org !== from;
+    const sub = subOrg && !(!!disp.value && disp.value !== pol.sp && disp.value === pol.p);
+    const pv = sub ? pol.sp : pol.p;
+    if (pv !== 'reject' && pv !== 'quarantine') return null;
+    return { pv, owner: sub ? org : from, t: 'the DMARC record of ' + (sub ? org : from) + ' carries ' + (sub ? 'sp=' : 'p=') + pv };
+  }
+  const ASK_T = { reject: 'reject', quarantine: 'treat as suspicious' };
+
+  function deliveryOf(status, c, flags) {
+    const { auth, dm, list, fw } = c;
+    const from = c.alignment.from, fd = from.domain;
+    if (status === 'unknown' || !from.defined) return null;
+    if (flags.some(x => x.state === 'fail') || auth.unbackedDkim) return null;
+    const src = uniq(dm.src.concat(auth.spf.src, auth.dkim.flatMap(k => k.src)));
+    const asked = askedOf(dm, fd, from.org);
+    const dkimPass = auth.dkim.some(k => k.result === 'pass');
+    const spfPass = auth.spf.result === 'pass';
+
+    if (status === 'none') return say('caveat',
+      'Bulk senders must publish a DMARC record, at least p=none. ' + RULES_T + ' ' + LINE_T,
+      BIG3 + ' require a DMARC setting from anyone who sends them mail in bulk. ' + LINE_P, dm.src);
+
+    if (status === 'error') {
+      if (dm.result !== 'permerror') return null;
+      return say('caveat',
+        'A receiver applies no DMARC processing when the record cannot be parsed (RFC 9989), so ' + fd + ' stands as a domain with no record until it is repaired. Bulk senders must publish one. ' + RULES_T + ' ' + LINE_T,
+        'Until the record is fixed, ' + fd + ' counts as having no DMARC setting. ' + BIG3 + ' require one from anyone who sends them mail in bulk. ' + LINE_P, dm.src);
+    }
+
+    if (status === 'pass') {
+      const pp = passPieces(auth);
+      if (!pp.length) return null;
+      if (pp.every(x => x.sha1)) return say('caveat',
+        'A verifier that follows RFC 8301 3.1 does not count this signature. Nothing else aligns with ' + fd + ', so DMARC fails there' + (asked ? ', and ' + asked.t + ', which asks receivers to ' + ASK_T[asked.pv] + ' failing mail (RFC 9989 4.7).' : '.'),
+        'At mail providers that no longer accept the old method, this mail fails the sender check (DMARC).' + (asked ? ' ' + asked.owner + '\'s DMARC setting then asks them to ' + (asked.pv === 'reject' ? 'refuse it.' : 'send it to spam.') : ''), src);
+      const record = dm.reported;
+      if (dkimPass && spfPass) return say('pass',
+        'SPF and DKIM both pass, and ' + (pp.length === 1 ? 'one aligns' : 'both align') + ' with the From domain ' + fd + (record ? ', which publishes a DMARC record' : '') + '. That meets the authentication requirements for bulk senders. ' + RULES_T + (record ? '' : ' They also require a DMARC record, which these headers do not show.') + ' Their spam rate and unsubscribe requirements are outside the headers.',
+        'Mail sent this way meets the rules ' + BIG3 + ' set for proving who sent a message.' + (record ? '' : ' They also require a DMARC setting, which these headers don\'t show.') + ' Those rules also cover spam complaints and unsubscribe links, which the headers don\'t show.', src);
+      return say('caveat',
+        'Only ' + (dkimPass ? 'DKIM' : 'SPF') + ' passes here. That meets the requirement for all senders, SPF or DKIM, but bulk senders need both to pass. ' + RULES_T + ' ' + LINE_T,
+        'Mail sent this way meets the basic rule at Gmail and Yahoo, but not the rule for bulk senders. Anyone sending in bulk must also ' + (dkimPass ? 'send from a server on the domain\'s list of allowed servers (SPF). ' : 'add a digital signature (DKIM). ') + LINE_P, src);
+    }
+
+    const again = asked ? ' ' + asked.owner + '\'s DMARC setting asks ' : '';
+    if (status === 'forwarded') return say('caveat',
+      'Copies that go through this forward keep failing DMARC wherever the forwarder\'s ARC chain is not accepted. RFC 7960 2.2 describes how forwarding breaks SPF.' + (asked ? ' ' + upFirst(asked.t) + ', which asks those receivers to ' + ASK_T[asked.pv] + ' them (RFC 9989 4.7).' : '') + ' Mail sent straight from ' + fd + ' is not affected.',
+      'Copies that go through this forward can keep failing at mail providers that don\'t accept the forwarding service\'s record.' + (asked ? again + 'those providers to ' + (asked.pv === 'reject' ? 'refuse them.' : 'send them to spam.') : '') + ' Mail sent straight from ' + fd + ' isn\'t affected.', uniq(fw.src.concat(dm.src)));
+
+    // Failed.
+    if (list.take) {
+      const ok = list.preResult === 'pass';
+      return say('caveat',
+        'Posts through a list that modifies messages keep failing DMARC (RFC 7960 3.2.3).' + (asked ? ' ' + upFirst(asked.t) + ', which asks receivers to ' + ASK_T[asked.pv] + ' them (RFC 9989 4.7).' : '') + (ok ? ' The list\'s record shows a pass on arrival, so nothing here counts against mail sent straight from ' + fd + '.' : ''),
+        'Messages from ' + fd + ' that go through a list like this keep failing.' + (asked ? again + 'mail providers to ' + (asked.pv === 'reject' ? 'refuse them.' : 'send them to spam.') : '') + (ok ? ' Nothing here points to a problem with mail sent straight to people.' : ''), uniq(list.src.concat(dm.src)));
+    }
+    if (list.unproven || (fw.yes && fw.preResult === 'pass')) return null;
+    if (auth.spf.result === 'temperror' || auth.dkim.some(k => k.result === 'temperror')) return null;
+    if (dm.disagreement && dm.disagreement.reason !== 'strict-mode') return null;
+    if (asked && asked.pv === 'reject') return say('fail',
+      upFirst(asked.t) + ', which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.',
+      asked.owner + '\'s DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.', src);
+    if (asked) return say('fail',
+      upFirst(asked.t) + ', which asks receivers to treat mail that fails DMARC as suspicious (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request.',
+      asked.owner + '\'s DMARC setting asks mail providers to send mail that fails this way to spam. Expect that for every message with this problem, at the ones that follow it.', src);
+    if (!dkimPass && !spfPass) return say('caveat',
+      'This message passed neither SPF nor DKIM. Google and Yahoo require one of them from every sender. Google says such mail might be marked as spam or rejected with a 5.7.26 error.',
+      'Gmail and Yahoo expect all mail to carry a valid digital signature or to come from a server the domain allows. This message did neither, and Gmail says it may refuse such mail or send it to spam.', src);
+    return say('caveat',
+      'Bulk senders must pass DMARC with SPF or DKIM aligned, and nothing that passes here aligns with ' + fd + '. ' + RULES_T + ' ' + LINE_T,
+      BIG3 + ' require bulk senders to pass the sender check (DMARC), and mail with this problem doesn\'t. ' + LINE_P, src);
   }
 
   // Microsoft's composite authentication is its own stated reason, so the
