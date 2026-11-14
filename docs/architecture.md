@@ -113,13 +113,19 @@ src/finding.js   The finding, the one sentence result. Reads
                  recorded dkim=fail and a cause was found, the DKIM
                  detail, the cause, and the fix use it, marked as
                  checked today. KEY_UI holds the button's words.
+                 signalsOf builds finding.signals, the block under
+                 the headline: sender (the DMARC status and the
+                 flags) and spam (warn and fail items from filter
+                 groups on the receiver's side, without compauth),
+                 each with a state, an answer, and its items, plus
+                 a scope sentence when nothing fired.
 src/analyze.js   analyze(text, opts) returns one plain result object.
                  The page renders it; the tests assert on it.
                  opts.keyCheck is a signature check to state.
 
 ui/page.html     Markup and tokens. The shared site header,
                  the paste box, then the results: finding (headline,
-                 what to do, the four check tiles, why, what the
+                 the sender and spam questions, what to do, the four check tiles, why, what the
                  DMARC setting did, evidence), message, alignment,
                  authentication, path, filter headers, raw headers
                  collapsed. Below the tool, static text for readers

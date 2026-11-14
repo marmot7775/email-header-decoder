@@ -135,6 +135,13 @@ const kcBody = (matches) => ({ computed: 'SyntheticComputedBh=', matches, short:
 function kc(source, r, o) {
   return Object.assign({ at: Date.UTC(2026, 10, 13, 12), day: 'November 13, 2026', source, truncated: false, bodyPresent: true, results: [Object.assign({ signature: 0, d: 'shop.example', s: 's1', a: 'rsa-sha256', l: null, name: KC_NAME }, r)] }, o);
 }
+// The block under the headline, where the flags and the filter rating show.
+CASES.push(
+  ['signals: pass with a forged display name and a reply address elsewhere', rcv({ ar: 'dkim=pass header.d=notify.example header.s=n1; spf=pass smtp.mailfrom=alerts@notify.example; dmarc=pass header.from=notify.example', sigs: [['notify.example', 'n1']], from: '"security@bank.example" <alerts@notify.example>', extra: ['Reply-To: help@other.example'] })],
+  ['signals: pass that Microsoft rated as spam', ms('spf=pass (sender IP is 198.51.100.44) smtp.mailfrom=shop.example; dkim=pass (signature was verified) header.d=shop.example; dmarc=pass action=none header.from=shop.example; compauth=pass reason=100', ['X-Forefront-Antispam-Report: CIP:198.51.100.44;CTRY:US;SFV:SPM;SCL:5;CAT:SPM'])],
+  ['signals: pass with a filter result and nothing against it', ms('spf=pass (sender IP is 198.51.100.44) smtp.mailfrom=shop.example; dkim=pass (signature was verified) header.d=shop.example; dmarc=pass action=none header.from=shop.example; compauth=pass reason=100', ['X-Forefront-Antispam-Report: CIP:198.51.100.44;CTRY:US;SFV:NSPM;SCL:1;CAT:NONE'])],
+);
+
 const KEY_CASES = [
   ['signature check: no key found', KC_FAIL, kc('paste', { outcome: 'no-key', dns: kcDns('nxdomain') })],
   ['signature check: no key at the end of a CNAME', KC_FAIL, kc('paste', { outcome: 'no-key', dns: kcDns('nxdomain', { cname: ['s1.dkim.mailer.example'], target: 's1.dkim.mailer.example' }) })],
@@ -177,6 +184,13 @@ function lines(f) {
   f.fixes.forEach((s, i) => pair('Fix ' + (i + 1), s));
   f.flags.forEach((s, i) => pair('Flag ' + (i + 1), s));
   f.limits.forEach((s, i) => pair('Limit ' + (i + 1), s));
+  if (f.signals) {
+    for (const [q, x] of [['Sender', f.signals.sender], ['Spam', f.signals.spam]]) {
+      pair(q + ' signals', x.answer);
+      x.items.forEach((s, i) => pair(q + ' signal ' + (i + 1), s));
+    }
+    if (f.signals.scope) pair('Signals, nothing fired', f.signals.scope);
+  }
   if (f.keyCheck) {
     pair('Signature check', f.keyCheck.intro);
     f.keyCheck.results.forEach((x) => {
@@ -258,6 +272,8 @@ function render() {
     md += '\n## ' + name + '\n\n';
     md += lines(run(name, text, check)).map(([l, s]) => l + ': ' + vis(s)).join('\n\n') + '\n';
   }
+  md += '\n## Signal questions\n\n';
+  md += Object.keys(HA.finding.SIGNAL_UI).map(k => k + ': ' + HA.finding.SIGNAL_UI[k]).join('\n\n') + '\n';
   md += '\n## Signature check labels\n\n';
   md += Object.keys(HA.finding.KEY_UI).map(k => k + ': ' + HA.finding.KEY_UI[k]).join('\n\n') + '\n';
   md += '\n## Filter code meanings\n\n';

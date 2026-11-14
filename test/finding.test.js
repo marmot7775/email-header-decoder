@@ -381,3 +381,56 @@ test('a look-alike From domain replaces the setup advice with a phishing warning
   assert.equal(f.fixes.length, 1);
   assert.match(f.fixes[0].technical, /^Treat the message as phishing/);
 });
+
+// The block under the headline: two questions answered from results the
+// page already has, so a warning never sits below a Passed headline.
+test('signals: a forged display name and a reply address elsewhere lead, under a pass', () => {
+  const S = require('../scripts/sentences.js');
+  const c = S.CASES.find(x => /^signals: pass with a forged display name/.test(x[0]));
+  const f = HA.analyze(c[1]).finding;
+  assert.equal(f.status, 'pass');
+  assert.deepEqual([f.signals.sender.state, f.signals.sender.items.length, f.signals.scope], ['fail', 2, null]);
+  assert.match(f.signals.sender.answer.plain, /^Maybe not\. Treat this message with care\.$/);
+  assert.match(f.signals.sender.items[0].plain, /contains an address at bank\.example/);
+  assert.match(f.signals.sender.items[1].plain, /Replies go to a different company/);
+  assert.deepEqual(f.signals.sender.items, f.flags, 'the signals are the flags, not a second reading');
+});
+
+test('signals: the receiver\'s own spam rating is named with its reasons, and compauth is not one', () => {
+  const S = require('../scripts/sentences.js');
+  const f = HA.analyze(S.CASES.find(x => /^signals: pass that Microsoft rated as spam/.test(x[0]))[1]).finding;
+  assert.deepEqual([f.status, f.signals.sender.state, f.signals.spam.state, f.signals.spam.items.length], ['pass', 'pass', 'fail', 3]);
+  assert.match(f.signals.spam.answer.plain, /^Yes\. The receiving system's filter rated it as spam or as a risk\.$/);
+  assert.match(f.signals.spam.answer.technical, /^Microsoft 365 recorded three results against this message\.$/);
+  assert.ok(f.signals.spam.items.every(x => /^Microsoft 365, (CAT|SFV|SCL) /.test(x.technical)));
+  const bulk = HA.analyze(fixture('m365-filter-codes.txt')).finding.signals.spam;
+  assert.ok(bulk.items.length >= 5 && !bulk.items.some(x => /compauth/.test(x.technical)));
+  // A failed message says so under the sender question, with the filter beside it
+  const fw = HA.analyze(fixture('forwarded.txt')).finding.signals;
+  assert.match(fw.sender.items[0].plain, /failed the sender check \(DMARC\), so nothing proves it came from/);
+  assert.equal(fw.spam.state, 'fail');
+});
+
+test('signals: nothing fired says so and says it covers the headers only; no answer is a score', () => {
+  const q = HA.analyze(fixture('exchange-online-inbound.txt')).finding.signals;
+  assert.deepEqual([q.sender.state, q.spam.state, q.sender.items.length, q.spam.items.length], ['pass', 'pass', 0, 0]);
+  assert.match(q.scope.plain, /^Nothing in the headers points to forgery or spam\. That covers the headers only, because this page doesn't judge the message text, links, or attachments\.$/);
+  // Gmail writes no placement into headers: unknown, not a clean bill
+  const g = HA.analyze(fixture('gmail-show-original.txt')).finding.signals;
+  assert.deepEqual([g.spam.state, /Gmail doesn't record/.test(g.spam.answer.plain)], ['unknown', true]);
+  // A filter the sender's side wrote is not the receiving system's
+  const two = HA.analyze(fixture('two-providers.txt'));
+  assert.ok(two.decoded.filters.some(x => x.side === 'before-custody'));
+  assert.ok(!two.finding.signals.spam.items.some(x => /^Proofpoint/.test(x.technical)));
+  // No receiver's results at all: neither question is answered
+  const n = HA.analyze(fixture('no-auth-results.txt')).finding.signals;
+  assert.deepEqual([n.sender.state, n.spam.state, n.scope], ['unknown', 'unknown', null]);
+  for (const name of fs.readdirSync(path.join(__dirname, 'fixtures'))) {
+    const f = HA.analyze(fixture(name)).finding;
+    if (!f) continue;
+    for (const s of [f.signals.sender.answer, f.signals.spam.answer].concat(f.signals.sender.items, f.signals.spam.items)) assert.ok(!/\d\s?%|percent/.test(s.plain + s.technical), name + ': ' + s.plain);
+  }
+  const app = fs.readFileSync(path.join(__dirname, '..', 'ui', 'app.js'), 'utf8');
+  assert.ok(app.indexOf('h += signalsHtml(f.signals);') < app.indexOf("h += '<h3>What to do</h3><ol"), 'the block sits above What to do');
+  assert.ok(!/Also worth knowing/.test(app), 'the flags are said once, in the block');
+});

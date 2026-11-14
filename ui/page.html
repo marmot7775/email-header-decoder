@@ -286,6 +286,15 @@ button { font: inherit; cursor: pointer; }
 .steps { margin: 8px 0 0; padding-left: 1.4em; display: grid; gap: 8px; font-size: var(--font-base); max-width: 72ch; }
 .steps li::marker { color: var(--primary); font-weight: 700; }
 .steps .txt { overflow-wrap: anywhere; }
+.signals { margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 10px; }
+.sig { border: 1px solid var(--border); border-left: 4px solid var(--border-strong); border-radius: var(--radius); padding: 10px 14px; min-width: 0; }
+.sig.pass { border-left-color: var(--pass); } .sig.fail { border-left-color: var(--fail); } .sig.caveat { border-left-color: var(--caveat); }
+.sig-q { margin: 0; font-size: var(--font-sm); font-weight: 600; color: var(--text-2); }
+.sig-a { margin: 4px 0 0; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.sig-a .sym { margin-right: 6px; }
+.sig.pass .sig-a .sym { color: var(--pass); } .sig.fail .sig-a .sym { color: var(--fail); } .sig.caveat .sig-a .sym { color: var(--caveat); }
+.sig-items { margin: 8px 0 0; padding-left: 1.2em; display: grid; gap: 6px; color: var(--text-2); font-size: var(--font-sm); line-height: 1.55; overflow-wrap: anywhere; }
+.sig-scope { margin-top: 10px; font-size: var(--font-sm); }
 .kc { margin: 12px 0 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); display: grid; gap: 10px; min-width: 0; }
 .kc-id { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--font-sm); overflow-wrap: anywhere; }
 .kc-two { margin: 0; display: grid; gap: 4px; max-width: 68ch; }

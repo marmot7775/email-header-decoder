@@ -81,6 +81,13 @@ First release
     failure from pasted text is could not confirm; a message file
     gives a firm answer. rsa-sha1 and ARC seals are not verified.
 
+15. (Added 2026-11-13.) Two questions under the headline: is the
+    sender who it appears to be, and did the receiving system treat
+    it as spam. Answered from the DMARC status, the flags, and the
+    receiver's own filter results, each signal with its reason and
+    no score. When nothing fires it says so, and that it covers
+    the headers only.
+
 Parked
 Bounce and SMTP code decoding (separate tool).
 Shareable result links (a link would have to carry the headers to

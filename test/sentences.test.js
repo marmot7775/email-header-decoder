@@ -25,6 +25,7 @@ test('sentences: every case runs, and no sentence breaks the copy rules', () => 
       if (/plain/i.test(label)) assert.ok(!SIMPLE_BANNED.test(s.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')), name + ', ' + label + ' uses a word Simple avoids: ' + s);
     }
   }
+  for (const [k, v] of Object.entries(HA.finding.SIGNAL_UI)) { check('question ' + k, v); assert.ok(!SIMPLE_BANNED.test(v), 'question ' + k + ' uses a word Simple avoids: ' + v); }
   for (const [k, v] of Object.entries(HA.finding.KEY_UI)) { check('label ' + k, v); assert.ok(!/;/.test(v) && !SIMPLE_BANNED.test(v.replace(/\([^)]*\)/g, '')), 'label ' + k + ' uses a word Simple avoids: ' + v); }
   for (const [code, t, p] of S.meanings()) { check(code, t); check(code, p); assert.ok(!SIMPLE_BANNED.test(p.replace(/Trusted ARC sealers/g, '').replace(/\([^)]*\)/g, '')), code + ' Simple uses a word Simple avoids: ' + p); }
 });
@@ -38,7 +39,8 @@ test('sentences: no two cases share a cause and its limits', () => {
     const c = f.cause;
     // A signature check case is there for what the check found.
     const kc = f.keyCheck ? f.keyCheck.results.flatMap(x => [x.line].concat(x.notes)) : [];
-    const key = [c].concat(f.limits, kc).map(s => s.technical + '\n' + s.plain).join('\n');
+    const sg = f.signals ? f.signals.sender.items.concat(f.signals.spam.items, [f.signals.spam.answer]) : [];
+    const key = [c].concat(f.limits, kc, sg).map(s => s.technical + '\n' + s.plain).join('\n');
     assert.ok(!seen.has(key), name + ' and ' + seen.get(key) + ' produce the same cause: ' + c.technical);
     seen.set(key, name);
   }
