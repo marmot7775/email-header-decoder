@@ -140,7 +140,10 @@ is handed out only after that. Status as of 2026-11-13.
    public kernel.org list messages verified against live keys.
    Browser check in Chromium at 1280 and 375px, light and dark:
    no lookup before the button or for a sample, one query per press
-   with no Referer, no sideways scroll, no page or CSP errors. PR 52.
+   with no Referer, no sideways scroll, no page or CSP errors. PR 52,
+   main bcbda03, live 2026-11-13 as Worker version b3656417; the
+   live page matched the build byte for byte and made one real
+   lookup per press.
 
 Decisions
 
