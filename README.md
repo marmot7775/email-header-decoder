@@ -4,7 +4,7 @@ Paste the headers of any email and read, in one sentence, why it
 passed or failed SPF, DKIM, and DMARC, and what to fix.
 
 It takes bare headers, a whole .eml (paste it, choose the file, or drop
-it on the box; the body is ignored), or a copy of Gmail's Show original
+it on the box), or a copy of Gmail's Show original
 page.
 Sample messages on the page show it working before you paste your own.
 
@@ -38,6 +38,12 @@ Live at https://headers.dns-audit.com, part of
   look-alike letters, such as mathematical bold or fullwidth
   characters, is called forged, since no registered domain can be
   spelled that way.
+- **It can say why DKIM failed.** Select the signature check and
+  the page looks up the sender's DKIM key, verifies the signature
+  again in your browser, and names the cause: no key, a revoked or
+  malformed key, a key that isn't the one that signed, a changed
+  body, or a changed signed header. What the receiver recorded at
+  delivery stays beside it as a separate fact.
 - **Evidence points at its source.** In Technical details, select a
   line reference and the raw header lines it came from light up.
 - **It says what headers can't show** instead of guessing.
@@ -59,13 +65,24 @@ storage under the key `theme`, the same way dns-audit.com saves it.
 
 ## Limits
 
-The page makes no DNS lookups and verifies no signatures. It reads
-the results the receiving server recorded at delivery. The
-organizational domain comes from a short built-in suffix list.
-ARC seals are checked for structure, not verified.
+The finding reads the results the receiving server recorded at
+delivery. The organizational domain comes from a short built-in
+suffix list. ARC seals are checked for structure, not verified.
 
-It doesn't yet look up DKIM keys, decode bounces and SMTP codes, or
-compare two messages. Shareable result links are left out on
+The signature check is the one part that looks anything up. It runs
+when you select its button, asks cloudflare-dns.com for the TXT
+record at the DKIM key name, and verifies rsa-sha256 and
+ed25519-sha256 signatures. It doesn't verify rsa-sha1, which RFC
+8301 retired. It tells you what the key and the message look like
+today, which can differ from what the receiver saw. From pasted
+text a failed verification is reported as could not confirm,
+because copying can change spaces; a message file gives a firm
+answer. An Ed25519 failure can't be split into a changed message
+or a wrong key. No other DNS record is looked up: the DMARC and SPF
+records are not read.
+
+It doesn't yet decode bounces and SMTP codes or compare two
+messages. Shareable result links are left out on
 purpose, because they would need a server.
 
 ## Beta

@@ -7,7 +7,7 @@
 //     not count or carries a condition. technical and plain are the same
 //     finding for two readers. src lists the field indexes it came from.
 //   Any value the page shows carries src the same way.
-//   finding = { status, state, headline: Sentence, cause: Sentence,
+//   finding = { keyCheck, status, state, headline: Sentence, cause: Sentence,
 //     consequence: Sentence | null, details, fixes, flags, limits: [Sentence],
 //     forwarded: { yes, by, preForward, src } }; see finding.js.
 //   decoded = { filters: [{ id, name, items, note, outcome, src, side }],
@@ -88,14 +88,16 @@
   // original page, or Outlook's Internet headers box.
   const KINDS = { bare: 'headers', eml: 'eml', 'gmail-original': 'show-original', 'outlook-headers': 'outlook-headers', none: 'not-headers' };
 
-  function analyze(text) {
+  // opts.keyCheck is the result of the signature check (dkimkey.js), when
+  // the reader ran one; the finding then states what it found.
+  function analyze(text, opts) {
     const parsed = P.parseHeaders(text);
     const fields = parsed.fields;
     const message = buildMessage(fields);
     const chain = HA.received.buildChain(fields);
     const { auth, alignment } = HA.auth.buildAuth(fields, chain, message);
     const decoded = HA.providers.decodeAll(fields, message, auth, chain);
-    const finding = parsed.blockFound ? HA.finding.build({ message, chain, auth, alignment, decoded, fields }) : null;
+    const finding = parsed.blockFound ? HA.finding.build({ message, chain, auth, alignment, decoded, fields, keyCheck: opts && opts.keyCheck }) : null;
     const flags = flagsOf(text, parsed, message, chain, auth);
     if (finding && finding.status === 'forwarded') flags.push('forwarded');
     if (finding && finding.flags.some(x => x.hidden)) flags.push('hidden-characters');

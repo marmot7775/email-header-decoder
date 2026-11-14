@@ -152,8 +152,9 @@ test('build: one self contained page whose CSP connects only to dns-audit.com, a
   const html = fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.html'), 'utf8');
   assert.match(html, /^<!doctype html>/);
   assert.ok(html.includes('http-equiv="Content-Security-Policy" content="' + CSP + '"'));
-  // The usage note is the only connection the page may make
-  assert.equal((CSP.match(/connect-src ([^;]*)/) || [])[1], 'https://dns-audit.com');
+  // The usage note, and the DKIM key lookup the reader starts with a
+  // button, are the only connections the page may make
+  assert.equal((CSP.match(/connect-src ([^;]*)/) || [])[1], 'https://dns-audit.com https://cloudflare-dns.com');
   // script-src allows only the hashes of the two inline scripts, the theme
   // script in the head and the page script, never 'unsafe-inline'.
   assert.ok(!/script-src[^;]*'unsafe-inline'/.test(CSP));

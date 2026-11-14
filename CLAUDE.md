@@ -14,19 +14,31 @@ two tests check for it on purpose.
 ## Hard rules
 
 Everything runs in the visitor's browser, with no analytics
-scripts. Pasted headers, addresses, and domains are never sent
-anywhere, but the page no longer advertises that (Neil, 2026-10-28:
-not a selling point; he wants usage logs). The usage notes to
-dns-audit.com are the page's only network calls (Neil, 2026-10-28: he
+scripts. The page makes two kinds of network call, and the CSP's
+connect-src names both hosts and no other.
+
+The first is the usage note to dns-audit.com (Neil, 2026-10-28: he
 wants to see the tool is used), posted by ui/app.js to
-https://dns-audit.com/api/usage, the CSP's only connect-src. A visit
+https://dns-audit.com/api/usage. A visit
 note goes once per page load and holds two fields: tool and ref
 (2026-11-09, so a visitor who reads nothing still shows). After each
 new read a use note holds exactly four fields: tool ("header-decoder"), the finding
 status, whether a built-in sample was read, and ref, the host name of
 the site that linked to the page (never its path or query; absent for
 a direct visit or a link from this site). Neil kept ref on 2026-11-02.
-Never add header text, addresses, or domains to it.
+Never add header text, addresses, or domains to it. The signature
+check adds nothing to it.
+
+The second is the DKIM key lookup (Neil, 2026-11-13). It runs only
+when the reader presses the signature check button: never on paste,
+on page load, or for a built-in sample. src/dkimkey.js sends a GET
+from the browser to https://cloudflare-dns.com/dns-query with name
+and type=TXT in the query and accept: application/dns-json. The only
+thing sent is the name selector._domainkey.domain, read from a
+DKIM-Signature field in the pasted text. No other header text,
+address, or domain goes anywhere. A name that is not made of DNS
+labels is not sent. The page does not advertise any of this as a
+privacy feature (Neil, 2026-10-28: not a selling point).
 
 The header and footer are the canonical copy from dns-audit's
 docs/site-chrome.html. Change them there first, then copy them here;
@@ -35,8 +47,19 @@ test/chrome.test.js holds the lists.
 Standalone repo, not a dns-audit.com feature. Hosting comes in
 step 4 as a static site; the droplet never serves it.
 
-No DNS lookups, no signature verification, no guessing. Every
-sentence on the page is built from identifiers in the headers.
+No guessing. Every sentence in the finding is built from
+identifiers in the headers, until the reader runs the signature
+check. That check looks up each DKIM key and verifies each
+signature again in the browser (src/dkimverify.js: rsa-sha256 on
+BigInt, ed25519-sha256 through WebCrypto, never rsa-sha1, never ARC
+seals). Its result is marked as checked today and stands beside
+what the receiver recorded at delivery, as two facts. Where they
+disagree the page gives no reason. A verification failure on pasted
+text reads as could not confirm, because copying can change
+whitespace; only a message file supports a failure. A recorded pass
+that fails today is unknown. DKIM keys are the only thing looked up:
+the DMARC record, SPF, and the organizational domain are still read
+from the headers alone.
 Where the page cannot know something (adkim and aspf, the
 organizational domain, Gmail's spam decision, unverified ARC
 seals) it says so in the limits list under the finding rather
@@ -98,10 +121,22 @@ src/providers.js  Filter header decode (Microsoft SCL, BCL, CAT,
                   Barracuda; SpamAssassin; Rspamd), platform
                   fingerprint with a confidence, list and sending
                   headers including RFC 8058 one-click.
+src/dkimverify.js Verifies a DKIM signature given the key. Pure,
+                  no network: SHA-256, both canonicalizations, l=,
+                  the RSA public key operation on BigInt with a look
+                  inside the PKCS #1 v1.5 padding, Ed25519 through
+                  a WebCrypto object passed in.
+src/dkimkey.js    The signature check: the DKIM key lookup over DNS
+                  over HTTPS, with fetch passed in, the key record
+                  per RFC 6376 3.6.1, and checkAll(), which the page
+                  calls only from the button.
 src/finding.js    The sentence. Status, headline, cause, policy
                   consequence, details, fixes, flags, and limits.
-src/analyze.js    analyze(text) returns one plain result object.
-                  The page renders it; the tests assert on it.
+                  Also every word of the signature check result
+                  (keyCheckOf) and its button (KEY_UI).
+src/analyze.js    analyze(text, opts) returns one plain result
+                  object. The page renders it; the tests assert on
+                  it. opts.keyCheck carries a signature check.
 ui/page.html      Markup and tokens. Site header, paste box, then
                   finding with the check tiles, message, alignment,
                   authentication, path, filter headers, raw headers
@@ -223,6 +258,18 @@ mailbox provider.
 RFC 8058 one-click passes only when a passing DKIM signature
 lists both List-Unsubscribe fields in h=.
 
+The signature check (2026-11-13). The button reads Find out why the
+signature failed when the receiver recorded a DKIM result that is
+not a pass, and Check the signature otherwise. A dropped or chosen
+file is verified from its own bytes, kept beside the text in the
+box, for as long as the box holds what the file put there; anything
+else is pasted text. A missing, revoked, malformed, or too short
+key is a fact about DNS, so it is stated from pasted text too. A
+cause replaces the finding's line that the headers cannot show
+which only when the receiver recorded dkim=fail for that signature.
+RSA keys under 1024 bits are not valid (RFC 8301 3.2), and 1024 to
+2047 bits is a caveat on a result that otherwise checks out.
+
 Palette and type use dns-audit.com's tokens and fonts. Dark and
 light both work. No horizontal scroll at 375px.
 
@@ -303,6 +350,14 @@ when known. Fixed words, used the same way everywhere:
 - DNS record: a DNS setting for the domain, at the company that
   hosts its DNS (often where the domain was bought).
 - TLS: encrypted. A Received hop: a handoff between servers.
+- DKIM key: the published key (DKIM key), a DNS setting that lets
+  anyone check the signature. After that, the key.
+- Revoked key: switched off on purpose (revoked).
+- Key size: too short, or shorter than recommended. The bit count
+  goes in Technical.
+
+Selector, canonicalization, body hash, and padding stay in
+Technical.
 
 Never in Simple: aligned, alignment, bounce, Return-Path,
 envelope, HELO, EHLO, selector, d=, s=, header (one named

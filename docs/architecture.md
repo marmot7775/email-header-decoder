@@ -2,15 +2,18 @@ Email Header Decoder, architecture
 
 Shape
 One static page with no server of its own. Pasted headers are
-parsed in the visitor's browser and never leave it. The only thing
-stored is the theme choice, in localStorage. The
-network calls are usage notes to dns-audit.com/api/usage: a visit note
+parsed in the visitor's browser. The only thing
+stored is the theme choice, in localStorage. There are two kinds of
+network call. Usage notes go to dns-audit.com/api/usage: a visit note
 when the page opens (tool and linking host only), and after each read the tool
 name, the finding status, whether a sample was read, and the host name
-of the linking site (ref). No header text, addresses or domains.
+of the linking site (ref), with no header text, addresses or domains.
+The signature check, when the reader presses its button, sends a TXT
+query for each DKIM key name (selector._domainkey.domain) to
+cloudflare-dns.com over DNS over HTTPS. Nothing is looked up on
+paste, on page load, or for a built-in sample.
 The same files run under Node for tests. This is the plan for the
-product, not a prototype shortcut: a header analyzer has no reason
-to send mail headers anywhere.
+product, not a prototype shortcut.
 
 Modules, each one file, each a pure function layer over the one
 below it, all under the HA namespace:
@@ -58,6 +61,38 @@ src/providers.js Decodes filter results (Microsoft SCL, BCL, CAT,
                  reads list and sending headers (RFC 8058 one-click,
                  Message-ID domain).
                  Unknown codes are shown raw, never guessed.
+src/dkimverify.js  Verifies one DKIM signature given its key. Pure,
+                 no DOM, no network, no dependencies. SHA-256 written
+                 out, base64, simple and relaxed canonicalization of
+                 headers and body (RFC 6376 3.4), the hash inputs of
+                 RFC 6376 3.7 with l= and with h= names listed more
+                 often than they appear (5.4.2), and the RSA public
+                 key operation on BigInt. rsaCheck looks inside the
+                 PKCS #1 v1.5 padding (RFC 8017 9.2): valid padding
+                 around this hash is a pass, valid padding around
+                 another hash means the key signed and a signed field
+                 changed, and invalid padding means the key in DNS is
+                 not the key that signed. Ed25519 (RFC 8463) goes
+                 through a WebCrypto object passed in and cannot
+                 separate those causes. Hashing reads each field
+                 byte for byte as given, from parse.exactLines, not
+                 the unfolded and repaired value.
+src/dkimkey.js   The signature check. lookup() asks
+                 cloudflare-dns.com/dns-query for name and type=TXT
+                 with accept: application/dns-json, through a fetch
+                 passed in, and reads NXDOMAIN, an empty answer, a
+                 CNAME chain with its target, joined TXT strings,
+                 SERVFAIL, an HTTP error, and a timeout. parseKey()
+                 reads v, k, p, t, h, and s (RFC 6376 3.6.1), an
+                 empty p= as revoked, and the RSA size in bits.
+                 checkAll(text, fetch, opts) checks every
+                 DKIM-Signature and returns one outcome each: pass,
+                 no-body, body-mismatch, header-changed,
+                 key-mismatch, ed25519-fail, no-key, revoked,
+                 malformed, too-short, dns-failed, sha1, unknown-alg,
+                 incomplete, or unsupported, with whether the text
+                 came from a file or a paste. One query per name. A
+                 name that is not DNS labels is never sent.
 src/finding.js   The finding, the one sentence result. Reads
                  everything above and writes status, headline,
                  cause, policy consequence, details, fixes, flags,
@@ -69,8 +104,18 @@ src/finding.js   The finding, the one sentence result. Reads
                  broken author signature is one possible reason,
                  beside a forgery. STATUS_WORD, the status chip
                  words, lives here so the Simple word test reads it.
-src/analyze.js   analyze(text) returns one plain result object.
+                 keyCheckOf turns a signature check into sentences:
+                 what the receiver recorded and what the check found
+                 as two facts, who fixes it, the steps, and the key
+                 size caveat. A verification failure on pasted text
+                 becomes could not confirm, and a recorded pass that
+                 fails today becomes unknown. When the receiver
+                 recorded dkim=fail and a cause was found, the DKIM
+                 detail, the cause, and the fix use it, marked as
+                 checked today. KEY_UI holds the button's words.
+src/analyze.js   analyze(text, opts) returns one plain result object.
                  The page renders it; the tests assert on it.
+                 opts.keyCheck is a signature check to state.
 
 ui/page.html     Markup and tokens. The shared site header,
                  the paste box, then the results: finding (headline,
@@ -84,9 +129,15 @@ ui/app.js        Rendering only. No parsing logic lives here. The
                  tiles and the copied report read values already
                  in the result; they decide nothing new. Invisible
                  and direction control characters print as <U+XXXX>.
-                 A dropped or chosen .eml goes through one reader
-                 (first 2 MB), and each result is announced in the
-                 polite live region. The raw
+                 A dropped or chosen .eml goes through one reader:
+                 the box shows the first 2 MB, and the file's own
+                 bytes (up to 25 MB, one character per byte) are
+                 kept for the signature check while the box still
+                 holds what the file put there. The signature check
+                 button calls dkimkey.checkAll, then analyze again
+                 with the result. It is the only caller, and it does
+                 nothing for a built-in sample. Each result is
+                 announced in the polite live region. The raw
                  header list is drawn when opened, 200 fields at a
                  time, and a field over 2,000 characters shows
                  clipped with a button to show all of it.
@@ -111,20 +162,26 @@ scripts/sentences.js  The sentence inventory: drives finding.js
                  two cases share a cause.
 
 Rules that keep it honest
-No DNS, no signature verification, no guessing. Every sentence is
-built from identifiers in the headers. Where the page cannot know
+No guessing. Every sentence in the finding is built from
+identifiers in the headers. Where the page cannot know
 (adkim/aspf, the organizational domain, Gmail's spam decision) it
-says so in the output rather than defaulting silently.
+says so in the output rather than defaulting silently. The signature
+check is the one thing that reaches past the headers, and only when
+asked: its result is dated, kept apart from the receiver's, and
+never turned into a reason when the two disagree. Only a message
+file supports a failure. The DMARC and SPF records are not looked
+up.
 
 Result object (what the page renders)
-input, message, finding, alignment (rows per identifier with
+input, message, finding (with keyCheck: null, or the signature check
+as intro and per signature results), alignment (rows per identifier with
 aligned, strict, mode), auth (all A-R, primary, spf, dkim, dmarc,
 computed, arc, arcResult, compauth, unbackedDkim), chain (hops, totalSec,
 slowestIdx, clockSkew, originIp), decoded (filters, platform,
 list, notes), fields, flags (hidden-characters among them).
 
 Parked for later releases
-DKIM key lookup through a DNS API. Bounce and SMTP code decoding.
+Bounce and SMTP code decoding.
 Full public suffix list or an RFC 9989 tree walk via DNS. Link from a
 failing From domain to its dns-audit.com audit. Compare two messages
 side by side.

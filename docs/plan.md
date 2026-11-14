@@ -1,7 +1,7 @@
 Email Header Decoder, plan
 
-Four steps. Each ends with a report and a commit, and the next prompt
-is handed out only after that. Status as of 2026-10-29.
+Five steps. Each ends with a report and a commit, and the next prompt
+is handed out only after that. Status as of 2026-11-13.
 
 1  Repo, parser, hop timeline, page skeleton, tests, build.    DONE
    parse.js (header block in a bare paste, a full .eml, a Show
@@ -104,10 +104,50 @@ is handed out only after that. Status as of 2026-10-29.
    Still to do: more real headers from Neil and the copy pass they
    drive.
 
+5  Say why DKIM failed: key lookup and signature check.     DONE
+   One button under the check tiles, Find out why the signature
+   failed (Check the signature when DKIM did not fail). It looks up
+   each DKIM key and verifies each signature again in the browser.
+   src/dkimverify.js: SHA-256, simple and relaxed canonicalization,
+   the RFC 6376 3.7 hashes with l= and repeated h= names, rsa-sha256
+   on BigInt with a look inside the PKCS #1 v1.5 padding, and
+   ed25519-sha256 through WebCrypto. src/dkimkey.js: the lookup at
+   cloudflare-dns.com/dns-query with fetch passed in (NXDOMAIN, no
+   TXT, CNAME chain, joined strings, SERVFAIL, HTTP error, timeout),
+   the key record per RFC 6376 3.6.1, and checkAll. parse.js keeps
+   the lines as given (exactLines) and where the body starts.
+   finding.js writes every outcome as a sentence in both voices with
+   who fixes it and numbered steps, states the receiver's record and
+   the check as two facts, and uses a found cause in the DKIM
+   detail, the cause, and the fix, marked as checked today. Copy
+   report carries it. The CSP connect-src adds cloudflare-dns.com.
+   Outcomes: no key found, key revoked, key written wrong, key too
+   short, key shorter than recommended, no answer, checks out,
+   checks out now but failed on arrival, text changed, text not
+   included, signed detail changed, wrong key, cannot tell which
+   (Ed25519), pasted text, passed on arrival but fails today, and
+   not checked (rsa-sha1, unknown method, incomplete signature,
+   browser without Ed25519). An earlier session had left
+   dkimverify.js, dkimkey.js, the parse.js change, and the RFC 8463
+   fixture uncommitted on main; this step read them, kept them, and
+   fixed two faults (a paste ending after the headers read as an
+   empty body, and a CNAME chain ending in NXDOMAIN lost its target).
+   Tests 243 to 266: keys made in the tests, an independent signer,
+   both canonicalizations, l=, h= listed more often than present, a
+   folded DKIM-Signature, file against paste, every lookup result,
+   and the RFC 8463 Appendix A message, which verifies under both
+   published keys. Run locally and not committed: 11 signatures on
+   public kernel.org list messages verified against live keys.
+   Browser check in Chromium at 1280 and 375px, light and dark:
+   no lookup before the button or for a sample, one query per press
+   with no Referer, no sideways scroll, no page or CSP errors. PR 52.
+
 Decisions
 
 2026-10-15  Runs entirely in the browser. No server, no network
-            calls, no DNS, no signature verification.
+            calls, no DNS, no signature verification. (Network
+            calls changed 2026-10-28; DNS and signature
+            verification changed 2026-11-13.)
 2026-10-28  One network call after all: a usage note with the
             finding status, posted to dns-audit.com/api/usage, so
             Neil can see the tool is used. Headers still never leave,
@@ -391,3 +431,42 @@ Decisions
             zooms in on focus, and the button takes a full width row
             under the box. Buttons carry touch-action: manipulation.
             test/ios-submit.test.js pins all of it.
+2026-11-13  Neil: the page may look up DKIM keys in DNS when the
+            reader presses a button. Nothing is looked up on paste,
+            on page load, or for a built-in sample. The lookup goes
+            from the browser to https://cloudflare-dns.com/dns-query
+            (name and type=TXT in the query, accept:
+            application/dns-json). The only thing sent is the name
+            selector._domainkey.domain. This reverses the
+            2026-10-15 rules of no DNS and no signature
+            verification, for DKIM keys and DKIM signatures only.
+            CLAUDE.md's hard rules now describe both network calls.
+2026-11-13  Signature check rules. The receiver's record and the
+            check are two facts, and no reason is given where they
+            disagree. A verification failure on pasted text is could
+            not confirm, and only a message file supports a failure.
+            A recorded pass that fails today is unknown. rsa-sha1 is
+            not verified (RFC 8301 3.1) and makes no lookup. ARC
+            seals stay unverified. Under 1024 bits the key is not
+            valid, and 1024 to 2047 is a caveat (RFC 8301 3.2).
+2026-11-13  Settled without being asked. A missing, revoked,
+            malformed, or too short key is a fact about DNS, not
+            about the pasted bytes, so it is stated from pasted text
+            too. A cause replaces the finding's cannot show which
+            line only when the receiver recorded dkim=fail for that
+            signature, and then the finding's fix carries the
+            check's steps, which the signature block does not
+            repeat. A file is verified from its own bytes, one
+            character per byte, so mail that is not UTF-8 hashes
+            right; the box still shows the first 2 MB, and the bytes
+            are kept up to 25 MB, past which the body is not
+            checked and the result says so. A paste that ends after
+            the headers has no body to check. Several TXT records at
+            one name are each tried (RFC 6376 6.1.2). A name that is
+            not DNS labels is never sent. The request sends no
+            Referer and no credentials. The lookup times out after
+            six seconds. A built-in sample shows a line instead of
+            the button. The words on the button live in finding.js
+            (KEY_UI) so the Simple word test reads them. The raw
+            headers note now says only the signature check reads
+            the body.
