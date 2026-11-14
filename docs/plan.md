@@ -1,6 +1,6 @@
 Email Header Decoder, plan
 
-Six steps. Each ends with a report and a commit, and the next prompt
+Seven steps. Each ends with a report and a commit, and the next prompt
 is handed out only after that. Status as of 2026-11-13.
 
 1  Repo, parser, hop timeline, page skeleton, tests, build.    DONE
@@ -158,6 +158,21 @@ is handed out only after that. Status as of 2026-11-13.
    doc's own order: its step 2 (a delivery sentence per case, for
    Neil to read) and step 3 (counting unread fields and hops over
    the two real mail sets).
+
+7  The delivery sentence.                                   DONE
+   From the next steps doc of 2026-11-13, its step 2. What the
+   DMARC setting did covers one message. finding.delivery now says
+   what the result means for mail from here on, in both voices,
+   under the heading What this means from here on, in Technical
+   details, and in Copy report. docs/sentences.md carries a
+   Delivery line under every case, 63 written and 20 marked none
+   written, and a Delivery sources section with each source, its
+   address, and what it was read for. Neil's part: read the
+   Delivery lines in that file and mark what reads wrong. Tests 269
+   to 276. Browser check in Chromium at 1280 and 375px, light and
+   dark: no page errors, no sideways scroll, no new requests. Not
+   done: the doc's step 3 (counting unread fields and hops over the
+   two real mail sets).
 
 Decisions
 
@@ -504,3 +519,29 @@ Decisions
             the signature check made untrue. Also worth knowing is
             gone, since the flags now show in the block. The status
             chip, the headline, and Nothing to fix are unchanged.
+2026-11-13  Delivery sentence. Sources, read 2026-11-13: RFC 9989
+            4.7 and 1, RFC 7960 2.2 and 3.2.3, RFC 8301 3.1,
+            Google's Email sender guidelines, Yahoo's Sender Best
+            Practices, and Microsoft's Outlook.com requirements for
+            high volume senders. Settled without being asked. A
+            failure under a quoted p= or sp= of quarantine or
+            reject states what the policy asks and that a receiver
+            need not honor it, and the provider rules are not
+            repeated there. With p=none or no policy quoted, the
+            provider rule speaks: SPF or DKIM for every sender when
+            neither passed, DMARC with alignment for bulk senders
+            otherwise. A pass on both SPF and DKIM meets the bulk
+            rules and says spam rate and unsubscribe are outside
+            the headers. A pass on one alone is a caveat. Yahoo
+            gives no number for bulk, so 5,000 a day is credited to
+            Google and Microsoft. Microsoft's post says both junk
+            and rejection, so the line says either. Nothing is
+            written for a temporary error, a result the headers do
+            not explain, a forgery flag, an unconfirmed list or
+            forward claim, results the sender could have written,
+            Microsoft action=none or pct.* as a policy, or a status
+            of unknown. The failure lines say mail that fails this
+            way, not mail sent this way, because one broken
+            signature does not show every message breaks. RFC 9989
+            is cited without a section for an unreadable record,
+            since the section text was not confirmed word for word.

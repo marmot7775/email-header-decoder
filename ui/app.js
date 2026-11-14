@@ -146,10 +146,11 @@
     h += keyCheckHtml();
     if (f.cause) h += '<h3>Why</h3>' + para(f.cause);
     if (f.consequence) h += '<h3>What the DMARC setting did</h3>' + para(f.consequence);
+    if (f.delivery) h += '<h3>What this means from here on</h3>' + para(f.delivery);
     // The same finding in the protocol's terms, with the lines it came from.
     const tp = (s) => s ? '<p class="fpara">' + esc(s.technical) + srcBtn(s.src) + '</p>' : '';
     h += '<details class="more" id="finding-more"><summary>Technical details</summary>';
-    h += tp(f.headline) + tp(f.cause) + tp(f.consequence);
+    h += tp(f.headline) + tp(f.cause) + tp(f.consequence) + tp(f.delivery);
     if (f.fixes.length) h += '<h3>Fixes</h3>' + says(f.fixes);
     if (f.details.length) h += '<h3>Evidence</h3>' + says(f.details);
     if (f.signals) h += '<h3>Sender and spam signals</h3>' + says([f.signals.sender.answer].concat(f.signals.sender.items, [f.signals.spam.answer], f.signals.spam.items));
@@ -238,6 +239,7 @@
     }
     if (f.cause) L.push('', 'Why: ' + f.cause.plain);
     if (f.consequence) L.push('', 'What the DMARC setting did: ' + f.consequence.plain);
+    if (f.delivery) L.push('', 'What this means from here on: ' + f.delivery.plain);
     if (f.limits.length) { L.push('', 'What these headers cannot show:'); f.limits.forEach(x => L.push('- ' + x[voice])); }
     L.push('', 'Decoded at headers.dns-audit.com.');
     return vis(L.join('\n'));

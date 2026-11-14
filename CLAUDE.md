@@ -133,8 +133,9 @@ src/dkimkey.js    The signature check: the DKIM key lookup over DNS
 src/finding.js    The sentence. Status, headline, cause, policy
                   consequence, details, fixes, flags, and limits.
                   Also every word of the signature check result
-                  (keyCheckOf) and its button (KEY_UI), and the two
-                  questions under the headline (signalsOf).
+                  (keyCheckOf) and its button (KEY_UI), the two
+                  questions under the headline (signalsOf), and the
+                  delivery sentence (deliveryOf).
 src/analyze.js    analyze(text, opts) returns one plain result
                   object. The page renders it; the tests assert on
                   it. opts.keyCheck carries a signature check.
@@ -282,6 +283,21 @@ cause replaces the finding's line that the headers cannot show
 which only when the receiver recorded dkim=fail for that signature.
 RSA keys under 1024 bits are not valid (RFC 8301 3.2), and 1024 to
 2047 bits is a caveat on a result that otherwise checks out.
+
+The delivery sentence (2026-11-13) says what the result means for
+mail from here on, under What the DMARC setting did. It is written
+only where a source covers it: RFC 9989 4.7 for what p=quarantine
+and p=reject ask, RFC 7960 for forwards and lists, RFC 8301 for
+rsa-sha1, and the published sender rules of Google, Yahoo, and
+Microsoft's Outlook.com for SPF, DKIM, DMARC, and alignment.
+docs/sentences.md lists the sources with their addresses and the
+date they were read. Nothing is written for a temporary error, a
+result the headers do not explain, a message with a forgery flag, a
+list or forward claim nothing confirms, results the sender could
+have written, or a status of unknown. Yahoo gives no number for
+bulk, so the 5,000 a day line is credited to Google and Microsoft
+only. Read the three provider pages again before changing a line
+that rests on them.
 
 Palette and type use dns-audit.com's tokens and fonts. Dark and
 light both work. No horizontal scroll at 375px.

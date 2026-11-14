@@ -8,7 +8,7 @@
 //     finding for two readers. src lists the field indexes it came from.
 //   Any value the page shows carries src the same way.
 //   finding = { keyCheck, status, state, headline: Sentence, cause: Sentence,
-//     consequence: Sentence | null, details, fixes, flags, limits: [Sentence],
+//     consequence: Sentence | null, delivery: Sentence | null, details, fixes, flags, limits: [Sentence],
 //     forwarded: { yes, by, preForward, src } }; see finding.js.
 //   decoded = { filters: [{ id, name, items, note, outcome, src, side }],
 //     platform: { name, confidence, evidence, mailer, statement },

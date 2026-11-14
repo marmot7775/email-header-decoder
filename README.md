@@ -49,6 +49,11 @@ Live at https://headers.dns-audit.com, part of
   malformed key, a key that isn't the one that signed, a changed
   body, or a changed signed header. What the receiver recorded at
   delivery stays beside it as a separate fact.
+- **It says what the result means from here on.** Where an RFC or
+  the published sender rules of Google, Yahoo, or Microsoft's
+  Outlook.com cover the result, one sentence says what to expect
+  for mail sent the same way. Where none does, the page says
+  nothing.
 - **Evidence points at its source.** In Technical details, select a
   line reference and the raw header lines it came from light up.
 - **It says what headers can't show** instead of guessing.

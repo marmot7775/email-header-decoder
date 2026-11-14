@@ -14,6 +14,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and one aligns with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
@@ -56,6 +60,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery, plain: Mail sent this way meets the basic rule at Gmail and Yahoo, but not the rule for bulk senders. Anyone sending in bulk must also add a digital signature (DKIM). Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Only SPF passes here. That meets the requirement for all senders, SPF or DKIM, but bulk senders need both to pass. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
+
 Detail 1, plain: The sending server is approved by shop.example, which belongs to the sender.
 
 Detail 1, technical: SPF passed for shop.example, which aligns with shop.example.
@@ -93,6 +101,10 @@ Cause, technical: For shop.example, both SPF and DKIM pass and align, so the mes
 Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
 
 Policy, technical: shop.example publishes p=none, which asks for no action. This message passed, so the policy did not come into play.
+
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and both align with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
 
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
@@ -136,6 +148,8 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery: none written
+
 Detail 1, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
 
 Detail 1, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
@@ -173,6 +187,10 @@ Cause, technical: For shop.example, the pass comes from aligned DKIM, which stil
 Policy, plain: The headers don't say what shop.example asks mail providers to do with fake mail.
 
 Policy, technical: mx.receiver.example did not quote the DMARC policy of shop.example, so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.
+
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. They also require a DMARC setting, which these headers don't show. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and one aligns with the From domain shop.example. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. They also require a DMARC record, which these headers do not show. Their spam rate and unsubscribe requirements are outside the headers.
 
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
@@ -216,6 +234,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -249,6 +271,10 @@ Cause, technical: The checks passed, but for mailer.example and bounce.mailer.ex
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The message was signed, but by mailer.example, not by the sender's own domain.
 
@@ -296,6 +322,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1 (body hash did not verify). Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
@@ -337,6 +367,10 @@ Cause, technical: The checks passed, but for bounce.mailer.example, a domain tha
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
 
@@ -380,6 +414,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The sending server is approved, but by o1.mailer.example, not by the sender's own domain.
 
 Detail 1, technical: SPF passed for the HELO name o1.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
@@ -417,6 +455,10 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -456,6 +498,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -493,6 +539,10 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. sho
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -532,6 +582,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -570,6 +624,8 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery: none written
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -603,6 +659,10 @@ Cause, technical: The DKIM signature from shop.example could not be checked at m
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The signature from shop.example couldn't be checked.
 
@@ -646,6 +706,8 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery: none written
+
 Detail 1, plain: The signature from shop.example couldn't be checked.
 
 Detail 1, technical: DKIM returned temperror for d=shop.example s=s1 (key query timeout).
@@ -688,6 +750,10 @@ Policy, plain: The headers don't say what shop.example asks mail providers to do
 
 Policy, technical: mx.receiver.example did not quote the DMARC policy of shop.example, so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.
 
+Delivery, plain: Gmail, Yahoo, and Microsoft's Outlook.com require bulk senders to pass the sender check (DMARC), and mail with this problem doesn't. Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Bulk senders must pass DMARC with SPF or DKIM aligned, and nothing that passes here aligns with shop.example. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
+
 Detail 1, plain: The message was signed, but by mailer.example, not by the sender's own domain.
 
 Detail 1, technical: DKIM passed for d=mailer.example s=m1, which does not align with shop.example. A pass on another domain does not count for DMARC.
@@ -729,6 +795,10 @@ Cause, technical: No record from before the list is in the headers, so this page
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: Messages from shop.example that go through a list like this keep failing. shop.example's DMARC setting asks mail providers to refuse them.
+
+Delivery, technical: Posts through a list that modifies messages keep failing DMARC (RFC 7960 3.2.3). The DMARC record of shop.example carries p=reject, which asks receivers to reject them (RFC 9989 4.7).
 
 Detail 1, plain: The signature from shop.example didn't check out, because the mailing list changed the message.
 
@@ -776,6 +846,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: Messages from shop.example that go through a list like this keep failing. shop.example's DMARC setting asks mail providers to refuse them. Nothing here points to a problem with mail sent straight to people.
+
+Delivery, technical: Posts through a list that modifies messages keep failing DMARC (RFC 7960 3.2.3). The DMARC record of shop.example carries p=reject, which asks receivers to reject them (RFC 9989 4.7). The list's record shows a pass on arrival, so nothing here counts against mail sent straight from shop.example.
+
 Detail 1, plain: The signature from shop.example didn't check out, because the mailing list changed the message.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. The message came through a mailing list, and lists change it enough to break the signature.
@@ -822,6 +896,8 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery: none written
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
@@ -863,6 +939,10 @@ Cause, technical: The receiver reported dmarc=fail and the identifiers align onl
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The message was signed by mail.shop.example, which belongs to the sender.
 
@@ -910,6 +990,10 @@ Policy, plain: shop.example has no DMARC setting, so it gives mail providers no 
 
 Policy, technical: shop.example publishes no DMARC policy, so nothing tells receivers what to do with mail that fails. Each receiver decides on its own.
 
+Delivery, plain: Gmail, Yahoo, and Microsoft's Outlook.com require a DMARC setting from anyone who sends them mail in bulk. Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Bulk senders must publish a DMARC record, at least p=none. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
@@ -955,6 +1039,10 @@ Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From d
 Policy, plain: shop.example has no DMARC setting, so it gives mail providers no instructions for fake mail. Each provider decides for itself.
 
 Policy, technical: shop.example publishes no DMARC policy, so nothing tells receivers what to do with mail that fails. Each receiver decides on its own.
+
+Delivery, plain: Gmail, Yahoo, and Microsoft's Outlook.com require a DMARC setting from anyone who sends them mail in bulk. Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Bulk senders must publish a DMARC record, at least p=none. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
 
 Detail 1, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
 
@@ -1002,6 +1090,10 @@ Policy, plain: shop.example has no DMARC setting, so it gives mail providers no 
 
 Policy, technical: shop.example publishes no DMARC policy, so nothing tells receivers what to do with mail that fails. Each receiver decides on its own.
 
+Delivery, plain: Gmail, Yahoo, and Microsoft's Outlook.com require a DMARC setting from anyone who sends them mail in bulk. Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Bulk senders must publish a DMARC record, at least p=none. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
+
 Detail 1, plain: The sending server is approved by shop.example, which belongs to the sender.
 
 Detail 1, technical: SPF passed for shop.example, which aligns with shop.example.
@@ -1042,6 +1134,10 @@ Cause, technical: A permanent error means the record exists but cannot be read: 
 
 Policy: none written
 
+Delivery, plain: Until the record is fixed, shop.example counts as having no DMARC setting. Gmail, Yahoo, and Microsoft's Outlook.com require one from anyone who sends them mail in bulk. Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: A receiver applies no DMARC processing when the record cannot be parsed (RFC 9989), so shop.example stands as a domain with no record until it is repaired. Bulk senders must publish one. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
+
 Detail 1, plain: The sending server is approved by shop.example, which belongs to the sender.
 
 Detail 1, technical: SPF passed for shop.example, which aligns with shop.example.
@@ -1081,6 +1177,8 @@ Cause, plain: The lookup failed this time. The next one may work.
 Cause, technical: A temporary error says nothing about the record itself. Computed from the identifiers, the message would fail.
 
 Policy: none written
+
+Delivery: none written
 
 Detail 1, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
 
@@ -1126,6 +1224,8 @@ Cause, technical: The identifiers are in the details below; the page does not gu
 
 Policy: none written
 
+Delivery: none written
+
 Detail 1, plain: The sending server is approved, but by bounce.mailer.example, not by the sender's own domain.
 
 Detail 1, technical: SPF passed for bounce.mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
@@ -1159,6 +1259,10 @@ Cause, technical: The failure belongs to the forward, not to the sender. The mes
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: Copies that go through this forward can keep failing at mail providers that don't accept the forwarding service's record. shop.example's DMARC setting asks those providers to refuse them. Mail sent straight from shop.example isn't affected.
+
+Delivery, technical: Copies that go through this forward keep failing DMARC wherever the forwarder's ARC chain is not accepted. RFC 7960 2.2 describes how forwarding breaks SPF. The DMARC record of shop.example carries p=reject, which asks those receivers to reject them (RFC 9989 4.7). Mail sent straight from shop.example is not affected.
 
 Detail 1, plain: The signature from shop.example didn't check out, most likely because the forward changed the message.
 
@@ -1210,6 +1314,8 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery: none written
+
 Detail 1, plain: The signature from shop.example didn't check out, most likely because the forward changed the message.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. The message was forwarded, and forwarders often change it enough to break the signature.
@@ -1260,6 +1366,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: One signature on the message wasn't checked by the receiver.
 
 Detail 1, technical: DKIM-Signature d=shop.example s=s1 carries no result from the receiver.
@@ -1306,6 +1416,8 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery: none written
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
@@ -1346,6 +1458,8 @@ Cause, technical: Some servers skip Authentication-Results, and some mail progra
 
 Policy: none written
 
+Delivery: none written
+
 Detail 1, plain: The message carries a signature, but no receiving system recorded checking it.
 
 Detail 1, technical: DKIM signatures present, not checked by any receiver here: d=shop.example (would align).
@@ -1373,6 +1487,8 @@ Cause, plain: There's nothing in the record to go on.
 Cause, technical: The field is there, but it lists no method this page reads (it reports none).
 
 Policy: none written
+
+Delivery: none written
 
 Fix 1, plain: Send the same message to a Gmail or Outlook mailbox and copy the headers from there. Those services write down the results this page needs.
 
@@ -1403,6 +1519,10 @@ Cause, technical: DKIM passed only for mailer.example, which is not shop.example
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The message was signed, but by mailer.example, not by the sender's own domain.
 
@@ -1452,6 +1572,8 @@ Cause, technical: A receiver writes Authentication-Results when it accepts the m
 
 Policy: none written
 
+Delivery: none written
+
 Detail 1, plain: The message carries a signature, but no receiving system recorded checking it.
 
 Detail 1, technical: DKIM signatures present, not checked by any receiver here: d=shop.example (would align).
@@ -1479,6 +1601,8 @@ Cause, plain: The receiving system recorded a result, but the headers don't say 
 Cause, technical: DMARC checks one author domain. mx.receiver.example still reported dmarc=pass for header.from=shop.example, but which address it judged is not in the headers.
 
 Policy: none written
+
+Delivery: none written
 
 Fix 1, plain: Don't trust this message. It names more than one sender, which is a common trick in forged mail.
 
@@ -1508,6 +1632,8 @@ Cause, technical: DMARC checks one author domain. Nothing is computed from any o
 
 Policy: none written
 
+Delivery: none written
+
 Fix 1, plain: Don't trust this message. It names more than one sender, which is a common trick in forged mail.
 
 Fix 1, technical: Treat the message as suspicious: with no single From domain, DMARC cannot protect the recipient.
@@ -1536,6 +1662,8 @@ Cause, technical: DMARC aligns SPF and DKIM with the author domain, and without 
 
 Policy: none written
 
+Delivery: none written
+
 Fix 1, plain: The sender's address is missing, so copy the full headers again and make sure the From line is included.
 
 Fix 1, technical: Paste the complete header block; there is no usable From address to check against.
@@ -1561,6 +1689,8 @@ Cause, technical: For notify.example, both SPF and DKIM pass and align, so the m
 Policy, plain: The headers don't say what notify.example asks mail providers to do with fake mail.
 
 Policy, technical: mx.receiver.example did not quote the DMARC policy of notify.example, so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.
+
+Delivery: none written
 
 Detail 1, plain: The message was signed by notify.example, which belongs to the sender.
 
@@ -1604,6 +1734,10 @@ Policy, plain: The sender's DMARC setting says to refuse fake mail. Microsoft ke
 
 Policy, technical: Microsoft recorded action=oreject: the domain's policy is reject and Microsoft overrode it. Microsoft's own pages disagree on whether that means junk or quarantine, so the page does not say which. The message was not refused outright.
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: Microsoft's action=oreject shows that shop.example publishes a reject policy, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -1641,6 +1775,10 @@ Cause, technical: The DKIM signature from shop.example did not verify at Microso
 Policy, plain: Microsoft put the message in junk or quarantine because of the sender's DMARC setting.
 
 Policy, technical: Microsoft recorded action=quarantine: the policy sent this message to junk or quarantine.
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to send mail that fails this way to spam. Expect that for every message with this problem, at the ones that follow it.
+
+Delivery, technical: Microsoft's action=quarantine shows that shop.example publishes a quarantine policy, which asks receivers to treat mail that fails DMARC as suspicious (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request.
 
 Detail 1, plain: The signature from shop.example didn't check out.
 
@@ -1688,6 +1826,10 @@ Policy, plain: Microsoft took no action over the failure, so it didn't send the 
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
 
+Delivery, plain: Gmail, Yahoo, and Microsoft's Outlook.com require bulk senders to pass the sender check (DMARC), and mail with this problem doesn't. Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Bulk senders must pass DMARC with SPF or DKIM aligned, and nothing that passes here aligns with shop.example. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
+
 Detail 1, plain: The message was signed, but by mailer.example, not by the sender's own domain.
 
 Detail 1, technical: DKIM passed for d=mailer.example, which does not align with shop.example. A pass on another domain does not count for DMARC.
@@ -1734,6 +1876,10 @@ Policy, plain: Microsoft refused the message because of the sender's DMARC setti
 
 Policy, technical: Microsoft recorded action=reject.
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: Microsoft's action=reject shows that shop.example publishes a reject policy, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -1772,6 +1918,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: Microsoft recorded action=none; the message passed, so no action was needed.
 
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and both align with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example, which aligns with shop.example.
@@ -1809,6 +1959,10 @@ Cause, technical: Without a DMARC record nothing ties SPF and DKIM to the From d
 Policy, plain: shop.example has no DMARC setting, so it gives mail providers no instructions for fake mail. Each provider decides for itself.
 
 Policy, technical: shop.example publishes no DMARC policy, so nothing tells receivers what to do with mail that fails. Each receiver decides on its own.
+
+Delivery, plain: Gmail, Yahoo, and Microsoft's Outlook.com require a DMARC setting from anyone who sends them mail in bulk. Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Bulk senders must publish a DMARC record, at least p=none. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
 
 Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
 
@@ -1856,6 +2010,10 @@ Policy, plain: shop.example has no DMARC setting, so it gives mail providers no 
 
 Policy, technical: shop.example publishes no DMARC policy, so nothing tells receivers what to do with mail that fails. Each receiver decides on its own.
 
+Delivery, plain: Gmail, Yahoo, and Microsoft's Outlook.com require a DMARC setting from anyone who sends them mail in bulk. Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Bulk senders must publish a DMARC record, at least p=none. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
+
 Detail 1, plain: shop.example's list of approved servers doesn't include the server that sent this.
 
 Detail 1, technical: SPF failed for shop.example (sender IP is 198.51.100.44).
@@ -1902,6 +2060,10 @@ Policy, plain: Microsoft took no action over the failure, so it didn't send the 
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
 
+Delivery, plain: Gmail and Yahoo expect all mail to carry a valid digital signature or to come from a server the domain allows. This message did neither, and Gmail says it may refuse such mail or send it to spam.
+
+Delivery, technical: This message passed neither SPF nor DKIM. Google and Yahoo require one of them from every sender. Google says such mail might be marked as spam or rejected with a 5.7.26 error.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -1939,6 +2101,10 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The
 Policy, plain: Microsoft took no action over the failure, so it didn't send the message to junk for this reason.
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
+
+Delivery, plain: Gmail and Yahoo expect all mail to carry a valid digital signature or to come from a server the domain allows. This message did neither, and Gmail says it may refuse such mail or send it to spam.
+
+Delivery, technical: This message passed neither SPF nor DKIM. Google and Yahoo require one of them from every sender. Google says such mail might be marked as spam or rejected with a 5.7.26 error.
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -1978,6 +2144,10 @@ Policy, plain: Microsoft put the message in junk or quarantine because of the se
 
 Policy, technical: Microsoft recorded action=quarantine: the policy sent this message to junk or quarantine.
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to send mail that fails this way to spam. Expect that for every message with this problem, at the ones that follow it.
+
+Delivery, technical: Microsoft's action=quarantine shows that shop.example publishes a quarantine policy, which asks receivers to treat mail that fails DMARC as suspicious (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -2015,6 +2185,10 @@ Cause, technical: There is no DKIM signature, so DMARC depends on SPF alone. The
 Policy, plain: Microsoft took no action over the failure, so it didn't send the message to junk for this reason.
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
+
+Delivery, plain: Gmail and Yahoo expect all mail to carry a valid digital signature or to come from a server the domain allows. This message did neither, and Gmail says it may refuse such mail or send it to spam.
+
+Delivery, technical: This message passed neither SPF nor DKIM. Google and Yahoo require one of them from every sender. Google says such mail might be marked as spam or rejected with a 5.7.26 error.
 
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
@@ -2054,6 +2228,10 @@ Policy, plain: Microsoft put the message in junk or quarantine because of the se
 
 Policy, technical: Microsoft recorded action=quarantine: the policy sent this message to junk or quarantine.
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to send mail that fails this way to spam. Expect that for every message with this problem, at the ones that follow it.
+
+Delivery, technical: Microsoft's action=quarantine shows that shop.example publishes a quarantine policy, which asks receivers to treat mail that fails DMARC as suspicious (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -2092,6 +2270,10 @@ Policy, plain: Microsoft took no action over the failure, so it didn't send the 
 
 Policy, technical: Microsoft recorded action=none: it applied no DMARC action to this message.
 
+Delivery, plain: Gmail and Yahoo expect all mail to carry a valid digital signature or to come from a server the domain allows. This message did neither, and Gmail says it may refuse such mail or send it to spam.
+
+Delivery, technical: This message passed neither SPF nor DKIM. Google and Yahoo require one of them from every sender. Google says such mail might be marked as spam or rejected with a 5.7.26 error.
+
 Fix 1, plain: Turn on email signing (DKIM) for shop.example in the settings of the service that sends this mail. It adds a digital signature with your domain to every message, and that signature still works when mail is forwarded.
 
 Fix 1, technical: Turn on DKIM signing for shop.example at the sending service. Aligned DKIM lets DMARC pass, including after a forward.
@@ -2129,6 +2311,10 @@ Cause, technical: For shop.example, only SPF passes and aligns. A forward or a m
 Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Delivery, plain: Mail sent this way meets the basic rule at Gmail and Yahoo, but not the rule for bulk senders. Anyone sending in bulk must also add a digital signature (DKIM). Gmail and Outlook.com count bulk as 5,000 messages a day, and may refuse mail that falls short or send it to spam.
+
+Delivery, technical: Only SPF passes here. That meets the requirement for all senders, SPF or DKIM, but bulk senders need both to pass. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Google and Microsoft draw the line at 5,000 messages a day, and mail that falls short may be rejected or marked as spam.
 
 Detail 1, plain: The sending server is approved by o1.shop.example, which belongs to the sender.
 
@@ -2171,6 +2357,8 @@ Cause, technical: For shop.example, the pass comes from aligned DKIM, which stil
 Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Delivery: none written
 
 Detail 1, plain: The message was signed on behalf of mail.shop.example, which belongs to the sender.
 
@@ -2222,6 +2410,8 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery: none written
+
 Detail 1, plain: The message was signed on behalf of mail.shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for i=@mail.shop.example s=s1, which aligns with shop.example in relaxed mode. No DKIM-Signature here shows its d=, so strict mode cannot be judged.
@@ -2272,6 +2462,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery, plain: At mail providers that no longer accept the old method, this mail fails the sender check (DMARC). shop.example's DMARC setting then asks them to refuse it.
+
+Delivery, technical: A verifier that follows RFC 8301 3.1 does not count this signature. Nothing else aligns with shop.example, so DMARC fails there, and the DMARC record of shop.example carries p=reject, which asks receivers to reject failing mail (RFC 9989 4.7).
+
 Detail 1, plain: The message was signed by shop.example, but with an outdated method (rsa-sha1) that mail systems should no longer accept.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example, but the signature uses rsa-sha1. RFC 8301 3.1 says verifiers must not accept rsa-sha1, so a receiver that follows it would not count this pass.
@@ -2318,6 +2512,8 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery: none written
+
 Detail 1, plain: The message was signed, but by list.example, not by the sender's own domain.
 
 Detail 1, technical: DKIM passed for d=list.example s=l1, which does not align with shop.example. A pass on another domain does not count for DMARC.
@@ -2363,6 +2559,8 @@ Cause, technical: The From domain sh<U+200B>op.example only looks like shop.exam
 Policy, plain: sh<U+200B>op.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: sh<U+200B>op.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery: none written
 
 Detail 1, plain: The message was signed, but by shop.example, not by the sender's own domain.
 
@@ -2414,6 +2612,8 @@ Policy, plain: The headers don't say what notify.example asks mail providers to 
 
 Policy, technical: mx.receiver.example did not quote the DMARC policy of notify.example, so the headers do not show what a failure means for this domain. The record is in DNS, which this page does not read.
 
+Delivery: none written
+
 Detail 1, plain: The message was signed by notify.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=notify.example s=n1, which aligns with notify.example.
@@ -2463,6 +2663,10 @@ Cause, technical: For shop.example, both SPF and DKIM pass and align, so the mes
 Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
 
 Policy, technical: Microsoft recorded action=none; the message passed, so no action was needed.
+
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and both align with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
 
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
@@ -2514,6 +2718,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: Microsoft recorded action=none; the message passed, so no action was needed.
 
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and both align with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example, which aligns with shop.example.
@@ -2555,6 +2763,10 @@ Cause, technical: The DKIM signature from shop.example did not verify at mx.rece
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The signature from shop.example points to a published key (DKIM key) that isn't there for shop.example. Nobody can check the signature without it, so mail signed this way fails. Ask the service that sends this mail for the DNS setting to add.
 
@@ -2636,6 +2848,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The signature from shop.example points to a published key (DKIM key) that isn't there for shop.example. Nobody can check the signature without it, so mail signed this way fails. Ask the service that sends this mail for the DNS setting to add.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The TXT query for s1._domainkey.shop.example returned NXDOMAIN, so no DKIM key record exists there. The name is a CNAME to s1.dkim.mailer.example. RFC 6376 6.1.2 has a verifier return PERMFAIL (no key for signature).
@@ -2715,6 +2931,10 @@ Cause, technical: The DKIM signature from shop.example did not verify at mx.rece
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The key for this signature from shop.example was switched off on purpose (revoked). Mail signed with it fails. Ask the service that sends this mail to sign with its current key.
 
@@ -2796,6 +3016,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The published key (DKIM key) for shop.example is there but written wrong, so the signature can't be checked. Copy it again from the settings of the service that sends this mail.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The TXT record at s1._domainkey.shop.example is not a usable DKIM key record: p= is not base64. RFC 6376 6.1.2 has verifiers ignore malformed key records.
@@ -2875,6 +3099,10 @@ Cause, technical: The DKIM signature from shop.example did not verify at mx.rece
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The published key (DKIM key) for shop.example is too short for mail systems to trust. Ask the service that sends this mail for a longer one.
 
@@ -2956,6 +3184,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
@@ -3012,6 +3244,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and one aligns with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
@@ -3067,6 +3303,10 @@ Cause, technical: For shop.example, the pass comes from aligned DKIM, which stil
 Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and one aligns with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
 
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
@@ -3128,6 +3368,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
@@ -3183,6 +3427,10 @@ Cause, technical: The DKIM signature from shop.example did not verify at mx.rece
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The message text was changed after shop.example signed it, so the signature no longer matches. A forwarder, a mailing list, or a security filter that adds a footer or rewrites links can do that.
 
@@ -3264,6 +3512,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
@@ -3320,6 +3572,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
@@ -3375,6 +3631,10 @@ Cause, technical: The DKIM signature from shop.example did not verify at mx.rece
 Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. The recipient's email provider refused this message.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
+
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
 
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): A signed detail, such as the subject or the From line, was changed after shop.example signed the message. Something between the sender and the mailbox edited the message.
 
@@ -3456,6 +3716,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The published key (DKIM key) for shop.example isn't the one that signed this message. Ask the service that sends this mail for its current DNS setting and compare the two.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The RSA public key operation with the 2048-bit RSA key at s1._domainkey.shop.example does not yield PKCS #1 v1.5 padding (RFC 8017 9.2), so that key did not produce this b= value. The key in DNS is not the key that signed.
@@ -3536,6 +3800,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out. Checked today (November 13, 2026): The signature from shop.example doesn't match. For this kind of signature the page can't tell whether the message changed or the key is wrong.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Checked today (November 13, 2026): The ed25519-sha256 signature (RFC 8463) does not verify against the key at s1._domainkey.shop.example. An Ed25519 failure does not show whether the signed data changed or the key differs. The body hash matches bh=.
@@ -3608,6 +3876,10 @@ Policy, plain: shop.example's DMARC setting asks providers to refuse fake mail. 
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused, and mx.receiver.example refused this message (dis=REJECT).
 
+Delivery, plain: shop.example's DMARC setting asks mail providers to refuse mail that fails this way. Expect the ones that follow it to refuse every message with this problem.
+
+Delivery, technical: The DMARC record of shop.example carries p=reject, which asks receivers to reject mail that fails DMARC (RFC 9989 4.7). Every message that fails this way falls under it. A receiver is not required to honor the request, so some copies may still arrive.
+
 Detail 1, plain: The signature from shop.example didn't check out.
 
 Detail 1, technical: DKIM failed for d=shop.example s=s1. Something changed the signed headers or body after signing, or the key in DNS does not match; the headers cannot show which.
@@ -3664,6 +3936,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and one aligns with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
@@ -3719,6 +3995,10 @@ Cause, technical: For shop.example, the pass comes from aligned DKIM, which stil
 Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Delivery, plain: At mail providers that no longer accept the old method, this mail fails the sender check (DMARC). shop.example's DMARC setting then asks them to refuse it.
+
+Delivery, technical: A verifier that follows RFC 8301 3.1 does not count this signature. Nothing else aligns with shop.example, so DMARC fails there, and the DMARC record of shop.example carries p=reject, which asks receivers to reject failing mail (RFC 9989 4.7).
 
 Detail 1, plain: The message was signed by shop.example, but with an outdated method (rsa-sha1) that mail systems should no longer accept.
 
@@ -3780,6 +4060,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and one aligns with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
@@ -3835,6 +4119,10 @@ Cause, technical: For shop.example, the pass comes from aligned DKIM, which stil
 Policy, plain: The message passed, so the sender's DMARC setting didn't come into play.
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
+
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and one aligns with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
 
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
@@ -3892,6 +4180,10 @@ Policy, plain: The message passed, so the sender's DMARC setting didn't come int
 
 Policy, technical: shop.example publishes p=reject, which asks for failing mail to be refused. This message passed, so the policy did not come into play.
 
+Delivery, plain: Mail sent this way meets the rules Gmail, Yahoo, and Microsoft's Outlook.com set for proving who sent a message. Those rules also cover spam complaints and unsubscribe links, which the headers don't show.
+
+Delivery, technical: SPF and DKIM both pass, and one aligns with the From domain shop.example, which publishes a DMARC record. That meets the authentication requirements for bulk senders. Google's Email sender guidelines, Yahoo's Sender Best Practices, and Microsoft's Outlook.com requirements for high volume senders all say so. Their spam rate and unsubscribe requirements are outside the headers.
+
 Detail 1, plain: The message was signed by shop.example, which belongs to the sender.
 
 Detail 1, technical: DKIM passed for d=shop.example s=s1, which aligns with shop.example.
@@ -3933,6 +4225,20 @@ Signature check, on arrival, technical: mx.receiver.example recorded dkim=pass f
 Signature check, today, plain: This browser can't check this kind of signature. Try the current version of Chrome, Firefox, or Safari.
 
 Signature check, today, technical: This browser's WebCrypto has no Ed25519, so the ed25519-sha256 signature (RFC 8463) was not verified. The key at s1._domainkey.shop.example was found.
+
+## Delivery sources
+
+RFC 9989, DMARC, section 4.7: what p=quarantine and p=reject ask of a receiver. Section 1 says a receiver is not required to honor the request. https://www.rfc-editor.org/rfc/rfc9989
+
+RFC 7960, sections 2.2 and 3.2.3: forwarding breaks SPF, and a mailing list that modifies a message breaks its DKIM signature. https://www.rfc-editor.org/rfc/rfc7960
+
+RFC 8301, section 3.1: rsa-sha1 signatures are not accepted. https://www.rfc-editor.org/rfc/rfc8301
+
+Google, Email sender guidelines: all senders need SPF or DKIM. Senders of 5,000 or more messages a day to Gmail accounts need SPF and DKIM, a DMARC record (p=none is enough), and a From domain aligned with the SPF or DKIM domain. Mail that falls short might be marked as spam or rejected with a 5.7.26 error. https://support.google.com/a/answer/81126
+
+Yahoo, Sender Best Practices: all senders need SPF or DKIM. Bulk senders need both, a DMARC record of at least p=none that passes, and an aligned From domain. Yahoo gives no number for bulk. https://senders.yahooinc.com/best-practices/
+
+Microsoft, Outlook's New Requirements for High Volume Senders (April 2025): domains sending more than 5,000 messages a day to outlook.com, hotmail.com, and live.com need SPF and DKIM to pass and a DMARC record of at least p=none aligned with one of them. The post says both junk and rejection (550 5.7.515), so the lines say either. https://techcommunity.microsoft.com/blog/microsoftdefenderforoffice365blog/strengthening-email-ecosystem-outlook%E2%80%99s-new-requirements-for-high%E2%80%90volume-senders/4399730
 
 ## Signal questions
 

@@ -180,6 +180,7 @@ function lines(f) {
   out.push(['Plain headline', f.headline.plain], ['Technical headline', f.headline.technical]);
   pair('Cause', f.cause);
   if (f.consequence) pair('Policy', f.consequence); else out.push(['Policy', 'none written']);
+  if (f.delivery) pair('Delivery', f.delivery); else out.push(['Delivery', 'none written']);
   f.details.forEach((s, i) => pair('Detail ' + (i + 1), s));
   f.fixes.forEach((s, i) => pair('Fix ' + (i + 1), s));
   f.flags.forEach((s, i) => pair('Flag ' + (i + 1), s));
@@ -262,6 +263,17 @@ function meanings() {
   return out;
 }
 
+// What the Delivery lines rest on, as read on 2026-11-13. A Delivery
+// line that none of these covers is not written.
+const SOURCES = [
+  ['RFC 9989, DMARC, section 4.7', 'what p=quarantine and p=reject ask of a receiver. Section 1 says a receiver is not required to honor the request. https://www.rfc-editor.org/rfc/rfc9989'],
+  ['RFC 7960, sections 2.2 and 3.2.3', 'forwarding breaks SPF, and a mailing list that modifies a message breaks its DKIM signature. https://www.rfc-editor.org/rfc/rfc7960'],
+  ['RFC 8301, section 3.1', 'rsa-sha1 signatures are not accepted. https://www.rfc-editor.org/rfc/rfc8301'],
+  ['Google, Email sender guidelines', 'all senders need SPF or DKIM. Senders of 5,000 or more messages a day to Gmail accounts need SPF and DKIM, a DMARC record (p=none is enough), and a From domain aligned with the SPF or DKIM domain. Mail that falls short might be marked as spam or rejected with a 5.7.26 error. https://support.google.com/a/answer/81126'],
+  ['Yahoo, Sender Best Practices', 'all senders need SPF or DKIM. Bulk senders need both, a DMARC record of at least p=none that passes, and an aligned From domain. Yahoo gives no number for bulk. https://senders.yahooinc.com/best-practices/'],
+  ['Microsoft, Outlook\'s New Requirements for High Volume Senders (April 2025)', 'domains sending more than 5,000 messages a day to outlook.com, hotmail.com, and live.com need SPF and DKIM to pass and a DMARC record of at least p=none aligned with one of them. The post says both junk and rejection (550 5.7.515), so the lines say either. https://techcommunity.microsoft.com/blog/microsoftdefenderforoffice365blog/strengthening-email-ecosystem-outlook%E2%80%99s-new-requirements-for-high%E2%80%90volume-senders/4399730'],
+];
+
 // Invisible and direction control characters written as <U+200B>, as the page shows them.
 const HIDDEN_G = new RegExp(HA.psl.HIDDEN.source, 'g');
 const vis = (s) => String(s).replace(HIDDEN_G, c => '<U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') + '>');
@@ -272,6 +284,8 @@ function render() {
     md += '\n## ' + name + '\n\n';
     md += lines(run(name, text, check)).map(([l, s]) => l + ': ' + vis(s)).join('\n\n') + '\n';
   }
+  md += '\n## Delivery sources\n\n';
+  md += SOURCES.map(x => x.join(': ')).join('\n\n') + '\n';
   md += '\n## Signal questions\n\n';
   md += Object.keys(HA.finding.SIGNAL_UI).map(k => k + ': ' + HA.finding.SIGNAL_UI[k]).join('\n\n') + '\n';
   md += '\n## Signature check labels\n\n';
